@@ -14,9 +14,9 @@
 
 <img width="682" height="345" alt="image" src="https://github.com/user-attachments/assets/32853df2-7874-4b9c-b2f0-18ebe4813761" />
 
-## 1.2 Uint_16 和 int
+## 1.2 uint_16 和 int
 
-Uint_16代表unsigned 16即无符号的16位（2字节）
+uint_16代表unsigned 16即无符号的16位（2字节）
 
 int 是个“变色龙” (可移植性问题)
 
@@ -39,22 +39,26 @@ int 是个“变色龙” (可移植性问题)
 
 在C90中有32个对应的关键字，之后还有C99以及C11的新增关键字
 ```text
-auto             break        case        char     const       continue    default    dodouble          else        enum        extern    float       for         goto       if       int             long        register    return   short       signed      sizeof     static    struct      switch      typedef     union  unsigned     void        volatile       while
+auto        break      case        char        const       continue    default
+dodouble    else       enum        extern      float       for         goto
+if          int        long        register    return      short       signed
+sizeof     static      struct      switch      typedef     union       unsigned
+void       volatile    while
 ```
 
-### 1.3.1 数据相关的关键字
+1. 数据相关的关键字
 char、 int、 short、 long、 sighed、 unsigned、 float、 double、  void、 bool 、 complex（复数）、 imaginary（虚数）
 
-### 1.3.2 流程控制关键字
+2. 流程控制关键字
 if、 else、 case 、switch、 default、 for、 while、 do、 break、 continue、 goto、 return
 
-### 1.3.3 自定义数据结构关键字
+3. 自定义数据结构关键字
 Struct、 union、 enum
 
-### 1.3.4 存储类别关键字
+4. 存储类别关键字
 auto、 register、 static、 extern、 typedef
 
-### 1.3.5 类型限定相关关键字
+5. 类型限定相关关键字
 const、 volatile、 restrict、 automic
 
 ## 1.4 Static
