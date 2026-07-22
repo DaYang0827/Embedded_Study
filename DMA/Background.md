@@ -28,17 +28,20 @@ STM32F103C8T6 DMA资源：DMA1（7个通道）
 
 ## 1.2 DMA基本结构
 
-![](file:///C:\Users\10548\AppData\Local\Temp\ksohtml12852\wps1.jpg) 
+<img width="623" height="286" alt="image" src="https://github.com/user-attachments/assets/1e267775-806b-4372-a6c4-6d58db6a6670" />
+
 
 ## 1.3  实际例子
 
 1. 数据转运
 
-![](file:///C:\Users\10548\AppData\Local\Temp\ksohtml12852\wps2.jpg) 
+<img width="435" height="271" alt="image" src="https://github.com/user-attachments/assets/4795d604-de93-45da-a871-93e7c7b32698" />
+
 
 2. ADC扫描模式
 
-![](file:///C:\Users\10548\AppData\Local\Temp\ksohtml12852\wps3.jpg)
+<img width="500" height="270" alt="image" src="https://github.com/user-attachments/assets/519ed7f4-ae66-4c4a-8682-0dd4f807051e" />
+
 
 ## 核心参数
 ```c
