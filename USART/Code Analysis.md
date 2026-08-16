@@ -1,5 +1,6 @@
 # USART编写逻辑以及代码理解
-## 1. USART Establish
+# 1 USART Setting
+## 1.1 USART Establish
 1. 开 GPIO 时钟
 2. 开 USART 时钟
 3. 配置 GPIO 为复用模式
@@ -10,20 +11,24 @@
 8. 使能 USART
 9. 接收不同类型字符的函数需要自己写，发送函数不需要自己写
 
-## 2. USART的部分组成
+## 1.2 USART的部分组成
+
 GPIO复用 + USART参数 + NVIC中断 + 回调函数
 
-## 3. 在stm32f407中常见的USART搭配
+## 1.3 在stm32f407中常见的USART搭配
+
 USART1：PA9 / PA10，挂在 APB2
 
 USART2：PA2 / PA3，挂在 APB1
 
 GPIOA：挂在AHB1
 
-## 4. 字节与比特
+## 1.4 字节与比特
+
 **1个字节（byte）= 8个比特（bite）**；字符 'A' 在 ASCII 码中是：十进制：65；二进制：0100 0001；十六进制：0x41
 
-## 5. RXNE 和TXE
+## 1.5 RXNE 和TXE
+
 **RXNE看接收：有没有数据可以读；TXE 看发送：有没有空位可以写**
 ```c
 //接收数据寄存器非空，也就是USART 已经收到了一个字节，这个字节现在放在接收数据寄存器里，还没有被你读走
@@ -42,8 +47,8 @@ GPIOA：挂在AHB1
     }
 ```
 
-## 6. 代码分析
-###  6.1 USART.h
+## 1.6. 代码分析
+###  1.6.1 USART.h
 ```c   
     #define USART_RX_BUF_SIZE    128						            //定义缓冲区
     
@@ -88,7 +93,7 @@ GPIOA：挂在AHB1
     void usart1_clear_buffer(void);
 ```    
     
-###    6.2 USART.c
+###    1.6.2 USART.c
 ```c
     //定义一个USART1的配置对象
     typedef_usart usart1 =       
