@@ -14,9 +14,9 @@
 
 <img width="682" height="345" alt="image" src="https://github.com/user-attachments/assets/32853df2-7874-4b9c-b2f0-18ebe4813761" />
 
-## 1.2 uint_16 和 int
+## 1.2 uint16_t 和 int
 
-uint_16代表unsigned 16即无符号的16位（2字节）
+uint16_t代表unsigned 16即无符号的16位（2字节）
 
 int 是个“变色龙” (可移植性问题)
 
@@ -626,7 +626,7 @@ enum W25Q128_CMD
 
 **这是 C 语言程序的入口**，也是整个程序的起跑线。简单来说：单片机上电复位后，干完必要的杂活（启动文件），就会直奔这里，开始执行你写的代码。
 
-### 1.8.1 main：主角（函数名）
+### 1.8.1 1.8.1int main(void)
    
 含义：**这是“主函数”的名字**。
 
@@ -856,13 +856,13 @@ HAL_StatusTypeDef Send_Data(void)
 
 指针就是一张写着地址的小纸条，想象内存就是一个巨大的大酒店，里面有成千上万个房间。
 
-变量 (int a = 100;)： 你在酒店开了一间房，房间里住着一个叫 100 的客人。为了方便，你给这个房间起个别名叫 a。地址 (&a)： 虽然你叫它 a，但在酒店管理系统（操作系统）里，它真正的名字是 房间号（比如 0x7ffee000 这种奇怪的十六进制数字）。
+变量 `int a = 100;`： 你在酒店开了一间房，房间里住着一个叫 100 的客人。为了方便，你给这个房间起个别名叫 a。地址 `&a`： 虽然你叫它 a，但在酒店管理系统（操作系统）里，它真正的名字是 房间号（比如 0x7ffee000 这种奇怪的十六进制数字）。
 
 **指针变量，就是用来专门记房间号的笔记本**。
 
-普通变量 (int a)：存的是数据（比如 100）。
+普通变量 `int a`：存的是数据（比如 100）。
 
-指针变量 (int* p)：存的是地址（比如 0x7ffee000）。
+指针变量 `int* p`：存的是地址（比如 0x7ffee000）。
 
 比喻：a 是房间，p 是房卡（或者写着房间号的纸条）。
 
@@ -1015,7 +1015,7 @@ printf("%d\n",*p);
 
 `char a=0x66`;  表示定义了一个char 类型的数据a，a的值为66，同时他的地址为147bf524
 
-`char *p`; 表示定义了一个char*类型的数据p，char*会占用8个字节的空间
+`char *p`; 表示定义了一个`char*`类型的数据p，`char*`会占用8个字节的空间
 
 `p = &a;`  表示将a的地址付给p，所以p的8个字节会按照低端的方式存入a的地址147bf524
 
@@ -1023,7 +1023,7 @@ printf("%d\n",*p);
 
 `printf("%x\n", p); ` 表示将p的值显示出来
 
-`printf("%x\n", p);`  表示将p的值做为地址，找到这个地址对应的存储信息并显示出来
+`printf("%x\n", *p);`  表示将p的值做为地址，找到这个地址对应的存储信息并显示出来
 
 ### 2.1.6 数组与指针
 
@@ -2278,7 +2278,336 @@ typedef uint32_t TickType;
 不要使用 `#define` 代替复杂类型定义。
 
 # 3 变量、函数与流程控制
-## 3.1 变量作用域
+
+## 3.1 Function 函数
+
+### 3.1.1 函数基本定义
+
+函数本质上是：**一段完成特定功能、可以被其他代码调用的机器指令集合。**
+
+例如：
+```c
+int add(int a, int b)
+{
+    int result;
+    
+    result = a + b;
+  
+    return result;
+}
+```
+
+
+- 站在 C 语言层面，它叫：函数。
+- 站在编译器层面，它会被编译成：一段机器指令
+- 站在 Flash 物理空间层面，它就是：Flash 中某一段连续的 Code
+
+例如：
+```assembly
+0x08001000    PUSH ...
+
+0x08001002    ADD  ...
+
+0x08001004    ...
+
+0x0800100C    BX LR
+
+```
+
+所以函数调用最底层可以理解成：
+```text
+CPU本来正在执行main
+        ↓
+遇到 add()
+        ↓
+保存“回来以后继续从哪里执行”
+        ↓
+PC跳到add对应的代码地址
+        ↓
+执行add
+        ↓
+获得返回值
+        ↓
+PC回到原来的程序
+```
+
+---
+
+函数的基本结构为
+
+```c
+int      add      (int a, int b)      { ...... }
+
+ ↓        ↓              ↓                 ↓
+
+返回类型  函数名          参数列表            函数体
+
+```
+
+因此可以记住函数定义的基本公式：==返回类型 + 函数名 + 参数列表 + 函数体==
+
+### 3.1.2 返回类型
+
+可以返回数据，指针，结构体或者什么都不返回
+
+```c
+uint8_t get_status(void)
+{
+    return 1U;
+}
+
+//返回：uint8_t
+
+//也可以返回指针：
+
+uint8_t *get_buffer(void)
+{
+    return rx_buffer;
+}
+
+//可以返回结构体：
+
+DeviceStatus get_status(void)
+{
+    DeviceStatus status;
+    ...
+    return status;
+}
+
+//什么都不返回：
+void led_on(void)
+{
+    GPIO_SetBits(GPIOA, GPIO_Pin_0);
+}
+```
+
+### 3.1.3 函数名
+
+ **函数名在大多数表达式中会自动转换为指向该函数的函数指针。** 
+
+例如：
+```c
+int (*p)(int, int);
+
+p = add;
+```
+
+因此：p(10, 20);最终也能够执行 `add()`。
+
+可以理解为：
+```text
+普通调用： 
+add()
+ ↓
+编译器已经知道要跳到谁    
+
+函数指针调用：  
+p()
+ ↓
+先从p里找到函数入口地址
+ ↓
+再跳过去执行
+```
+
+### 3.1.4 函数参数 parameter
+
+1. 普通参数
+```c
+int add(int a, int b)
+```
+
+这里：int a、 int b叫：**形参 Formal Parameter**
+
+调用的时候：
+```c
+int x = 10;
+int y = 20; 
+
+int result = add(x, y);
+```
+
+这里：x、y叫：**实参 Actual Argument**
+
+可以理解：
+```text
+调用者 
+x = 10
+y = 20  
+ ↓ 传参 
+add(a, b)  
+
+a得到10
+b得到20
+```
+
+---
+2. 数组作为函数参数
+```c
+void process(uint8_t buffer[])
+{
+
+}
+```
+
+在**函数参数列表中**：
+
+`uint8_t buffer[]`基本等价于：`uint8_t *buffer`
+
+所以更常见的驱动接口是：
+```c
+void uart_send(const uint8_t *data,  uint16_t length);
+```
+
+为什么一定要再传：length, 因为函数内部只拿到了：首地址。它通常已经不知道原数组到底有：10 Byte、100 Byte还是1000 Byte
+
+例如：
+```c
+uint8_t data[100];
+
+uart_send(data, 100);
+```
+
+所以非常经典的 API 组合就是：
+```c
+const uint8_t *data,
+
+uint16_t length
+```
+
+---
+3. 指针参数
+```c
+void change(int *p)
+{
+    *p = 100;
+}  
+
+int main(void)
+{
+    int x = 10;  
+    change(&x);
+}
+```
+
+这里仍然是： **值传递。** 只是这一次复制的“值”不是 `10`，而是：x的地址。假设：x地址 = 0x20001000  那么：`change(&x);`  相当于：把0x20001000复制给p。于是：p = 0x20001000 然后：`*p = 100;` CPU 顺着：0x20001000 找到真正的 `x`。因此变成：x = 100
+
+所以一定要记：**C语言没有真正意义上的“引用传递”。指针也是值传递，只不过传进去的值恰好是一个地址。**
+
+实际应用中会有大量的指针参数
+
+驱动模板：`void spi_init(typedef_spi *spi);`
+
+不写：`void spi_init(typedef_spi spi);`
+
+假设：
+```c
+typedef struct
+{
+    SPI_TypeDef *SPIx;
+    uint32_t SPI_CLK;
+    GPIO_TypeDef *GPIOx;
+    uint32_t GPIO_CLK; 
+    ...
+} typedef_spi;
+```
+
+整个结构体可能占几十个 Byte。如果：`spi_init(spi1_flash1);`直接值传递，就可能需要复制整个结构体。
+
+而：`spi_init(&spi1_flash1);`只需要传递：一个地址  STM32F407 是32位地址，因此普通数据指针通常就是：4 Byte  于是：
+```text
+大结构体
+   ↓
+不复制
+   ↓
+只传地址
+   ↓
+驱动函数通过 -> 操作原对象
+```
+
+---
+
+4. const参数
+```c
+void uart_send(
+    const uint8_t *data,
+    uint16_t length
+);
+```
+
+意思是：` uart_send()` 可以读取 `data` 指向的数据，但不应该通过 `data` 修改它。
+
+所以：
+```c
+data[0] = 0x55;     // 不允许
+```
+
+这种接口非常好，因为它明确告诉别人：这是输入数据，函数只读，不会修改原来的buffer
+
+例如：
+```c
+bool esp_at_send_command(
+    const char *cmd,
+    ...
+);
+```
+
+这里的：`const char *cmd`本质也是： `cmd` 是输入参数，只读取 AT 命令。
+
+### 3.1.5 static 函数
+
+```c
+static void uart_gpio_init(void)
+{
+
+}
+```
+
+普通：
+```c
+void uart_init(void);
+```
+
+通常是：Public API  其他 `.c` 可以调用。而：
+```c
+static void uart_gpio_init(void)
+{
+
+}
+```
+是：Private Function 只给：`uart.c`内部使用。
+
+典型驱动：
+```c
+static void uart_gpio_init(void);
+static void uart_clock_init(void);
+  
+void uart_init(void)
+{
+    uart_clock_init();
+    uart_gpio_init();
+}
+
+```
+
+于是形成：
+```text
+外部
+   ↓
+uart_init()
+   ↓
+----------------
+
+uart.c内部
+   ↓
+uart_clock_init()
+uart_gpio_init()
+```
+
+### 3.1.6 函数的执行
+
+
+
+## 3.2 变量作用域
 
 1. 局部变量（local variable）
 
@@ -2323,10 +2652,9 @@ void main()
 {
 	int data = Get_Sensor_Data(); //接住扔出来的值
 }
-
 ```
 
-## 3.2 `if...else`
+## 3.3 `if...else`
 
    适合：
 
@@ -2352,7 +2680,7 @@ else
 
 在 C 中，条件表达式结果为 0 表示假，非 0 表示真。
 
-## 3.3 `for` 条件
+## 3.4 `for` 条件
 
 适合循环次数明确的场景：
 
@@ -2363,7 +2691,7 @@ for (uint16_t i = 0U; i < length; i++)
 }
 ```
 
-## 3.4 While 循环
+## 3.5 While 循环
 
 在嵌入式开发（STM32）中，while 循环主要扮演两个截然不同的角色：“永动机”和“等待者”。
 
@@ -2409,9 +2737,9 @@ USART_SendData(USART1,Data);
 
 符合while里面的判断，就会一直等待，直到条件不满足while中的语句才会进行下一步的程序
 
-## 3.5 Switch...case
+## 3.6 Switch...case
 
-### 3.5.1 定义
+### 3.6.1 定义
 `switch...case` 是 C 语言中的**多分支选择语句**。它适合处理这种情况：
 
 > 根据同一个变量的不同离散值，执行不同代码
@@ -2464,7 +2792,7 @@ else
 
 当分支很多，而且都是判断同一个变量是否等于某个固定值时，`switch...case` 通常比连续的 `if...else if` 更清楚。
 
-### 3.5.2 基本语法
+### 3.6.2 基本语法
 
 ```c
 switch (表达式)
@@ -2562,9 +2890,9 @@ switch (operation)
 
 需要注意： `case` 只是一个跳转入口，不会自动结束前一个分支。
 
-### 3.5.3 `switch` 和 `if...else` 的区别
+### 3.6.3 `switch` 和 `if...else` 的区别
 
-#### 3.5.3.1 适合使用 `switch` 的情况
+#### 3.6.3.1 适合使用 `switch` 的情况
 
 **判断同一个变量是否等于多个固定值**：
 
@@ -2590,7 +2918,7 @@ switch (command)
 - 字符运算符；
 - 协议类型。
 
-#### 3.5.3.2 适合使用 `if...else` 的情况
+#### 3.6.3.2 适合使用 `if...else` 的情况
 
 判断范围：
 
@@ -2644,8 +2972,8 @@ if (strcmp(command, "start") == 0)
 |    字符串判断    |  不直接支持   |     支持      |
 |   复杂逻辑条件    |   不适合    |     适合      |
 |   枚举状态处理    |   非常适合   |     可以      |
-## 3.6 运算符
-### 3.6.1 位运算符
+## 3.7 运算符
+### 3.7.1 位运算符
 
 & , | , ~ , ^  —— 用来修寄存器、操作硬件的。	
 
@@ -2685,7 +3013,7 @@ STM32 用法：用来构造掩码。
 
 例子： 1 << 5 的意思就是把 1 向左移 5 位，变成 0010 0000 (也就是 0x20)。 
 
-### 3.6.2 逻辑运算符
+### 3.7.2 逻辑运算符
 
 &&,  ||,  ! —— 用来写 if 语句做判断的。
 
@@ -2709,7 +3037,7 @@ STM32 用法：用来构造掩码。
 
 单个符号搞硬件，成双成对做判断
 
-### 3.6.3 >>和<<
+### 3.7.3 >>和<<
 
 `>>`右移运算符
 
@@ -3186,13 +3514,13 @@ callback = &led_on;
 callback();
 ```
 
-也可以写：
+  也可以写：
 
 ```c
 (*callback)();
 ```
 
-两种方式都可以，但通常写：
+  两种方式都可以，但通常写：
 
 ```c
 callback();
@@ -3226,7 +3554,7 @@ int main(void)
 typedef void (*UART_RxCallback)(uint8_t data);
 ```
 
-2. 注册回调函数
+2. 注册回调函数 **最重要的部分** 可以方便后续直接调用
 
 ```c
 UART_RxCallback rx_callback = NULL;
@@ -3268,100 +3596,126 @@ int main(void)
 
 4. 完整的回调函数示例
 
- `uart.h`
-
 ```c
-#ifndef __UART_H__
-#define __UART_H__
-#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
-typedef void (*UART_RxCallback)(uint8_t data);
+// ==========================================
+// 第一部分：USART 驱动层 (底层驱动工程师编写)
+// ==========================================
 
-void uart_init(void);
+// 1. 留插座：定义串口接收回调函数的类型 (带数据指针和长度参数)
+typedef void (*usart_rx_callback_t)(const uint8_t* p_data, uint16_t len);
 
-void uart_register_rx_callback(UART_RxCallback callback);
+// 2. 准备登记簿：全局静态指针，用来存放应用层注册的函数地址
+static usart_rx_callback_t g_usart_rx_callback = NULL;
 
-void uart_irq_handler(void);
-
-#endif
-```
-`uart.c`
-
-```c
-#include "uart.h"
-
-static UART_RxCallback rx_callback = NULL;
-
-void uart_init(void)
+// 3. 提供安装说明：开放给应用层的“串口接收中断注册函数”
+void usart_register_rx_callback(usart_rx_callback_t cb)
 {
-	rx_callback = NULL;                          // UART硬件初始化
+    g_usart_rx_callback = cb; // 把上层写好的业务函数地址记下来
 }
 
-void uart_register_rx_callback(UART_RxCallback callback)
-{    
-	rx_callback = callback;
+// 4. 模拟硬件中断：当手机或电脑通过串口发数据给单片机时，硬件会自动触发这个函数
+void USART_IRQHandler_Mock(const uint8_t* hardware_buffer, uint16_t hardware_len)
+{
+    // 底层驱动只负责硬件层面的提示
+    printf("[硬件层提示]: 串口引脚检测到电平变化，接收到 %d 字节原始数据。\n", hardware_len);
+
+    // 5. 通电运行：翻看登记簿，如果应用层注册了函数，就把数据“回传”给应用层去处理
+    if (g_usart_rx_callback != NULL) 
+    {
+        g_usart_rx_callback(hardware_buffer, hardware_len);
+    } 
+    else 
+    {
+        printf("[硬件层警告]: 未注册接收回调函数，丢弃该数据包！\n");
+    }
 }
 
-void uart_irq_handler(void)
-{    
-	uint8_t data;    
-	
-	data = (uint8_t)USART1->DR;
-	   
-	if (rx_callback != NULL)    
-	{        
-		rx_callback(data);    
-	}
-}
-```
-`main.c`
+// ==========================================
+// 第二部分：应用层/业务层 (由业务工程师编写)
+// ==========================================
 
-```c
-#include "uart.h"
-static volatile uint8_t received_data;
-void app_uart_rx_callback(uint8_t data)
-{    
-	received_data = data;
+// 业务逻辑 A：智能家居控制命令解析
+void smart_home_protocol_parser(const uint8_t* data, uint16_t len)
+{
+    printf("【应用层-智能家居控制中心】: 收到 %d 字节指令。\n", len);
+    
+    // 简单的协议解析：判断第一个字节
+    if (len > 0) {
+        switch (data[0]) {
+            case 0xA1:
+                printf(" -> 执行动作: 开启客厅大灯 💡\n");
+                break;
+            case 0xA2:
+                printf(" -> 执行动作: 关闭客厅大灯 🌑\n");
+                break;
+            default:
+                printf(" -> 错误: 未知控制指令 ❓\n");
+                break;
+        }
+    }
 }
 
+// 业务逻辑 B：透传模式（直接打印文本，比如用于调试日志）
+void AT_command_logger(const uint8_t* data, uint16_t len)
+{
+    printf("【应用层-串口调试助手】: 收到文本数据 -> ");
+    for (int i = 0; i < len; i++) {
+        putchar(data[i]); // 一个字符一个字符打印出来
+    }
+    printf("\n");
+}
+
+
+// ==========================================
+// 第三部分：主函数调用 (完成完整的注册与调用闭环)
+// ==========================================
 int main(void)
-{    
-	uart_init();
-	   
-	uart_register_rx_callback(app_uart_rx_callback);    
-	
-	while (1)    
-	{ 
-		// 主程序处理received_data    
-	}
-}
-```
+{
+    // 模拟的硬件数据缓存
+    uint8_t cmd_turn_on[] = {0xA1};
+    uint8_t cmd_turn_off[] = {0xA2};
+    uint8_t at_string[] = "AT+REBOOT\r\n";
 
-5. 真正的中断函数
+    printf("--- 场景 1：切换到【智能家居模式】 ---\n");
+    // 【关键动作】应用层把“控制命令解析函数”注册到串口驱动中
+    usart_register_rx_callback(smart_home_protocol_parser);
 
-```c
-void USART1_IRQHandler(void)
-{    
-	uart_irq_handler();
+    // 模拟硬件突然收到数据（触发中断）
+    USART_IRQHandler_Mock(cmd_turn_on, 1);
+    USART_IRQHandler_Mock(cmd_turn_off, 1);
+
+    printf("\n--------------------------------------------------\n");
+
+    printf("--- 场景 2：切换到【调试/透传模式】 ---\n");
+    // 【关键动作】应用层随时重新注册，把“AT指令日志函数”覆盖上去
+    usart_register_rx_callback(AT_command_logger);
+
+    // 模拟硬件再次突然收到数据（触发中断）
+    USART_IRQHandler_Mock(at_string, strlen((char*)at_string));
+
+    return 0;
 }
+
 ```
 
 运行过程：
 
 ```text
-main.c注册app_uart_rx_callback              
-↓
-uart.c保存函数地址              
-↓
-UART收到数据，发生中断              
-↓
-USART1_IRQHandler执行              
-↓
-uart_irq_handler执行              
-↓
-rx_callback(data)              
-↓
-实际调用app_uart_rx_callback(data)
+--- 场景 1：切换到【智能家居模式】 ---
+[硬件层提示]: 串口引脚检测到电平变化，接收到 1 字节原始数据。
+【应用层-智能家居控制中心】: 收到 1 字节指令。
+ -> 执行动作: 开启客厅大灯 💡
+[硬件层提示]: 串口引脚检测到电平变化，接收到 1 字节原始数据。
+【应用层-智能家居控制中心】: 收到 1 字节指令。
+ -> 执行动作: 关闭客厅大灯 🌑
+
+--------------------------------------------------
+--- 场景 2：切换到【调试/透传模式】 ---
+[硬件层提示]: 串口引脚检测到电平变化，接收到 11 字节原始数据。
+【应用层-串口调试助手】: 收到文本数据 -> AT+REBOOT
 ```
 
 ## 4.8 `' '`和`" "`的区别
@@ -3757,7 +4111,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 含义：“现在，立刻，马上去执行这件事！”
 
-位置：必须写在函数体（比如 main() 或 GPIO_Init()）的大括号 { } 里面。
+位置：必须写在函数体（比如 `main( )` 或 `GPIO_Init( )`）的大括号 { } 里面。
 
 作用：CPU 执行到这一行时，会真的去设置寄存器，把GPIO重新配置
 
@@ -3767,15 +4121,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 这里有个核心细节：如果你在括号里填的是 GPIOB 这种具体的值，而前面加了 void，这通常是错误的写法。
 
-①如果在 main 函数里这样写是错误的
+1. 如果在 main 函数里这样写是错误的
 
 void 是用来定义新函数的。在 main 函数里，不需要定义这个函数（ST公司已经定义好了），你只需要使用它。加了 void，编译器以为你想在 main 里面再创造一个函数，但语法又不对，所以报错。
 
-②在 .h 头文件或帮助文档
+2. 在 .h 头文件或帮助文档
 
 注意区别：这里括号里写的是 类型 (uint8_t)，而不是具体的值 (GPIOB)。
 
-含义：这是在告诉编译器，“有一个叫 GPIOx 的函数，它不返回值 (void)，它需要两个 uint8_t 类型的参数”。
+含义：这是在告诉编译器，“有一个叫 `GPIOx` 的函数，它不返回值 (void)，它需要两个 uint8_t 类型的参数”。
 
 |          写法           |   比喻   |             电脑的反应             |
 | :-------------------: | :----: | :---------------------------: |
