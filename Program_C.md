@@ -2022,6 +2022,88 @@ int *p = &a;
 ```
 表示：p->a->0
 
+### 2.1.10 快慢指针
+
+快慢指针是**用两个变量记录两个不同的“当前位置”，按照不同规则移动。**
+
+最典型的是读写指针，这个例子就是进行删除数组中指定元素的操作
+
+```c
+int remove_value(int *arr, int n, int value)
+{
+    //进行指针不为空，以及传入数组不为空的判断
+    if (arr == NULL || n == 0) {
+        return 0;
+    }
+    
+    int* write = arr;
+    int* read = arr;
+
+    for (int i = 0; i < n; i++)
+    {
+        if (*read != value) 
+        {
+            *write++ = *read;
+        }
+        read++;
+    }
+
+    return write - arr;  //注意这里的地址差直接就是元素个数差，而不是字节差
+}
+```
+
+`read`  相当于“快指针”，负责：**不断往前扫描原数组**
+
+而：`write`   相当于“慢指针”，负责： **记录下一个有效元素应该写到哪里。**
+
+内部实现逻辑：
+```text
+假设：
+
+arr = [1, 2, 3, 2, 4]
+value = 2
+
+开始：*read = 1    *write = 1
+
+第一步:
+
+*read = 1
+
+不是 `2`，所以：*write = *read;      write++;     read++
+
+结果：
+
+[1, 2, 3, 2, 4]
+ ↑
+ write=1
+
+第二步:
+
+*read = 2   == value(2)等于要删除的值。所以：write不移动。  之后read++
+
+第三步
+
+*read = 3
+
+保留：*write = *read;   也就是：arr[1] = arr[2];   数组变成：[1, 3, 3, 2, 4]
+
+然后：write++ 以及read++
+
+最终处理完成：[1, 3, 4, ?, ?]
+
+函数返回：return 3;
+
+表示：有效数组长度 = 3     所以真正有效的数据是：[1, 3, 4]   后面的内容不用管。
+```
+
+会有很多的情况使用到快慢指针，需要记住**两个位置按照不同的移动规则向前推进** 就可以使用快慢指针
+
+|  类型   |    快指针    |    慢指针    |   用途    |
+| :---: | :-------: | :-------: | :-----: |
+| 删除元素  |  `read`   |  `write`  |  数组过滤   |
+| 数组去重  |  `read`   |  `write`  |  压缩数据   |
+| 链表找中点 | `fast` 2步 | `slow` 1步 |   链表    |
+| 链表判环  | `fast` 2步 | `slow` 1步 | Floyd算法 |
 ## 2.2 function pointer（函数指针）
 
 在纯 C 语言（尤其是底层、嵌入式、驱动开发）中，使用函数指针的核心目的只有四个字：**动态调用**。如果不用函数指针，C 语言的函数调用都是死板、硬编码（写死）的。而有了函数指针，**程序就可以在运行时根据不同的情况，动态地决定去执行哪段代码**,主要针对回调函数使用
@@ -2484,43 +2566,34 @@ xiaoming.score = 95.5;
 ### 2.3.2 结构体 + 指针：嵌入式的灵魂
 
 1. 既然有结构体，为什么还要用“结构体指针”？
-
-这就好比你要交作业给老师：
-
-传值（不用指针）：你把作业本上的内容全部抄写一份给老师。如果作业有100页，这太慢了，还浪费纸（内存）。
-
-传址（使用指针）：你直接告诉老师你的作业本放在哪张桌子上（给地址）。老师走过去直接看原件。这非常快！
-
-**在嵌入式中，寄存器配置结构体往往很大，复制它们太浪费时间，所以几乎永远只传地址（指针）**。
+   这就好比你要交作业给老师：传值（不用指针）：你把作业本上的内容全部抄写一份给老师。如果作业有100页，这太慢了，还浪费纸（内存）。传址（使用指针）：你直接告诉老师你的作业本放在哪张桌子上（给地址）。老师走过去直接看原件。这非常快！**在嵌入式中，寄存器配置结构体往往很大，复制它们太浪费时间，所以几乎永远只传地址（指针）**。
 
 2. 最重要的符号：箭头 ->
 
-当你手里拿着一个结构体的指针时，如何访问里面的成员？
+   当你手里拿着一个结构体的指针时，如何访问里面的成员？
 
-普通结构体变量用点 `.` （例如 `xiaoming.age`）
+   普通结构体变量用点 `.` （例如 `xiaoming.age`）
 
-结构体指针变量用箭头 `->` （例如 p->age）
+   结构体指针变量用箭头 `->` （例如 p->age）
 
-|变量类型	|访问符号	|代码示例	|含义|
-|:---:|:---:|:---:|:---:|
-|实体变量|	. (点)|	Config.Mode = ...	|直接打开包裹拿东西|
-|指针变量|	-> (箭头)|	Config->Mode = ...	|顺着地址找到包裹，再拿东西|
+| 变量类型 |  访问符号   |        代码示例        |      含义       |
+| :--: | :-----: | :----------------: | :-----------: |
+| 实体变量 |  . (点)  | Config.Mode = ...  |   直接打开包裹拿东西   |
+| 指针变量 | -> (箭头) | Config->Mode = ... | 顺着地址找到包裹，再拿东西 |
 
 ### 2.3.3 ADC1 -> DR
 
 1. 物理层面的含义：**数据的“终点站”**
 
-ADC (Worker)：是负责干活的模数转换器。它在后台默默地把电压变成数字。
+`ADC (Worker)`：是负责干活的模数转换器。它在后台默默地把电压变成数字。
 
--> (Flow)：代表“写入”或“传送”的动作。
+`-> (Flow)`：代表“写入”或“传送”的动作。
 
-DR (Data Register)：数据寄存器。这是 ADC 模块对外展示结果的唯一窗口。
+`DR (Data Register)`：数据寄存器。这是 ADC 模块对外展示结果的唯一窗口。
 
-“ADC -> DR” 的意思就是： ADC 硬件内部电路转换完电压后，自动把算出来的那个数字（比如 2048），搬运并存储到 DR 寄存器里去。
+`“ADC -> DR”` 的意思就是： ADC 硬件内部电路转换完电压后，自动把算出来的那个数字（比如 2048），搬运并存储到 DR 寄存器里去。
 
-形象比喻：ADC 是厨房里的厨师。DR 是厨房门口的出餐台。ADC -> DR：就是厨师把做好的菜（数据），端到了出餐台上。
-
-CPU（你）平时进不去厨房，你看不到厨师是怎么炒菜的。你只能去出餐台 (DR) 拿菜。
+形象比喻：ADC 是厨房里的厨师。DR 是厨房门口的出餐台。ADC -> DR：就是厨师把做好的菜（数据），端到了出餐台上。CPU平时进不去厨房，看不到厨师是怎么炒菜的。只能去出餐台 (DR) 拿菜。
 
 2. 代码层面的含义：**结构体指针**
 
@@ -2534,13 +2607,11 @@ CPU（你）平时进不去厨房，你看不到厨师是怎么炒菜的。你�
 
 `. B`：表示“成员访问”，即找到结构体里的 B 成员（进房间）。
 
-ADC1 -> DR编码器会把他翻译为 （* ADC1）. DR   * ADC1：先用钥匙打开 ADC1 这个大楼的门（完成了你想要的“取内容”操作）。.DR：然后直接走到 DR 这个房间，拿走里面的数据。结论： 因为 -> 已经帮你把“开门（取内容）”这件事做了，所以不需要再手动加一个 *。
+`ADC1 -> DR`编码器会把他翻译为 `（* ADC1）. DR`         `* ADC1`：先用钥匙打开 ADC1 这个大楼的门（完成了你想要的“取内容”操作）。.`DR`：然后直接走到 DR 这个房间，拿走里面的数据。结论： 因为 -> 已经帮你把“开门（取内容）”这件事做了，所以不需要再手动加一个 *。
 
-ADC1 是一个指针，指向 ADC1 外设在内存中的基地址（大本营）。DR 是这个结构体里的一个成员（偏移地址）。
+`ADC1` 是一个指针，指向 `ADC1 `外设在内存中的基地址（大本营）。`DR` 是这个结构体里的一个成员（偏移地址）。当写代码 `Value = ADC1->DR;` 时，在对 CPU 说： “请去 ADC1 的大本营，找到那个叫 DR 的房间，把里面的数字读出来给。”
 
-当写代码 Value = ADC1->DR; 时，在对 CPU 说： “请去 ADC1 的大本营，找到那个叫 DR 的房间，把里面的数字读出来给。”
-
-### 2.3.4 结构体嵌套结构体
+### 2.3.4 结构体嵌套(❗)
 
 ```c
 typedef struct 
@@ -2561,9 +2632,7 @@ typedef struct
   DMA_HandleTypeDef my_dma_handler;
   my_dma_handler.DMA_Streamx = DMA1_Stream0; // 👈 把物理地址（如 0x40026000）传给它
   ```
-
 3. 接下来，当想在 App 层让这个 DMA 开启传输时，驱动函数内部就可以通过这个指针，**直接物理操控硬件的寄存器**：
-   
  ```c
  // 驱动内部代码：顺着门牌号找到硬件，把它的控制寄存器（CR）的启动位（EN）给置 1！
  my_dma_handler.DMA_Streamx->CR |= DMA_SxCR_EN; 
@@ -2576,53 +2645,192 @@ typedef struct
     - **作用**：让你的软件代码能够精准操控具体的物理硬件。
 2. **如果不带星号（如 `GPIO_InitTypeDef Init;`）**：
     - **真相**：这才是真正的结构体嵌套（实体套实体）。
-    - **作用**：这通常是一张**“配置参数大礼包（表单）”**，里面装满了诸如引脚速度、上拉下拉等具体的配置数值，用来一次性传给初始化函数。
+    - **作用**：这通常是一张 **“配置参数大礼包（表单）”**，里面装满了诸如引脚速度、上拉下拉等具体的配置数值，用来一次性传给初始化函数。
 
 具体的使用方式
 ```c
-/* 1. 先定义被嵌套的底层配置图纸 */ 
-typedef struct 
-{ 
-	uint32_t pin; // 引脚号（分号结尾，代表独立变量声明语句） 
-	uint32_t mode; // 模式（分号结尾） 
-} GPIO_Config_t; 
+typedef struct
+{
+    uint8_t tx_buffer[128];
+    uint8_t rx_buffer[128];
+} Buffer;
 
-/* 2. 再定义总管结构体图纸（也就是 total_manager 的真身） */ 
-typedef struct 
-{ // 核心关键：嵌套的结构体指针！它是一个 4 字节的物理地址接收器 
-	GPIO_Config_t *p_config; // 可以在总管里继续塞入其他的业务属性 uint8_t device_id; 
-	// 设备编号 
-	uint8_t status; // 设备状态（比如：0代表休眠，1代表运行） 
-} Device_Manager_t; // 这一整行声明结束，用分号收尾！
+typedef struct
+{
+    Buffer *buffer;
 
+    uint8_t state;
+} UART_Device;
 
-int main(void) 
-{ 
-	// 内存里现在有两个实打实的硬件配置表（实体 A 和 实体 B） 
-	GPIO_Config_t config_room_A = 
-	{ 
-		.pin = 1, 
-		.mode = 0 
-	}; 
-	
-	GPIO_Config_t config_room_B = 
-	{ 
-		.pin = 2, 
-		.mode = 1 
-	}; 
-	
-	Device_Manager_t total_manager; // 总管 
-	
-	// 物理动作 1：白天，让总管去管 A 房间 
-	total_manager.p_config = &config_room_A; 
-	total_manager.p_config->pin = 10;   // 此时修改的是 config_room_A.pin！ 
-	
-	// 物理动作 2：黑夜，【动态调换指向】！让总管转头去管 B 房间 
-	total_manager.p_config = &config_room_B; 
-	total_manager.p_config->pin = 20; // 此时修改的是 config_room_B.pin！config_room_A 毫发无损！ 
-}
+//然后
+Buffer uart_buffer;
+
+UART_Device uart;
+
+//初始化
+uart.buffer = &uart_buffer;
+
+//访问
+uart.buffer->tx_buffer[0] = 'A';
 ```
 
+拆开看：`uart` 是变量：`uart.buffer` 而：`uart.buffer` 是：`Buffer *`
+
+所以：
+
+```c
+uart.buffer->tx_buffer
+```
+
+最终：
+
+```c
+uart.buffer->tx_buffer[0]
+```
+
+---
+一共有四种的嵌套方式
+
+1️⃣ 外层变量 + 内层变量
+```c
+struct Student
+{
+    struct Date birthday;
+};
+
+struct Student stu;
+```
+
+访问：
+
+```c
+stu.birthday.year
+```
+
+逻辑：
+
+```text
+stu            结构体      .
+birthday       结构体      .
+year
+```
+
+所以：
+
+```c
+stu.birthday.year
+```
+
+---
+2️⃣ 外层指针 + 内层变量
+
+```c
+struct Student
+{
+    struct Date birthday;
+};
+
+struct Student *p;
+```
+
+访问：
+
+```c
+p->birthday.year
+```
+
+逻辑：
+
+```c
+p              指针        ->
+birthday       结构体      .
+year
+```
+
+所以：
+
+```c
+p->birthday.year
+```
+
+---
+3️⃣ 外层变量 + 内层指针
+
+```c
+struct Student
+{
+    struct Date *birthday;
+};
+
+struct Student stu;
+```
+
+访问：
+
+```c
+stu.birthday->year
+```
+
+逻辑：
+
+```text
+stu            结构体      .
+birthday       指针        ->
+year
+```
+
+所以：
+
+```c
+stu.birthday->year
+```
+
+---
+
+4️⃣ 外层指针 + 内层指针
+
+```c
+struct Student
+{
+    struct Date *birthday;
+};
+
+struct Student *p;
+```
+
+那么：
+
+```text
+p->birthday->year
+```
+
+逻辑：
+
+```text
+p              指针        ->
+birthday       指针        ->
+year
+```
+
+所以：
+
+```c
+p->birthday->year
+```
+
+判断结构体嵌套只需要**每走一层，看当前左边那个东西是什么类型**
+
+规则只有两个：
+
+```text
+左边是结构体变量
+        ↓
+        .
+
+左边是结构体指针
+        ↓
+        ->
+```
 ## 2.4 Typedef （定义类型）
 
 关键字：typedef
@@ -3959,7 +4167,190 @@ int      add      (int a, int b)      { ...... }
 
 因此可以记住函数定义的基本公式：==返回类型 + 函数名 + 参数列表 + 函数体==
 
-### 3.1.2 返回值
+### 3.1.2 函数参数 parameter
+
+C语言默认是**值传递** 如：
+```c
+void Change(int x)
+{
+    x = 100;
+}
+
+//然后：
+
+int a = 10;  
+Change(a);
+```
+
+最后：a = 10，不是100。
+
+因为：`Change(a);`本质：
+```text
+a = 10 
+复制一份 
+     ↓  
+x = 10
+
+所以内存：
+main  
+
+a
+地址 0x20000000
+值   10
+
+
+Change  
+x
+地址 0x20000100
+值   10
+
+执行：x = 100;
+只是：x = 100
+不会改变：a = 10
+
+```
+
+所以：C语言函数参数默认都是值传递。
+
+想让函数真正修改外面的变量需要传地址
+
+1. 普通参数
+```c
+int add(int a, int b)
+```
+
+这里：int a、 int b叫：**形参 Formal Parameter**
+
+调用的时候：
+```c
+int x = 10;
+int y = 20; 
+
+int result = add(x, y);
+```
+
+这里：x、y叫：**实参 Actual Argument**
+
+可以理解：
+```text
+调用者 
+x = 10
+y = 20  
+ ↓ 传参 
+add(a, b)  
+
+a得到10
+b得到20
+```
+
+---
+2. 数组作为函数参数
+```c
+void process(uint8_t buffer[])
+{
+
+}
+```
+
+在**函数参数列表中**：
+
+`uint8_t buffer[]`基本等价于：`uint8_t *buffer`
+
+所以更常见的驱动接口是：
+```c
+void uart_send(const uint8_t *data,  uint16_t length);
+```
+
+为什么一定要再传：length, 因为函数内部只拿到了：首地址。它通常已经不知道原数组到底有：10 Byte、100 Byte还是1000 Byte
+
+例如：
+```c
+uint8_t data[100];
+
+uart_send(data, 100);
+```
+
+所以非常经典的 API 组合就是：
+```c
+const uint8_t *data,
+
+uint16_t length
+```
+
+---
+3. 指针做为参数
+```c
+void change(int *p)
+{
+    *p = 100;
+}  
+
+int main(void)
+{
+    int x = 10;  
+    change(&x);
+}
+```
+
+这里仍然是： **值传递。** 只是这一次复制的“值”不是 `10`，而是：x的地址。假设：x地址 = 0x20001000  那么：`change(&x);`  相当于：把0x20001000复制给p。于是：p = 0x20001000 然后：`*p = 100;` CPU 顺着：0x20001000 找到真正的 `x`。因此变成：x = 100
+
+所以一定要记：**C语言没有真正意义上的“引用传递”。指针也是值传递，只不过传进去的值恰好是一个地址。**
+
+实际应用中会有大量的指针参数，驱动模板：`void spi_init(typedef_spi *spi);`  不写：`void spi_init(typedef_spi spi);`
+
+假设：
+```c
+typedef struct
+{
+    SPI_TypeDef *SPIx;
+    uint32_t SPI_CLK;
+    GPIO_TypeDef *GPIOx;
+    uint32_t GPIO_CLK; 
+    ...
+} typedef_spi;
+```
+
+整个结构体可能占几十个 Byte。如果：`spi_init(spi1_flash1);`直接值传递，就可能需要复制整个结构体。而：`spi_init(&spi1_flash1);`只需要传递：一个地址  STM32F407 是32位地址，因此普通数据指针通常就是：4 Byte  于是：
+```text
+大结构体
+   ↓
+不复制
+   ↓
+只传地址
+   ↓
+驱动函数通过 -> 操作原对象
+```
+
+---
+
+4. const + 参数
+```c
+void uart_send(
+    const uint8_t *data,
+    uint16_t length
+);
+```
+
+意思是：` uart_send()` 可以读取 `data` 指向的数据，但不应该通过 `data` 修改它。
+
+所以：
+```c
+data[0] = 0x55;     // 不允许
+```
+
+这种接口非常好，因为它明确告诉别人：这是输入数据，函数只读，不会修改原来的buffer
+
+例如：
+```c
+bool esp_at_send_command(
+    const char *cmd,
+    ...
+);
+```
+
+这里的：`const char *cmd`本质也是： `cmd` 是输入参数，只读取 AT 命令。
+
+### 3.1.3 返回值
 
 可以返回数据，指针，结构体或者什么都不返回
 
@@ -3996,7 +4387,7 @@ void led_on(void)
 
 判断返回的内容，返回的通常都是指针，
 
-#### 3.1.2.1 返回数据
+#### 3.1.3.1 返回数据
 
 嵌入式喜欢return 0/-1
 
@@ -4040,9 +4431,9 @@ Flash_Status_t Flash_Write(...)
 ```
 可读性会好很多。
 
-#### 3.1.2.2 返回数组
+#### 3.1.3.2 返回数组
    
-   **C 语言的函数不支持直接返回一个真正的数组（如 `int[10]`）**，只能通过**返回指向数组首元素的指针（**`int*`）来实现
+   **C 语言的函数不支持直接返回一个真正的数组（如 `int[10]`）**，只能通过**返回指向数组首元素的指针（`int*`）来实现**
 
 绝对不能返回“局部自动数组”，这是最常见、最隐蔽的崩溃性错误。
 
@@ -4099,7 +4490,7 @@ int* getArray(int* returnSize) {
 }
 ```
 
-#### 3.1.2.3 返回指针
+#### 3.1.3.3 返回指针
 ```c
 int *find(...)
 ```
@@ -4221,7 +4612,7 @@ int *func()
 
 所以，“字符串”其实只是内容的概念。C 语言里的字符串既可以存在于字符串字面量里，也可以存在于字符数组里。真正决定能不能安全返回的，是**存储位置和生命周期**。
 
-### 3.1.3 函数名
+### 3.1.4 函数名
 
  **函数名在大多数表达式中会自动转换为指向该函数的函数指针。** 
 
@@ -4248,197 +4639,6 @@ p()
  ↓
 再跳过去执行
 ```
-
-### 3.1.4 函数参数 parameter
-
-C语言默认是**值传递** 如：
-```c
-void Change(int x)
-{
-    x = 100;
-}
-
-//然后：
-
-int a = 10;  
-Change(a);
-```
-
-最后：a = 10，不是100。
-
-因为：`Change(a);`本质：
-```text
-a = 10 
-复制一份 
-     ↓  
-x = 10
-
-所以内存：
-main  
-
-a
-地址 0x20000000
-值   10
-
-Change  
-
-x
-地址 0x20000100
-值   10
-
-执行：x = 100;
-
-只是：x = 100
-
-不会改变：a = 10
-
-```
-
-所以：C语言函数参数默认都是值传递。
-
-想让函数真正修改外面的变量需要传地址
-
-1. 普通参数
-```c
-int add(int a, int b)
-```
-
-这里：int a、 int b叫：**形参 Formal Parameter**
-
-调用的时候：
-```c
-int x = 10;
-int y = 20; 
-
-int result = add(x, y);
-```
-
-这里：x、y叫：**实参 Actual Argument**
-
-可以理解：
-```text
-调用者 
-x = 10
-y = 20  
- ↓ 传参 
-add(a, b)  
-
-a得到10
-b得到20
-```
-
----
-2. 数组作为函数参数
-```c
-void process(uint8_t buffer[])
-{
-
-}
-```
-
-在**函数参数列表中**：
-
-`uint8_t buffer[]`基本等价于：`uint8_t *buffer`
-
-所以更常见的驱动接口是：
-```c
-void uart_send(const uint8_t *data,  uint16_t length);
-```
-
-为什么一定要再传：length, 因为函数内部只拿到了：首地址。它通常已经不知道原数组到底有：10 Byte、100 Byte还是1000 Byte
-
-例如：
-```c
-uint8_t data[100];
-
-uart_send(data, 100);
-```
-
-所以非常经典的 API 组合就是：
-```c
-const uint8_t *data,
-
-uint16_t length
-```
-
----
-3. 指针做为参数
-```c
-void change(int *p)
-{
-    *p = 100;
-}  
-
-int main(void)
-{
-    int x = 10;  
-    change(&x);
-}
-```
-
-这里仍然是： **值传递。** 只是这一次复制的“值”不是 `10`，而是：x的地址。假设：x地址 = 0x20001000  那么：`change(&x);`  相当于：把0x20001000复制给p。于是：p = 0x20001000 然后：`*p = 100;` CPU 顺着：0x20001000 找到真正的 `x`。因此变成：x = 100
-
-所以一定要记：**C语言没有真正意义上的“引用传递”。指针也是值传递，只不过传进去的值恰好是一个地址。**
-
-实际应用中会有大量的指针参数
-
-驱动模板：`void spi_init(typedef_spi *spi);`
-
-不写：`void spi_init(typedef_spi spi);`
-
-假设：
-```c
-typedef struct
-{
-    SPI_TypeDef *SPIx;
-    uint32_t SPI_CLK;
-    GPIO_TypeDef *GPIOx;
-    uint32_t GPIO_CLK; 
-    ...
-} typedef_spi;
-```
-
-整个结构体可能占几十个 Byte。如果：`spi_init(spi1_flash1);`直接值传递，就可能需要复制整个结构体。
-
-而：`spi_init(&spi1_flash1);`只需要传递：一个地址  STM32F407 是32位地址，因此普通数据指针通常就是：4 Byte  于是：
-```text
-大结构体
-   ↓
-不复制
-   ↓
-只传地址
-   ↓
-驱动函数通过 -> 操作原对象
-```
-
----
-
-4. const + 参数
-```c
-void uart_send(
-    const uint8_t *data,
-    uint16_t length
-);
-```
-
-意思是：` uart_send()` 可以读取 `data` 指向的数据，但不应该通过 `data` 修改它。
-
-所以：
-```c
-data[0] = 0x55;     // 不允许
-```
-
-这种接口非常好，因为它明确告诉别人：这是输入数据，函数只读，不会修改原来的buffer
-
-例如：
-```c
-bool esp_at_send_command(
-    const char *cmd,
-    ...
-);
-```
-
-这里的：`const char *cmd`本质也是： `cmd` 是输入参数，只读取 AT 命令。
 
 ### 3.1.5 static 函数
 
@@ -4870,9 +5070,7 @@ USART_SendData(USART1,Data);
 
 ### 3.6.1 定义
 
-`switch...case` 是 C 语言中的**多分支选择语句**。它适合处理这种情况：
-
-> 根据同一个变量的不同离散值，执行不同代码
+`switch...case` 是 C 语言中的**多分支选择语句**。它适合处理这种情况：**根据同一个变量的不同离散值，执行不同代码**
 
 例如根据命令执行不同功能：
 
@@ -5014,9 +5212,7 @@ switch (operation)
 
 因为**字符在 C 语言中本质上也是整数编码**。
 
-`break` 表示： 立即退出当前 `switch`。
-
-如果不写 `break`，程序会继续向下执行后面的 `case`
+`break` 表示： 立即退出当前 `switch`。如果不写 `break`，程序会继续向下执行后面的 `case`
 
 需要注意： `case` 只是一个跳转入口，不会自动结束前一个分支。
 
@@ -5102,6 +5298,166 @@ if (strcmp(command, "start") == 0)
 |    字符串判断    |  不直接支持   |     支持      |
 |   复杂逻辑条件    |   不适合    |     适合      |
 |   枚举状态处理    |   非常适合   |     可以      |
+## 3.7 链表
+
+### 3.7.1 定义
+
+数组是这样存的：
+
+```text
+arr:
+
+[10][20][30][40]
+ ↑   ↑   ↑   ↑
+连续内存
+```
+
+每个元素紧挨着。
+
+链表则不要求连续：
+
+```text
+┌──────┬──────┐
+│  10  │ next │
+└──────┴───┬──┘
+           ↓
+        ┌──────┬──────┐
+        │  20  │ next │
+        └──────┴───┬──┘
+                   ↓
+                ┌──────┬──────┐
+                │  30  │ NULL │
+                └──────┴──────┘
+```
+
+**每个节点包含：数据 + 下一个节点的地址**
+
+因此： 链表本质上就是**通过指针把一堆节点串起来**。
+
+### 3.7.2 基本语法
+
+通常定义：
+
+```c
+struct Node
+{
+    int data;
+    struct Node *next;
+};
+```
+
+这里：`int data;`保存数据。而：`struct Node *next;`   保存：下一个 `Node` 的地址。
+
+例如：
+
+```c
+node1.data = 10
+node1.next = &node2
+
+node2.data = 20
+node2.next = &node3
+
+node3.data = 30
+node3.next = NULL
+```
+
+最终：
+
+```c
+node1 → node2 → node3 → NULL
+```
+
+ ❗ **next 必须是指针**,不能写：
+
+```c
+struct Node
+{
+    int data;
+    struct Node next;
+};
+```
+
+因为会发生无限递归：
+
+```text
+Node里面有Node
+    ↓
+这个Node里面又有Node
+    ↓
+又有Node
+    ↓
+……
+```
+
+编译器根本不知道：`sizeof(struct Node)`应该是多少。所以**必须写：`struct Node *next;`指针大小是固定的。这样结构体大小才能确定。**
+
+### 3.7.3 头指针
+
+链表最重要的变量一般是：
+
+```c
+struct Node *head;
+```
+
+它保存： 第一个节点的地址。
+
+例如：
+
+```text
+head
+ ↓
+[10|next] → [20|next] → [30|NULL]
+```
+
+如果：`head == NULL` 就表示：链表为空      这一点和：`int *p = NULL;`本质是一样的。
+
+---
+手动创建一个链表
+
+先不考虑 `malloc`：
+
+```c
+struct Node node1;
+struct Node node2;
+struct Node node3;
+
+node1.data = 10;
+node2.data = 20;
+node3.data = 30;
+
+node1.next = &node2;
+node2.next = &node3;
+node3.next = NULL;
+
+struct Node *head = &node1;
+```
+
+现在：
+
+```text
+head
+ ↓
+node1        node2        node3
+[10| • ] → [20| • ] → [30|NULL]
+```
+
+### 3.7.4 相关应用
+1️⃣ 访问链表
+
+如果：
+
+```c
+struct Node *p = head;
+```
+
+那么：`p->data`  就是第一个节点的数据：10   而：`p->next` 就是：node2 的地址
+
+所以：`p = p->next;`就是： 指针移动到下一个节点。 
+
+然后：`p->data`就是：20
+
+再：`p = p->next;`就到：30
+
 # 4 模块化与嵌入式关键字
 
 ## 4.1 区分App（应用层）和Driver（驱动层）
