@@ -1404,7 +1404,7 @@ sizeof(arr)
 
 因此**数组传入函数时，一般要额外传入长度：**
 
-```
+```c
 void test(uint8_t *arr, size_t len)
 {
 }
@@ -2542,7 +2542,7 @@ int main()
 
 在纯 C 语言（尤其是底层、嵌入式、驱动开发）中，使用函数指针的核心目的只有四个字：**动态调用**。如果不用函数指针，C 语言的函数调用都是死板、硬编码（写死）的。而有了函数指针，**程序就可以在运行时根据不同的情况，动态地决定去执行哪段代码**,主要针对回调函数使用
 
-### 2.2.1 什么是函数指针
+### 2.2.1 函数指针定义
 
 普通指针保存的是**数据地址**：
 
@@ -2562,26 +2562,25 @@ int add(int a, int b)
 int (*func_ptr)(int, int) = add;
 ```
 
-这里：
-
-```c
-func_ptr
-```
-
-保存了 `add()` 函数的地址，因此可以通过它调用 `add()`：
+这里：**`func_ptr` 就是个指针，只不过里面存放的应该是函数的地址** 保存了 `add()` 函数的地址，因此可以通过它调用 `add()`：
 
 ```c
 int result = func_ptr(10, 20);
 ```
 
-结果：
-
-```c
-result = 30
-```
+结果：`result = 30`
 
 函数指针的核心作用是： **不把要调用的函数写死，而是在运行时决定调用哪个函数**。
 
+要对函数指针熟悉，定义的**函数指针`Callback_t` 本质上就和`int*` 是一样的**
+
+|    操作步骤    |     🍦 普通指针 `int *`     |           ⚡ 函数指针 `Callback_t`           |
+| :--------: | :---------------------: | :-------------------------------------: |
+|  **声明变量**  |        `int *p;`        |            `Callback_t cb;`             |
+|  **给它清零**  |   `p = 0;` (或 `NULL`)   |          `cb = 0;` (或 `NULL`)           |
+| **传参/赋值**  |        `p = &a;`        |       `cb = hello;` (或 `&hello`)        |
+| **函数里接收**  |   `void func(int *p)`   | `void register_callback(Callback_t cb)` |
+| **顺藤摸瓜使用** | `*p = 10;` (解引用取出/修改数据) |        `cb(10);` (加个括号直接让代码跑起来)         |
 ### 2.2.2 函数指针声明
 
 假设有函数：
@@ -2614,7 +2613,8 @@ func_ptr 是一个指针
 参数这个函数返回 int
 ```
 
-### 2.2.3 函数指针的赋值
+
+### 2.2.3 函数指针赋值与调用
 
 1. 直接使用函数名
 
@@ -2624,11 +2624,11 @@ int (*func_ptr)(int, int);
 func_ptr = add;
 ```
 
-**函数名在多数表达式中会自动转换成函数地址**。
+   **函数名在多数表达式中会自动转换成函数地址**。
 
 2. 使用取地址符
 
-也可以写：
+   也可以写：
 
 ```c
 func_ptr = &add;
@@ -2647,8 +2647,9 @@ func_ptr = &add;
 ```c
 func_ptr = add;
 ```
+---
 
-4. 通过函数指针调用函数
+3. 通过函数指针调用函数
 
 两种写法都可以：
 
@@ -2662,41 +2663,66 @@ int result = func_ptr(10, 20);
 int result = (*func_ptr)(10, 20);
 ```
 
-两者效果相同。
+两者效果相同。通常使用：`func_ptr(10, 20);` 更简洁。
 
-通常使用：
+需要注意，对于函数指针**有多种的调用方式**：   
 
-```c
-func_ptr(10, 20);
+**判断有没有调用函数，就看最后有没有 `()`。**
+
+```text
+p();       // 1. 最常用的现代写法（隐式解引用）
+(*p)();    // 2. 最严谨的传统写法（标准解引用）
+(***p)();  // 3. 疯狂套娃写法，依然正确！
+hello();   // 4. 直接调用
+
+callback;    // 不调用 
+*callback;   // 不调用 
+callback();  // 调用 
+(*callback)(); // 调用
 ```
 
-更简洁。
+这几种写法都可以做到正常调用函数指针，**`(*p)()` 也能跑**：因为 `p` 是指针，`*p` 就拿到了函数本身；而函数本身在执行时又被自动转成了指针，所以无论加多少个 `*`，编译器最终都会把它还原成那个函数的入口地址。
 
-完整示例：
+
+如果不使用typedef对函数指针重新命名，在调用的时候就会很麻烦
 
 ```c
 #include <stdio.h>
 
-int add (int a, int b)
-{    
-	return a + b;
+int8_t UART_DR;
+
+void (*uart_callback)(uint8_t data) = NULL;
+
+/*
+	这里的输入参数就是完整的void (*cb)(uint8_t)    和typedef区别很大
+*/
+void UART_RegisterCallback(void (*cb)(uint8_t))   
+{
+    uart_callback = cb;
+}
+
+void UART_IRQHandler(void)
+{
+    uint8_t data = UART_DR;
+
+    if (uart_callback != NULL)
+    {
+        uart_callback(data);
+    }
+}
+
+void app_uart_receive(uint8_t data)
+{
+    printf("%c\n", data);
 }
 
 int main(void)
-{    
-	int (*func_ptr)(int, int);    
-	
-	func_ptr = add;    
-	
-	int result = func_ptr(10, 20);    
-	
-	printf("%d\n", result);    
-	
-	return 0;
+{
+    UART_RegisterCallback(app_uart_receive);
 }
 ```
 
-### 2.2.4 使用 typedef 简化函数指针
+### 2.2.4 使用 typedef 简化函数指针（❗）
 
 函数指针声明比较复杂：
 
@@ -2710,19 +2736,7 @@ int (*func_ptr)(int, int);
 typedef int (*Operation) (int, int);
 ```
 
-这里的：
-
-```c
-Operation
-```
-
-代表一种函数指针类型： **指向“接收两个 `int`、返回 `int`”函数的指针类型**。
-
-之后可以直接写：
-
-```c
-Operation func_ptr;
-```
+这里的：`Operation` 代表一种函数指针类型： **指向“接收两个 `int`、返回 `int`”函数的指针类型**。之后可以直接写：`Operation func_ptr;`
 
 完整示例：
 
@@ -2781,11 +2795,86 @@ int main(void)
 - **还想再来一个**：“再来一个 `Operation` 类型的变量，名字叫 `p2`。”
     - **代码**：`Operation p2;`
 
+---
+使是这种写法：
+
+```c
+typedef void (*Callback_t)(int);
+```
+
+那么： **`Callback_t` 对应的是 `int *`，不是 `int`。**  因为 `Callback_t` 本身已经把那个 `*` 包进去了。
+
+直接类比最清楚：
+
+```c
+typedef int* IntPtr_t;
+```
+
+那么：`IntPtr_t p;` 其实就是：int *p;`
+
+同样：
+
+```c
+typedef void (*Callback_t)(int);
+```
+
+那么：`Callback_t callback;`  其实就是：`void (*callback)(int);`
+
+所以对应关系是：
+
+```text
+int *p
+│    │
+│    └── p：变量名
+└─────── int *：变量类型
+```
+
+函数指针：
+
+```text
+void (*callback)(int)
+       │
+       └── callback：变量名
+
+整个：
+void (*)(int)
+就是 callback 的类型
+```
+
+而我们：
+
+```c
+typedef void (*Callback_t)(int);
+```
+
+就是给：
+
+```c
+void (*)(int)
+```
+
+这个**函数指针类型**起了一个名字：`Callback_t`  因此：
+
+```tect
+Callback_t
+=
+void (*)(int)
+=
+函数指针类型
+```
+
+可以**直接记：`int *p;`   对应：`Callback_t callback;`**   这里：
+
+```text
+int *       ↔ Callback_t
+p           ↔ callback
+```
+
 ### 2.2.5 使用示例
 
 1. 不用函数指针，普通函数的做法（硬编码死板应用）
 
-假设你写了一个底层的按键驱动文件 `button.c`。
+   假设写了一个底层的按键驱动文件 `button.c`
 
 - **规则**：底层驱动的代码一旦写好，**绝对不能轻易修改**。
 - **痛点**：今天产品经理要求按键按下时“LED灯闪烁”，明天要求按键按下时“屏幕显示文字”。
@@ -2806,7 +2895,7 @@ void check_button_status() {
 
 2. 函数指针的做法（真正的回调应用）
 
-现在，在底层驱动里换上**函数指针**。底层驱动只提供一个“空插座”，具体插什么由上层决定。可以很好的做到解耦合
+   现在，在底层驱动里换上**函数指针**。底层驱动只提供一个“空插座”，具体插什么由上层决定。可以很好的做到解耦合
 
 ```c
 // button.c（底层驱动）
@@ -2836,7 +2925,7 @@ void check_button_status()
 
 3. 上层业务（随心所欲，底层代码一字不改）
 
-有了上面的函数指针驱动，上层应用（比如 `main.c`）就可以随意玩转了：
+   有了上面的函数指针驱动，上层应用（比如 `main.c`）就可以随意玩转了：
 
 - **应用场景 A：需要闪烁 LED**
     ```c
@@ -3488,7 +3577,7 @@ switch (state)
 基本写法：
 
 ```c
-typedef int *IntPtr;
+typedef int* IntPtr;
 ```
 
 使用：
@@ -3599,7 +3688,7 @@ operation = add;
 int result = operation(10, 20);
 ```
 
-### 2.4.8 回调函数类型
+### 2.4.8 回调函数类型(❗)
 
 ```c
 typedef void (*UART_Callback)( uint8_t data);
@@ -4664,7 +4753,7 @@ void process(uint8_t buffer[])
 
 在**函数参数列表中**：
 
-`uint8_t buffer[]`基本等价于：`uint8_t *buffer`
+`uint8_t buffer[]`基本等价于：`uint8_t* buffer`
 
 所以更常见的驱动接口是：
 ```c
@@ -4690,7 +4779,7 @@ uint16_t length
 ---
 3. 指针做为参数
 ```c
-void change(int *p)
+void change(int* p)
 {
     *p = 100;
 }  
@@ -4731,36 +4820,8 @@ typedef struct
 驱动函数通过 -> 操作原对象
 ```
 
----
 
-4. const + 参数
-```c
-void uart_send(
-    const uint8_t *data,
-    uint16_t length
-);
-```
-
-意思是：` uart_send()` 可以读取 `data` 指向的数据，但不应该通过 `data` 修改它。
-
-所以：
-```c
-data[0] = 0x55;     // 不允许
-```
-
-这种接口非常好，因为它明确告诉别人：这是输入数据，函数只读，不会修改原来的buffer
-
-例如：
-```c
-bool esp_at_send_command(
-    const char *cmd,
-    ...
-);
-```
-
-这里的：`const char *cmd`本质也是： `cmd` 是输入参数，只读取 AT 命令。
-
-### 3.1.3 返回值
+### 3.1.3 返回值(❗)
 
 可以返回数据，指针，结构体或者什么都不返回
 
@@ -5022,6 +5083,7 @@ int *func()
 
 所以，“字符串”其实只是内容的概念。C 语言里的字符串既可以存在于字符串字面量里，也可以存在于字符数组里。真正决定能不能安全返回的，是**存储位置和生命周期**。
 
+#### 返回结构体
 ### 3.1.4 函数名
 
  **函数名在大多数表达式中会自动转换为指向该函数的函数指针。** 
