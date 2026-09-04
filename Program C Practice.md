@@ -4688,6 +4688,13 @@ p = NULL;
 3. 执行 `p = NULL` 后，`a` 是多少？
 4. 此时还能执行 `*p = 30` 吗？为什么？
 
+```text
+执行 `*p = 20` 后，`a` 是20
+`p = NULL` 修改的是 `p`
+执行 `p = NULL` 后，`a` 是20
+此时不能执行 `*p = 30`   因为p已经指向了空地址    对应并没有内容存放
+```
+
 ---
 
 ### 第 2 题：指针重新指向
@@ -4724,7 +4731,13 @@ p = &b;
 ```
 
 本质上有什么区别？
-
+```text
+a = 30
+b = 40
+* p = 40
+p = &b;  是把数值b的地址传到指针p中
+*p = b;   是把p保存地址对应的内容替换成b
+```
 ---
 
 ## 第二部分：你之前容易混的自增
@@ -4749,6 +4762,13 @@ printf("%d\n", arr[0]);
 2. `arr[0]` 是多少？
 3. `(*p)++` 修改的是谁？
 4. `p++` 修改的是谁？
+
+```text
+最终*p为20
+arr[0]是11
+(*p)++ 修改的是数组的第一个元素    进行自增
+p++  修改的是指针保存的地址    自增了4个字节的大小     对应数组第二个元素
+```
 
 ---
 
@@ -4779,7 +4799,11 @@ x = ?
 ```
 
 加括号写成真正的运算顺序。
-
+```text
+x = 10
+*p = 20
+*p++代表的是*（p++） 意思是先对指针进行取值    所有命令都执行完成之后再对指针进行自增的操作
+```
 ---
 
 ### 第 5 题：三个表达式必须区分
@@ -4808,7 +4832,11 @@ p++;
 分别修改什么？
 
 这一题不用运行代码，重点解释语义。
-
+```text
+p++;  代表指针自增     如果a原本的地址是0x1000   那么现在p保存的地址就是0x1004
+(*p)++;   代表先对指针取值    再把取出来的值自增1
+*p++;   先对指针取值     取值之后再把指针自增1
+```
 ---
 
 ## 第三部分：函数与指针参数
@@ -4843,7 +4871,13 @@ p = NULL;
 ```
 
 会不会把 `main()` 中的 `a` 删除？
+```text
+`change(&a)` 真正传进去的是  a的地址
+`p` 和 `a` 并不是同一个变量
+因为想改变哪个变量   就把哪个变量的地址传入到函数中    通过修改*p可以直接修改地址对应的内容
 
+写p = NULL;并不会把main中的a 删除    如果想修改调用者的一级指针本身，需要传一级指针的地址，也就是二级指针。
+```
 ---
 
 ### 第 7 题：这个函数为什么修改不了指针？
@@ -4874,7 +4908,12 @@ int main(void)
 重点解释：
 
 > 为什么函数里面明明执行了 `p = &b`，main 中的 `p` 却没有被修改？
-
+```text
+最终打印的还是10
+想要修改谁就要把谁的地址传入到函数中
+这段程序想要通过改变指针p保存的地址   从而改变最后的取值
+但是只传入了p  应该传入int** p
+```
 ---
 
 ## 第四部分：二级指针
@@ -4915,6 +4954,14 @@ pp 保存什么？
 a = ?
 ```
 
+```text
+p 保存a的地址
+*p 是取出地址对应的值    就是a = 10
+pp 保存的是p这个指针的地址
+*pp 就代表了p  里面保存了a的地址
+**pp 是取出a的值   也就是10
+最后a = 50
+```
 ---
 
 ### 第 9 题：为什么这里需要二级指针？
@@ -4950,7 +4997,12 @@ int main(void)
 ```
 
 真的能够修改 main 中 `p` 保存的地址？
-
+```text
+`&p` 是指针p的地址
+pp  保存的就是指针p的地址
+`*pp`  表示的是p    对应main中的&a
+*pp = &b;   可以修改main中p保存的地址     因为函数传入的是指针p的地址    可以更改main中的内容
+```
 ---
 
 ## 第五部分：字符串指针——你之前反复卡过的地方
@@ -4981,7 +5033,14 @@ xxx[0] = 'H';
 ```
 
 5. 为什么？
-
+```text
+第一个hello存在只读区     
+第二个hello存在栈里面    ram中
+p  保存的是这个字符串对应的地址
+str是数组名
+第二个可以安全执行字符串的修改
+因为第一个字符串保存在只读区    是禁止修改里面的字符的
+```
 ---
 
 ### 第 11 题：函数返回指针
@@ -5013,7 +5072,10 @@ char *func(void)
 重点解释：
 
 > 为什么两段代码虽然都返回 `char *`，生命周期却不一样？
-
+```text
+第一段有问题     因为第一段是在函数里面定义的数组字符串   如果函数结束就会释放这个数组   最后传出去的只有一个地址    并没有对应的值
+第二段的hello是存在只读区的    即使函数结束   也不会擦除只读区的内容
+```
 ---
 
 ## 第六部分：结构体指针
@@ -5061,7 +5123,12 @@ p->value
 ```
 
 使用 `->`。
-
+```text
+dev.value = 200
+p -> = 200
+因为第一个dev是结构体的类型是通过.直接进行更改结构体里面的数据的
+第二个是指针的类型    需要通过->去进去结构体内部
+```
 ---
 
 ### 第 13 题：结构体内部的指针
@@ -5106,12 +5173,15 @@ dev
 把 `d.value` 修改成 `200`。
 
 这一题正好练你之前“结构体里面套结构体指针怎么赋值”的薄弱点。
-
+```text
+dev.data = &d
+dev.data -> value = 200
+```
 ---
 
 ## 第七部分：函数指针——近期重点
 
-### 第 14 题：先区分三个人
+### 第 14 题：先区分三个人（❗）
 
 ```
 typedef void (*Callback_t)(int);
@@ -5148,6 +5218,82 @@ callback = hello;
 callback 里面保存什么？
 ```
 
+```text
+Callback_t 是对函数指针的重命名    在使用中可以看做是int*
+
+`callback` 是：**函数指针变量**   ‼️
+
+hello 是定义的具体的函数    输入参数是int   没有输出
+callback 里面能够保存输入参数是int   没有输出参数的函数名   也就是函数对应的地址
+```
+
+完整关系：
+
+```
+typedef void (*Callback_t)(int);
+```
+
+表示：
+
+```
+Callback_t
+=
+void (*)(int)
+=
+一种函数指针类型
+```
+
+然后：
+
+```
+Callback_t callback;
+```
+
+表示：
+
+```
+callback
+=
+一个函数指针变量
+```
+
+而：
+
+```
+void hello(int x)
+```
+
+这里：
+
+```
+hello
+=
+函数
+```
+
+所以：
+
+```
+callback = hello;
+```
+
+之后：
+
+```
+callback
+    ↓ 保存
+hello 函数的地址
+```
+
+这一点你要非常严格：
+
+```
+hello     → 函数
+
+callback  → 函数指针变量
+
+Callback_t → 函数指针类型
+```
 ---
 
 ### 第 15 题：这一题专门打你最近的混淆
@@ -5181,7 +5327,13 @@ callback 保存 ?
 > `Callback_t` 在这个类比中更接近 `int` 还是 `int *`？
 
 说明原因。
+```text
+int *          ↔ Callback_t
+p              ↔ callback
 
+p 保存变量地址
+callback 保存   输入是int类型   没有输出的函数名    也就是函数对应的地址
+```
 ---
 
 ## 第八部分：函数指针调用
@@ -5218,7 +5370,9 @@ callback();
 哪几个**真正调用了 `hello()`**？
 
 这一题你上一次错过，所以这次再做。
-
+```text
+只有第三个和第四个真正的调用了hello函数      想要调用函数必须在函数名后加()
+```
 ---
 
 ## 第九部分：callback 注册流程
@@ -5266,6 +5420,17 @@ int main(void)
 ⑤ callback(100) 为什么最终执行 print_data(100)？
 ```
 
+```text
+print_data 在 register_callback(print_data) 中代表   把print_data进行注册  完成callback = print_data 的复制
+
+在这段代码中cb里面保存的是print_data这个函数的地址
+
+callback保存的是传入参数cb这个函数的地址
+
+最后保存的地址相同
+
+最后执行的是print_data（100）  是因为在register_callback这个函数中   定义的是把输入参数cb复制给callback   现在输入参数cb是print_data这个函数的地址     所以对应的callback里面存放的就是print_data的地址    可以执行到print_data(100)
+```
 ---
 
 ## 第十部分：找 Bug——非常适合你现在
@@ -5306,7 +5471,26 @@ int main(void)
 1. 问题是什么？
 2. 为什么？
 3. 怎么改？
+```text
+第一个问题是没有对app_callback这个函数名进行判断是否为空    因为函数名在实际中会退化成函数的地址   这个可能里面存的是NULL
+第二个问题是callback最后并没成功进行调用
+第三个问题是在最开始定义函数指针的时候   定义的参数有问题    定义了有输入参数int   应该没有输入参数
 
+typedef void (*Callback_t)(void);
+
+
+int main(void)
+{
+    if(app_callback != NULL)
+    {
+	    register_callback(app_callback);
+    }
+    
+    callback();
+
+    return 0;
+}
+```
 ---
 
 ## 第 19 题：自己写 callback
@@ -5363,6 +5547,34 @@ int main(void)
 data = 100
 ```
 
+```c
+typedef void (*callback_t)(int);
+
+callback_t sensor_irq_handler;
+
+void sensor_register_callback (callback_t cd)
+{
+	if(cd != NULL)
+	{
+		sensor_irq_handler = cd;
+	}
+}
+
+void sensor_data_ready(int data)
+{
+    printf("data = %d\n", data);
+}
+
+int main(void)
+{
+    sensor_register_callback(sensor_data_ready);
+
+    sensor_irq_handler();
+
+    return 0;
+}
+
+```
 ---
 
 ## 第 20 题：综合题
@@ -5430,6 +5642,17 @@ NULL
 二级指针
 ```
 
+```text
+1. RxCallback_t是函数指针的重命名   相当于int* 类型   
+2.UART_Device* dev 中 dev 保存的是以UART_Device为结构体对应的地址
+3.`dev->callback` 是RxCallback_t类型的     输入参数是char类型    没有输出参数
+4.执行UART_Register(&uart1, bluetooth_rx); 后`uart1.callback 就是bluetooth_rx
+5.因为dev里面的callback已经保存了bluetooth_rx的地址     所以可以直接调用到这个函数
+6.用到了结构体指针   dev->callback就是结构体指针    因为定义的dev就是结构体指针类型
+用到了typedef  把函数指针进行了重命名 
+用到了callback回调函数    把中断里面执行的操作通过回调函数进行注册
+用到了NULL 因为需要判断指针传进来的地址是否为空     否则会发生随机访问的问题
+```
 # 链表
 ## 第一部分：基础概念
 
@@ -5457,6 +5680,15 @@ node1.next = NULL;
 4. `*p` 代表什么？
 5. `p->data` 等于多少？
 6. `p->next` 等于什么？
+
+```text
+node 1 是结构体Node的类型
+p是结构体指针的类型
+p里面保存的是node1这个结构体的地址
+*p代表node1里面的内容
+p -> data 等于10
+p -> next 等于null
+```
 
 ---
 
@@ -5502,7 +5734,9 @@ D.
 ```
 
 并解释为什么。
-
+```text
+与B是等价的     因为p是结构体指针      所以真正取值的时候应该先（*p）代表取到结构体node1  在用.data进行赋值
+```
 ---
 
 ## 第二部分：节点之间如何连接
@@ -5538,7 +5772,12 @@ head → ?
 ```
 
 对应的链表结构。
-
+```text
+head->data = 10
+head->next = &node2
+head->next->data = 20
+head->next->next = NULL
+```
 ---
 
 ### 第 4 题：三个节点
@@ -5584,7 +5823,12 @@ head->next->next->next
 ```
 
 是多少？
-
+```text
+head->next  保存的是b的地址
+head->next->next  保存的是c的地址
+head->next->next->data 是3
+head->next->next->next是NULL
+```
 ---
 
 ## 第三部分：链表遍历
@@ -5636,7 +5880,13 @@ p    → 10
 ```
 
 解释为什么。
+```text
+应该选A
+Node* p = head; 代表把head的地址放入到结构体指针p中
 
+p = p->next;  p->next   应该对应的是head.next    所以指向的应该是20
+但是head还是10
+```
 ---
 
 ### 第 6 题：继续移动
@@ -5661,6 +5911,10 @@ p->data = ?
 p->next = ?
 ```
 
+```text
+p->data = 30
+p->next = NULL
+```
 ---
 
 ### 第 7 题：遍历代码
@@ -5693,7 +5947,12 @@ head = head->next;
 ```
 
 来遍历？
-
+```text
+输出 5 8 12 
+循环结束之后p应该等于NULL
+循环结束head没有发生变化
+用head = head->next;  遍历时通常不用 `head` 移动，是为了保留链表头地址，防止丢失链表入口。
+```
 ---
 
 ## 第四部分：NULL 判断
@@ -5717,7 +5976,10 @@ C. 非法访问内存，可能程序崩溃
 D. 编译器自动跳过
 
 解释原因。
-
+```text
+C
+因为head对应的是空指针       计算机可能会直接hardfault
+```
 ---
 
 ### 第 9 题：最后一个节点
@@ -5761,6 +6023,13 @@ p->next != NULL
 p != NULL
 ```
 
+```text
+p 指向30这个节点
+p->data = 30
+p->next = NULL
+
+这里用p->next != NULL 是为了链表可以停在最后一个节点上
+```
 ---
 
 ## 第五部分：头插法
@@ -5800,7 +6069,12 @@ head = new_node;
 最终链表是什么？
 
 请分别画出**两步之后的结构**。
-
+```text
+第一次执行后会变成
+new_node   head
+↓           ↓	
+5    ->    10 → 20 → NULL
+```
 ---
 
 ### 第 11 题：顺序能不能反？
@@ -5836,7 +6110,17 @@ new_node->next = ?
 ```
 
 最后会形成什么结构？
+```text
+如果是
+head = new_node;
+new_node->next = head;
 
+head
+ ↓
+ 5 → NULL
+ 
+ 这个链表应该会一直在第一个节点进行循环
+```
 ---
 
 ## 第六部分：函数和 head
@@ -5882,19 +6166,24 @@ C. NULL
 
 > 为什么函数内部的 `head = head->next` 没有修改主函数里的 `head`？
 
+```text
+选A
+因为这个想要改变的是head里面保存的地址     应该通过二级指针进行更改
+这样只使用一级指针    只是在函数内部重新复制了一个新的head结构体    但是函数结束之后   就会被释放掉  并不会传递到函数外面
+```
 ---
 
 ### 第 13 题：返回新 head
 
 ```
-Node *delete_head(Node *head)
+Node *delete_head(Node* head)
 {
     if (head == NULL)
     {
         return NULL;
     }
 
-    Node *temp = head;
+    Node* temp = head;
 
     head = head->next;
 
@@ -5934,6 +6223,14 @@ head = delete_head(head);
 delete_head(head);
 ```
 
+```text
+`temp` 最开始指向头指针
+`head = head->next` 后 `head` 指向头指针的下一位    也就是20
+free(temp)` 释放的其实就是原本的head节点
+最终的链表是20 → 30 → NULL
+
+因为delete_head这个函数返回的是Node *  也就是节点的地址，需要最后把新节点的地址传给head才能完成对原本head节点的擦除
+```
 ---
 
 ## 第七部分：malloc
@@ -5955,7 +6252,12 @@ new_node->next = NULL;
 2. `new_node` 里面保存什么？
 3. `malloc(sizeof(Node))` 创建的是什么？
 4. `new_node->data` 修改的是指针本身，还是堆内存里的数据？
-
+```text
+new_node 本身在heap里面存    因为是使用malloc进行创建的空间
+里面保存的是创建出来空间的首地址
+在heap里面创建了一个大小是node这个结构体的空间
+修改的是堆内存里面的数据
+```
 ---
 
 ### 第 15 题：判断 malloc 失败
@@ -5980,6 +6282,11 @@ if (new_node == NULL)
 }
 ```
 
+```text
+因为需要判断这个地址是不是空的     也就是创建malloc是否成功
+如果sizeof（Node）是0   就代表不会创建对应的heap空间
+后续调用的额时候会发生hardfault
+```
 ---
 
 ## 第八部分：内存泄漏
@@ -6013,7 +6320,10 @@ free(p)
 ```
 
 ？
-
+```text
+发生了内存泄漏
+p = NULL只是单纯的把p这个指针保存的地址改成了NULL    但是对应的heap区还是有空间在    并没有把这个空间给清除掉
+```
 ---
 
 ## 第九部分：free
@@ -6043,7 +6353,10 @@ D. 编译错误
 并解释：
 
 > `free(p)` 之后，`p` 这个指针变量本身还存在吗？
-
+```text
+有问题    应该选C
+`free(p)` 之后，`p` 这个指针变量本身还存在    但是对应的地址里面没有东西了    p还是保存之前的那个地址   但是什么数据都读不出来   或者被别的数据覆盖之后读出来是错误数据
+```
 ---
 
 ## 第十部分：删除中间节点
@@ -6082,7 +6395,12 @@ prev->next = curr->next;
 此时 `30` 是否已经被释放？
 
 还需要执行什么？
-
+```text
+prev->next = curr->next;后  20的next指向了40
+从head看起来就变成了10 → 20 → 40 → NULL
+但是30并没有被释放    只是链表不会再查询到他
+还需要执行free  把30所在的节点释放掉
+```
 ---
 
 ### 第 19 题：为什么要两个指针？
@@ -6110,7 +6428,10 @@ Node *prev;
 ```
 
 来解释。
-
+```text
+想删除30   需要知道30的下一位是谁
+是curr的next需要修改   把curr的next修改成30的next   所以需要两个指针去进行地址的交换
+```
 ---
 
 ## 第十一部分：找 bug
@@ -6138,7 +6459,12 @@ free(head);
 4. 10节点会出现什么问题？
 
 请写出正确代码。
-
+```text
+第一行之后head指向了20
+第二行释放的20的这个节点
+本来香释放的是10这个节点
+10节点会出现即不是头节点     也遍历不到    最后也没有被释放
+```
 ---
 
 ## 第十二部分：简单手写
@@ -6161,9 +6487,22 @@ void print_list(Node *head)
 }
 ```
 
+```c
+void print_list(Node *head)
+{
+    Node *p = head;
+
+    while (p -> neaxt != NULL)
+    {
+        printf("%d\n", p -> data);
+
+        p = p -> neaxt;
+    }
+}
+```
 ---
 
-### 第 22 题：写头插
+### 第 22 题：写头插（❌）
 
 补全：
 
@@ -6200,6 +6539,43 @@ Node *insert_head(Node *head, int data)
 5 → 10 → 20 → NULL
 ```
 
+```text
+错误写法
+Node *insert_head(Node *head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return head;
+    }
+
+    new_node->data = data;
+
+    new -> next = head -> next;
+
+    head = new_node;
+}
+```
+
+```c
+正确写法：
+Node *insert_head(Node *head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return head;
+    }
+
+    new_node->data = data;
+    new_node->next = head;
+    head = new_node;
+
+    return head;
+}
+```
 ---
 
 ## 第十三部分：二级指针
@@ -6228,10 +6604,17 @@ Node **pp = &head;
 实际上修改的是谁？
 
 这题对你非常重要。
-
+```text
+head的类型是node类型的指针    应该保存node类型的地址
+&head   是node类型的地址
+pp 是node类型的二级指针
+pp  里面保存的是node类型的一级指针对应的地址
+*pp 就是p  里面保存的node类型的地址
+*pp = new_node;  实际上改变的p 保存的地址
+```
 ---
 
-### 第 24 题：二级指针头插
+### 第 24 题：二级指针头插（❌）
 
 ```
 void insert_head(Node **head, int data)
@@ -6277,13 +6660,50 @@ head
 
 ？
 
----
+```text
+（❌）
+new_node->data = data;
+
+    new_node->next = head -> next;
+
+    **head = new_node;
+
+调用的时候用的是&head   因为在函数中想要改变谁就要传入谁的地址    这里想要改变的是head所保存的地址   所以应该传入head本身的地址
+```
+
+```text
+函数参数是：Node **head  因此：
+
+- `head`是主函数中`head`变量的地址
+- `*head`才是主函数中的头指针
+- `**head`才是头节点本身
+
+正确填法：
+new_node->next = *head;
+*head = new_node;
+
+完整代码：
+void insert_head(Node **head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return;
+    }
+
+    new_node->data = data;
+    new_node->next = *head;
+    *head = new_node;
+}
+```
+
 
 ## 第十四部分：稍微提高
 
 ### 第 25 题：预测输出
 
-```
+
 Node a;
 Node b;
 Node c;
@@ -6299,13 +6719,13 @@ c.next = NULL;
 Node *head = &a;
 Node *p = head;
 
-printf("%d\n", p->data);
+printf("%d\n", p->data);   //输出10
 
 p = p->next;
 
-printf("%d\n", p->data);
+printf("%d\n", p->data);  //输出20
 
-p->data = 100;
+p->data = 100;  //b里面的数据变成100
 
 printf("%d\n", b.data);
 ```
@@ -6320,6 +6740,10 @@ b.data
 
 也发生了变化。
 
+```text
+最终输出是100
+因为p->data = 100;   是直接进入结构体里面去改对应的元素的    p->data本身就相当于（*p）.data   是通过地址进去读取或者修改对应数据的 
+```
 ---
 
 ### 第 26 题：修改 next
@@ -6348,6 +6772,10 @@ a → ?
 - 还存在吗？
 - 还能通过 `a` 找到它吗？
 
+```text
+a → c
+b并没有被释放   他还存在    但是不能通过a找到
+```
 ---
 
 ### 第 27 题：很重要的综合题
@@ -6383,3 +6811,759 @@ C.
 ```
 
 解释每一次 `insert_head()` 后链表分别是什么。
+
+```text
+最后是B
+第一次就是加入一个头节点是10
+第二次又加入头节点  把之前的10这个头节点就做为下一个节点了
+第三次也是这样的操作
+```
+
+
+# C语言与指针训练（二）
+
+## 第一部分：C基础判断
+
+### 1. 运算符与寄存器判断
+
+下面代码的实际含义是什么？它能否正确判断最低位为 `1`？
+
+```c
+uint32_t status = 0x05;
+
+if (status & 0x01 == 0x01)
+{
+    printf("bit0 = 1\n");
+}
+```
+
+要求：
+
+1. 写出运算顺序。
+2. 判断结果。
+3. 写出更清晰、安全的版本。
+```text
+status
+0000 1001
+0000 0001
+进行与运算之后是0000 0001
+是可以判断出来最低位是1的    因为&本身就是可以当做查看指令的      而0x01就是1U的掩码
+
+```
+
+---
+
+### 2. 自增运算
+
+写出以下代码的输出，并解释每次访问的是哪个元素：
+
+```
+int arr[] = {10, 20, 30, 40};
+int *p = arr;
+
+printf("%d\n", *p++);
+printf("%d\n", (*p)++);
+printf("%d\n", *++p);
+printf("%d\n", *p);
+```
+
+最后写出数组中四个元素的值。
+```text
+
+
+```
+
+---
+
+### 3. 作用域与生命周期
+
+下面代码是否存在问题？为什么？
+
+```
+int *get_value(void)
+{
+    int value = 100;
+    return &value;
+}
+
+int main(void)
+{
+    int *p = get_value();
+    printf("%d\n", *p);
+}
+```
+
+要求：
+
+1. 指出错误本质。
+2. 给出两种修改方式。
+3. 说明两种修改方式各自的缺点。
+```text
+
+
+```
+
+---
+
+### 4. `static`变量
+
+分析输出：
+
+```
+void test(void)
+{
+    static int count = 0;
+    int value = 0;
+
+    count++;
+    value++;
+
+    printf("%d %d\n", count, value);
+}
+
+int main(void)
+{
+    test();
+    test();
+    test();
+}
+```
+
+并回答：
+
+- `count`存储在哪里？
+- `value`存储在哪里？
+- 两者的作用域和生命周期分别是什么？
+```text
+
+
+```
+
+---
+
+### 5. 宏的陷阱
+
+分析下面代码：
+
+```
+#define SQUARE(x) x * x
+
+int result1 = SQUARE(3 + 1);
+int result2 = 10 / SQUARE(2);
+```
+
+写出 `result1`、`result2` 的值，并修改宏。
+
+然后分析：
+
+```
+int a = 3;
+int result3 = SQUARE(a++);
+```
+
+这段代码有什么风险？
+```text
+
+
+```
+
+---
+
+## 第二部分：数组、地址和指针
+
+### 6. 数组名与取地址
+
+```
+int arr[5] = {1, 2, 3, 4, 5};
+```
+
+分别说明下面表达式的：
+
+- 类型
+- 表示的含义
+- 数值上是否相同
+
+```
+arr
+&arr[0]
+&arr
+arr + 1
+&arr + 1
+```
+
+重点说明：为什么 `arr + 1` 和 `&arr + 1` 移动的字节数不同？
+```text
+
+
+```
+
+---
+
+### 7. 指针类型影响
+
+假设：
+
+```
+uint32_t value = 0x12345678;
+uint8_t *p = (uint8_t *)&value;
+```
+
+在小端系统中，回答：
+
+```
+p[0]
+p[1]
+p[2]
+p[3]
+```
+
+分别是什么。
+
+然后解释下面两句的本质区别：
+
+```
+uint8_t *p1 = (uint8_t *)&value;
+uint8_t *p2 = (uint8_t *)value;
+```
+
+哪一句可能访问非法地址？为什么？
+```text
+
+
+```
+
+---
+
+### 8. 指针相减
+
+```
+int arr[10];
+int *p1 = &arr[2];
+int *p2 = &arr[7];
+```
+
+回答：
+
+```
+p2 - p1
+(uint8_t *)p2 - (uint8_t *)p1
+```
+
+结果分别是什么？为什么结果单位不同？
+```text
+
+
+```
+
+---
+
+### 9. 数组作为函数参数
+
+分析：
+
+```
+void print_size(int arr[])
+{
+    printf("%zu\n", sizeof(arr));
+}
+
+int main(void)
+{
+    int data[10];
+    printf("%zu\n", sizeof(data));
+    print_size(data);
+}
+```
+
+假设系统中：
+
+```
+sizeof(int)  == 4
+sizeof(void*) == 8
+```
+
+写出两次输出，并解释原因。
+
+然后修改 `print_size()`，使它能够正确遍历数组。
+```text
+
+
+```
+
+---
+
+### 10. 二维数组参数
+
+下面哪个函数声明可以接收 `int matrix[3][4]`？逐个判断。
+
+```
+void func1(int **p);
+void func2(int p[][4]);
+void func3(int (*p)[4]);
+void func4(int p[3][4]);
+```
+
+回答：
+
+1. 哪几个可以？
+2. `int **p` 为什么不等价于二维数组？
+3. `p + 1` 会移动多少字节？
+```text
+
+
+```
+
+---
+
+## 第三部分：`const`与二级指针
+
+### 11. 四种指针声明
+
+分别解释下面声明，并指出“指针能不能改”和“指向的数据能不能改”。
+
+```
+const int *p1;
+int const *p2;
+int *const p3 = NULL;
+const int *const p4 = NULL;
+```
+
+```text
+
+
+```
+---
+
+### 12. 修改字符串接口
+
+设计一个发送字符串的函数：
+
+```
+void Uart_SendString(________ str);
+```
+
+函数只读取字符串，不修改字符串。
+
+回答：
+
+1. 参数应该写成什么？
+2. 为什么比 `char *str` 更准确？
+3. 函数内部的局部指针还能否执行 `str++`？
+```text
+
+
+```
+---
+
+### 13. 二级指针修改调用者指针
+
+分析：
+
+```
+void set_pointer(int *p)
+{
+    static int value = 100;
+    p = &value;
+}
+
+int main(void)
+{
+    int x = 10;
+    int *ptr = &x;
+
+    set_pointer(ptr);
+    printf("%d\n", *ptr);
+}
+```
+
+输出什么？为什么 `set_pointer()` 没有成功改变 `ptr`？
+
+把函数改成能够真正修改 `main()` 中的 `ptr`。
+```text
+
+
+```
+---
+
+### 14. 交换指针
+
+补全函数，让 `p1` 和 `p2` 交换它们保存的地址，而不是交换 `a`、`b` 的值：
+
+```
+void swap_pointer(____________, ____________)
+{
+    // 补全
+}
+
+int main(void)
+{
+    int a = 10;
+    int b = 20;
+
+    int *p1 = &a;
+    int *p2 = &b;
+
+    swap_pointer(____________);
+
+    printf("%d %d\n", *p1, *p2);
+}
+```
+
+最终输出应为：
+
+```
+20 10
+```
+```text
+
+
+```
+---
+
+## 第四部分：内存操作与常见Bug
+
+### 15. `memcpy`长度错误
+
+找出问题：
+
+```
+uint32_t src[4] = {1, 2, 3, 4};
+uint32_t dest[4] = {0};
+
+memcpy(dest, src, 4);
+```
+
+如果目标是复制整个数组，第三个参数应该是什么？
+
+写出两种正确写法，并说明哪一种更不容易因数组长度变化而出错。
+```text
+
+
+```
+---
+
+### 16. 缓冲区越界
+
+```
+char buffer[5];
+strcpy(buffer, "hello");
+```
+
+这段代码有没有越界？为什么？
+
+如果要完整保存 `"hello"`，数组至少需要多大？
+```text
+
+
+```
+---
+
+### 17. 未初始化指针
+
+```
+int *p;
+*p = 100;
+```
+
+这段代码编译可能通过，为什么运行时仍然危险？
+
+写出三种让 `p` 合法指向可写内存的方法。
+```text
+
+
+```
+---
+
+### 18. 指针释放后继续使用
+
+分析：
+
+```
+int *p = malloc(sizeof(int));
+*p = 20;
+
+free(p);
+
+if (p != NULL)
+{
+    printf("%d\n", *p);
+}
+```
+
+回答：
+
+1. `free(p)` 后，`p` 是否自动变成 `NULL`？
+2. `if` 判断能否阻止错误？
+3. 应该怎样修改？
+4. “野指针”和“悬空指针”分别是什么意思？
+```text
+
+
+```
+---
+
+## 第五部分：嵌入式C
+
+### 19. `volatile`
+
+假设中断会修改变量：
+
+```
+uint8_t rx_flag = 0;
+
+void USART1_IRQHandler(void)
+{
+    rx_flag = 1;
+}
+
+int main(void)
+{
+    while (rx_flag == 0)
+    {
+    }
+
+    process_data();
+}
+```
+
+回答：
+
+1. `rx_flag` 是否应该加 `volatile`？
+2. 不加可能发生什么？
+3. `volatile` 能否保证线程安全或原子性？
+4. `volatile` 能否代替互斥锁或临界区？
+```text
+
+
+```
+---
+
+### 20. 寄存器指针
+
+解释下面代码的每一部分：
+
+```
+#define GPIOA_ODR (*(volatile uint32_t *)0x40020014U)
+
+GPIOA_ODR |= (1U << 5);
+```
+
+要求解释：
+
+- `0x40020014U`
+- `(volatile uint32_t *)`
+- `*`
+- `|=`
+- `1U << 5`
+
+这句代码最终想完成什么操作？
+```text
+
+
+```
+---
+
+### 21. 位操作
+
+给定：
+
+```
+uint32_t reg = 0;
+```
+
+只使用位操作，分别写出：
+
+1. 将第5位置 `1`。
+2. 将第5位清 `0`。
+3. 翻转第5位。
+4. 判断第5位是否为 `1`。
+5. 将第4～7位设置为二进制 `1010`，但不影响其他位。
+
+规定最低位为第0位。
+```text
+
+
+```
+---
+
+### 22. 中断与主程序共享数据
+
+```
+uint8_t rx_buffer[64];
+volatile uint8_t rx_length;
+
+void USART1_IRQHandler(void)
+{
+    rx_buffer[rx_length++] = USART1->DR;
+}
+```
+
+找出至少三个潜在问题。
+
+可以从这些角度考虑：
+
+- 数组越界
+- 主程序与中断同时访问
+- `rx_length`溢出
+- 一帧数据何时结束
+- 主程序处理数据时，中断继续写入
+
+给出一个更可靠的设计思路，不要求完整实现。
+```text
+
+
+```
+---
+
+## 第六部分：函数指针综合题
+
+### 23. 看懂回调调用
+
+```
+typedef void (*uart_callback_t)(uint8_t data);
+
+static uart_callback_t rx_callback = NULL;
+
+void uart_register_callback(uart_callback_t callback)
+{
+    rx_callback = callback;
+}
+
+void USART1_IRQHandler(void)
+{
+    uint8_t data = USART1->DR;
+
+    if (rx_callback != NULL)
+    {
+        rx_callback(data);
+    }
+}
+```
+
+回答：
+
+1. `uart_callback_t`是什么类型？
+2. `rx_callback`保存的是什么？
+3. `callback`、`*callback`、`callback(data)`分别表示什么？
+4. 为什么调用前需要判断 `NULL`？
+5. 下面哪些函数可以注册？为什么？
+
+```
+void func1(uint8_t data);
+void func2(int data);
+uint8_t func3(uint8_t data);
+void func4(void);
+```
+
+```text
+
+
+```
+---
+
+### 24. 综合编程题：LED驱动接口
+
+完成下面程序：
+
+```
+typedef struct
+{
+    void (*on)(void);
+    void (*off)(void);
+    void (*toggle)(void);
+} led_driver_t;
+```
+
+要求：
+
+1. 编写三个具体函数：
+
+```
+led1_on()
+led1_off()
+led1_toggle()
+```
+
+2. 定义并初始化：
+
+```
+led_driver_t led1;
+```
+
+3. 编写函数：
+
+```
+void led_blink(________________)
+{
+    // 调用toggle
+}
+```
+
+4. 在 `main()` 中通过结构体内的函数指针控制LED。
+5. 防止传入空结构体指针或空函数指针。
+6. 解释调用时为什么使用：
+
+```
+led->toggle();
+```
+
+而不是：
+
+```
+led.toggle();
+```
+
+```text
+
+
+```
+---
+
+## 最后两道口述题
+
+做完代码题后，不查资料，用自己的话回答。
+
+### 25. 地址到底是什么？
+
+解释下面四者的区别：
+
+```
+x
+&x
+p
+*p
+```
+
+不要只说“一个是地址，一个是值”，要结合：
+
+- 变量本身
+- 内存地址
+- 指针变量中保存的内容
+- 解引用操作
+```text
+
+
+```
+---
+
+### 26. 指针为什么必须有类型？
+
+既然指针本质上保存的是地址，为什么还要区分：
+
+```
+uint8_t *
+uint16_t *
+uint32_t *
+```
+
+至少从以下方面说明：
+
+- 解引用读取多少字节
+- `p + 1`移动多少字节
+- 如何解释内存中的二进制数据
+- 对齐要求
+
+```text
+
+
+```
