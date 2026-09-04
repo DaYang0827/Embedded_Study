@@ -111,7 +111,7 @@ while ((*dst++ = *src++) != '\0');
 
 ---
 
-## 3. 手写 `strncpy`
+## 3. 手写 `strncpy` ([ X])
 
 ```c
 char *my_strncpy(char *dst, const char *src, size_t n);
