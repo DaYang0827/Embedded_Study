@@ -484,7 +484,7 @@ bool uart_read_byte(uint8_t *data)
 - `rx_tail`可能由主程序修改；
 - 两者在不同执行上下文中被访问。
 
-但需要注意，仅仅使用 `volatile`还不能自动保证整个算法线程安全。
+但需要注意，仅仅使用 `volatile`还不能自动保证整个算法线程安全。[[Embed System#2 并发与线程安全基础]]
 
 ---
 
@@ -543,43 +543,20 @@ volatile uint8_t dma_buffer[512];
 ---
 
 总结：
-```c
-static
-```
 
-控制的是： **存多久，以及能被哪些文件看到**。
+`static`控制的是： **存多久，以及能被哪些文件看到**。
 
-```c
-const
-```
+`const`控制的是： **当前代码有没有修改权限**。
 
-控制的是： **当前代码有没有修改权限**。
-
-```c
-volatile
-```
-
-控制的是： **编译器能不能假设这个值不会自行变化**。
+`volatile`控制的是： **编译器能不能假设这个值不会自行变化**。
 
 最常见嵌入式组合：
 
-```c
-static volatile uint8_t flag;
-```
+`static volatile uint8_t flag;`当前**驱动文件私有、长期存在、可能被中断修改**。
 
-当前**驱动文件私有、长期存在、可能被中断修改**。
+`static const uint16_t table[];`当前**驱动文件私有、长期存在、只读查找表**。
 
-```c
-static const uint16_t table[];
-```
-
-当前**驱动文件私有、长期存在、只读查找表**。
-
-```c
-volatile const uint32_t status_reg;
-```
-
-软件只读，但硬件可能随时修改。
+`volatile const uint32_t status_reg;`软件只读，但硬件可能随时修改。
 
 ## 1.7 `enum` （enumeration）（枚举）
 
@@ -8466,3 +8443,16 @@ Servo:伺服
 
 Slave：从动装置
 
+
+```text
+为什么USART不再每字节进RXNE中断？ 
+因为usart接收到数据之后    就直接由dma硬件进行搬运了     就不需要usart进去中断了
+为什么USART->DR地址不自增？ 
+因为这个项目是dma固定读取usart1的内容    不需要usart的地址自增
+为什么dma_buf地址要自增？ 
+因为dma buffer是我自己定义的一个数组    如果不进行自增    就会一直给buffer的第一个元素写
+为什么Normal模式收满8字节后就停？ 
+因为不是circula模式    如果是循环模式就会像Ringbuffer那样写满之后再从头继续写
+为什么TC是DMA中断，不是USART中断？
+现在想实现的应该是DMA的buffer收满之后再进行中断然后CPU来处理信息    所以不是usart进行中断
+```

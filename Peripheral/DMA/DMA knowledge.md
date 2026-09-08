@@ -30,7 +30,7 @@ STM32F103C8T6 DMA资源：DMA1（7个通道）
 
 <img width="623" height="286" alt="image" src="https://github.com/user-attachments/assets/1e267775-806b-4372-a6c4-6d58db6a6670" />
 
-## 1.3  实际例子
+## 1.3 实际例子
 
 1. 数据转运
 
@@ -254,6 +254,16 @@ DMA_MemoryDataSize
 
 到 0：` DMA Transfer Complete。`
 
+可以把 `DMA_BufferSize` 理解为给 DMA 制定的一份 **“定量计件工作合同”**。
+
+1. **合同签约**：==当写入 `DMA_InitStruct.DMA_BufferSize = 8;` 并开启 DMA 时，硬件 `NDTR` 寄存器的数值就会被充值成 **`8`**。==
+2. **流水线开工**：串口每发来一个字节，DMA 实时搬运一个字节，同时 `NDTR` 寄存器就会**自动减 1**。
+    - 搬完第 1 个：`NDTR` 变成 7。
+    - 搬完第 2 个：`NDTR` 变成 6。
+    - ……
+3. **合同完工，触发中断**：当 DMA 搬运完第 8 个字节的瞬间，`NDTR` 刚好**减到了 `0`**。
+4. **弹起中断**：硬件检测到 `NDTR == 0`，立刻判定为“传输完成（Transfer Complete）”，并在硬件上把 **`TCIF`（传输完成中断标志位）** 置 1。如果代码里开启了 DMA 中断，CPU 就会立刻收到通知，蹦进 DMA 的中断服务函数里去。
+
 ### 1.5.6 `DMA_PeripheralInc`
 
 ```c
@@ -335,7 +345,6 @@ ADC 有时可能配置`DMA_PeripheralDataSize_HalfWord`
 
 因为 ADC 数据通常是 12 bit，但装在 16 bit 数据单元里处理。
 
----
 
 ### 1.5.9 `DMA_MemoryDataSize`
 
@@ -344,9 +353,7 @@ DMA_InitStructure.DMA_MemoryDataSize =
     DMA_MemoryDataSize_Byte;
 ```
 
-意思类似**内存里每次存多少位。** 对于`uint8_t rx_buffer[8];`自然是`DMA_MemoryDataSize_Byte`
-
-如果有`uint16_t adc_buffer[128];`就常见`DMA_MemoryDataSize_HalfWord`
+意思类似**内存里每次存多少位。** 对于`uint8_t rx_buffer[8];`自然是`DMA_MemoryDataSize_Byte`如果有`uint16_t adc_buffer[128];`就常见`DMA_MemoryDataSize_HalfWord`
 
 所以可以这样对应：
 
@@ -611,4 +618,350 @@ Normal模式
 不用FIFO
         ↓
 每次单次搬运
+```
+
+## 1.6 DMA + USART(IDLE)
+### 1.6.1 定义
+
+**USART IDLE（串口空闲中断） + DMA（直接内存访问）** 是一种被誉为“黄金搭档”的接收方式。它的核心优势在于：**高效、省 CPU、能接收不定长的数据。**
+
+1. 形象的比喻：快递员派送大米：
+
+- **没有 DMA（普通中断）**：快递员（串口）每送到一粒大米（1个字节），就敲一次家大门（触发一次 CPU 中断）。CPU必须放下手里的工作，跑去开门，把这粒大米放进米缸。如果有一万粒大米，就得开一万次门，人都要崩溃了。
+- **有了 DMA + IDLE**：
+    - **DMA 相当于“传送带”**：给传送带设置好目的地（米缸/内存数组）和最大容量。快递员来送货时，直接把大米放到传送带上，传送带自动把大米源源不断地运进米缸，**全过程不需要CPU插手**。
+    - **IDLE（空闲中断）相当于“传送带停工警报”**：快递员一整箱货送完了，一小段时间内没有新的大米送过来，传送带发现“空闲了”，就会**叮~**地响一下，提醒CPU：“货送完了，快来查收！”
+
+---
+
+2. 它们是如何协同工作的？
+
+- **DMA 负责“默默搬运”**：我们提前在代码里开启 DMA 接收。每当串口收到一个字节，DMA 就自动把它搬运到你指定的内存数组（缓冲区）中。
+- **IDLE 负责“通知结束”**：当一帧数据（可能有很多个字节）发送完毕后，串口总线上会出现**超过 1 个字节时间的空闲（没有数据波动）**。这时候，硬件会自动触发 **IDLE 空闲中断**。
+- **CPU 负责“收尾处理”**：CPU 收到 IDLE 中断通知后，知道这一波数据已经全部接收完了。它只需要做两件事：
+    1. 算一算刚才一共收到了多少个字节。
+    2. 把数据拿去处理，并清空标志位，准备接收下一波。
+    
+
+### 1.6.2 中断处理
+1. normal模式
+
+   直接清除中断标志位，再把信息传出去就可以
+```c
+void DMA2_Stream2_IRQHandler(void)
+{
+    if(DMA_GetITStatus(dma1.DMAy_Streamx, dma1.DMA_FLAG))
+    {
+        DMA_ClearITPendingBit(dma1.DMAy_Streamx, dma1.DMA_FLAG);
+        for(int i = 0; i < BufferSize; i++)
+        {
+            rb_write(&rb, dma1.dma_buffer[i]);
+        }
+    }
+}
+```
+
+---
+2. normal + IDLE模式下
+
+   因为还没有达到DMA的正常TC中断，所以CPU不会把DMAbuffer里面的内容搬运到外部进行解析，所以需要手动进行数据的搬运
+
+   进入IDLE的中断之后，需要先**手动把DMA停止掉，再把IDLE中断清除**，计算DMA已经搬运了多少字节的信息，使用for循环把已经存在DMAbuffer的信息传到RingBuffer中。**最后再清空DMA的标志位，给DMA重新装填NDTR，使能DMA
+```c
+	void USART1_IRQHandler(void)
+{
+    if(USART_GetITStatus(usart1.USARTx, USART_IT_IDLE) == SET)
+    {
+        volatile uint32_t temp;
+
+        DMA_Cmd(dma1.DMAy_Streamx, DISABLE);
+        while (DMA_GetCmdStatus(dma1.DMAy_Streamx) == ENABLE);
+
+        temp = USART1->SR;
+        temp = USART1->DR;
+        (void)temp;
+
+        uint16_t rx_len = DMABufferSize - DMA_GetCurrDataCounter(dma1.DMAy_Streamx);
+
+        for(int i = 0; i < rx_len; i++)
+        {
+            rb_write(&rb, dma1.dma_buffer[i]);
+        }
+
+        DMA_ClearFlag(dma1.DMAy_Streamx, dma1.DMA_FLAG);
+        DMA_SetCurrDataCounter(dma1.DMAy_Streamx, DmaBufferSize); 
+        DMA_Cmd(dma1.DMAy_Streamx, ENABLE);
+    }
+}
+```
+
+---
+3. circular + IDLE
+
+   因为是circular模式，所以不需要再给NDTR进行重装，可以直接进行计算并输出。Circular + IDLE 常见思路是：
+
+```text
+DMA一直跑
+↓
+USART负责IDLE通知
+↓
+CPU只读NDTR
+↓
+计算new_pos
+↓
+处理old_pos→new_pos
+```
+
+```c
+void USART1_IRQHandler(void)
+{
+    if(USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
+    {
+        volatile uint32_t temp;
+
+        temp = USART1->SR;
+        temp = USART1->DR;
+        (void)temp;
+
+        new_pos =
+            DmaBufferSize -
+            DMA_GetCurrDataCounter(dma1.DMAy_Streamx);
+
+        if(new_pos != old_pos)
+        {
+            if(new_pos > old_pos)
+            {
+                for(uint16_t i = old_pos; i < new_pos; i++)
+                {
+                    rb_write(&rb, dma1.dma_buffer[i]);
+                }
+            }
+            else
+            {
+                for(uint16_t i = old_pos; i < DmaBufferSize; i++)
+                {
+                    rb_write(&rb, dma1.dma_buffer[i]);
+                }
+
+                for(uint16_t i = 0; i < new_pos; i++)
+                {
+                    rb_write(&rb, dma1.dma_buffer[i]);
+                }
+            }
+
+            old_pos = new_pos;
+        }
+    }
+}
+```
+
+> **Normal + IDLE**：IDLE 常常意味着“这一轮结束，重新准备下一轮”。  
+> **Circular + IDLE**：IDLE 更像“看一眼 DMA 当前写到哪，不打断它继续跑”。
+### 1.6.3 计算接收的字节
+
+ 1. 针对normal模式
+ 
+  DMA 控制器里有一个寄存器叫做 **CNDTR（剩余传输数据量计数器）**。
+
+- **开始前**：给 DMA 设置一个最大接收长度（比如 100 字节）。此时 `CNDTR = 100`。
+- **接收中**：DMA 每帮你搬运 1 个字节，`CNDTR` 的值就会自动 **减 1**。
+- **结束时**：比如这一帧数据一共有 20 个字节。DMA 搬完后，`CNDTR` 变成了 80。此时触发了 IDLE 中断。
+- **计算公式**：
+```c
+rx_len = DmaBufferSize - NDTR;
+```
+实际接收长度 = 设定的最大长度（即DMA.BufferSize） - CNDTR（即 100 - 80 = 20 字节）。
+
+---
+
+2. 对于Circular模式
+
+   定义两个变量
+```c
+static uint16_t old_pos = 0;
+uint16_t new_pos;
+```
+
+```c
+pos = DmaBufferSize - NDTR;
+```
+
+这里这个 `pos` 表示的是 **DMA 当前已经写到 buffer 的哪个“位置边界”了。**
+
+比如：
+
+```text
+SIZE = 8
+NDTR = 5
+```
+
+那么`pos = 8 - 5 = 3`,表示 DMA 已经写了 3 个字节：
+
+```text
+buffer[0]
+buffer[1]
+buffer[2]
+```
+
+下一次 DMA 要写的是`buffer[3]`所以这个 `pos = 3` 更像**下一次 DMA 要写入的位置索引。** 而我们自己保存的`old_pos`表示**上一次 CPU 已经处理到的边界位置。**
+
+所以 Circular 里其实有两个“位置”：
+
+```text
+new_pos → DMA 现在写到哪里了
+
+old_pos → CPU 上次处理到哪里了
+```
+
+然后`old_pos → new_pos` 之间，就是这一次“新到的数据”。
+
+例如：
+
+```
+old_pos = 2
+new_pos = 5
+```
+
+新数据是：
+
+```
+buffer[2]
+buffer[3]
+buffer[4]
+```
+
+处理完以后`old_pos = new_pos;`也就是`old_pos = 5`,这样下次就不会重复处理前面的数据。
+
+所以可以记成一句`SIZE - NDTR` 算出来的是 **DMA 当前写入边界**，而 `old_pos` 是 **CPU 上次处理边界**
+
+### 1.6.4 将接收到的数据写入RingBuffer中
+1. 使用的DMA的normal模式
+ 
+   可以直接计算接收到的数据长度，然后把对应长度的数据写入RingBuffer里面
+```c
+
+rx_len = DmaBufferSize - DMA_GetCurrDataCounter(dma1.DMAy_Streamx);
+for(int i = 0 ; i < rx_len; i++)
+{
+	rb_write(&rb, dma1.dma_buffer[i]);
+}
+```
+
+---
+2. 使用DMA的circular模式
+
+   需要判断new_pos和old_pos的大小来判断dmabuffer中的数据是不是已经发生了回卷
+   情况1：没回卷
+
+```c
+if(new_pos > old_pos)
+{
+    for(uint16_t i = old_pos; i < new_pos; i++)
+    {
+        rb_write(&rb, dma1.dma_buffer[i]);
+    }
+}
+```
+
+比如：
+
+```text
+old_pos = 2
+new_pos = 5
+```
+
+就处理：
+
+```text
+buffer[2]
+buffer[3]
+buffer[4]
+```
+
+---
+
+情况2：发生回卷
+
+```c
+else if(new_pos < old_pos)
+{
+    for(uint16_t i = old_pos; i < DmaBufferSize; i++)
+    {
+        rb_write(&rb, dma1.dma_buffer[i]);
+    }
+
+    for(uint16_t i = 0; i < new_pos; i++)
+    {
+        rb_write(&rb, dma1.dma_buffer[i]);
+    }
+}
+```
+
+比如：
+
+```text
+old_pos = 5
+new_pos = 1
+```
+
+就处理：
+
+```text
+buffer[5]
+buffer[6]
+buffer[7]
+buffer[0]
+```
+
+最后：
+
+```
+old_pos = new_pos;
+```
+
+---
+
+IDLE ISR 的核心可以写成：
+
+```c
+void USART1_IRQHandler(void)
+{
+    if(USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
+    {
+        volatile uint32_t temp;
+
+        temp = USART1->SR;
+        temp = USART1->DR;
+        (void)temp;
+
+        new_pos =
+            DmaBufferSize -
+            DMA_GetCurrDataCounter(dma1.DMAy_Streamx);
+
+        if(new_pos != old_pos)
+        {
+            if(new_pos > old_pos)
+            {
+                for(uint16_t i = old_pos; i < new_pos; i++)
+                {
+                    rb_write(&rb, dma1.dma_buffer[i]);
+                }
+            }
+            else
+            {
+                for(uint16_t i = old_pos; i < DmaBufferSize; i++)
+                {
+                    rb_write(&rb, dma1.dma_buffer[i]);
+                }
+
+                for(uint16_t i = 0; i < new_pos; i++)
+                {
+                    rb_write(&rb, dma1.dma_buffer[i]);
+                }
+            }
+
+            old_pos = new_pos;
+        }
+    }
+}
 ```
