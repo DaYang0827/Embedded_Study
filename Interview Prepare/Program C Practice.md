@@ -7668,3 +7668,715 @@ uint32_t *
 
 
 ```
+
+# 嵌入式工程中的 C 练习
+## 1. 指针传参
+
+下面代码输出什么？为什么？
+
+```
+#include <stdio.h>
+
+void change(int *p)
+{
+    *p = 20;
+}
+
+int main(void)
+{
+    int a = 10;
+    change(&a);
+    printf("%d\n", a);
+}
+```
+
+重点说清楚：
+
+```
+a
+&a
+p
+*p
+```
+
+分别是什么。
+```text
+a 是定义的全局变量     是一个int类型的变量     即4个字节的长度
+&a    是a的地址
+p   是函数内部的int类型指针     里面存放的应该是一个地址
+*p  是对指针的取值    取出对应地址里面的内容
+
+这个代码输出的是20     因为在函数的内部是通过寻址的方式对变量进行更改的
+
+```
+---
+
+## 2. 二级指针
+
+```
+#include <stdio.h>
+
+void change_ptr(int **pp, int *new_ptr)
+{
+    *pp = new_ptr;
+}
+
+int main(void)
+{
+    int a = 10;
+    int b = 20;
+
+    int *p = &a;
+
+    change_ptr(&p, &b);
+
+    printf("%d\n", *p);
+}
+```
+
+问题：
+
+1. 输出什么？
+2. 为什么这里必须是 `int **pp`？
+3. 如果写成：
+
+```
+void change_ptr(int *p, int *new_ptr)
+{
+    p = new_ptr;
+}
+```
+
+为什么 main 里的 `p` 不会改变？
+```text
+输出的是20
+智力必须是**pp是因为   在函数里面想改变谁就要把谁的地址传进函数中    现在想改变的是外部p指针所保存的地址    所以应该把指针p的地址传入函数中     对应的就是二级指针了
+因为函数实际是值传递    只是在函数内部重新创建了一个名叫p的新指针    和外面的指针没有关系了已经   所以不会发生改变
+
+```
+---
+
+## 3. 数组退化
+
+```
+#include <stdio.h>
+
+void func(uint8_t buf[])
+{
+    printf("%zu\n", sizeof(buf));
+}
+
+int main(void)
+{
+    uint8_t buf[8];
+    printf("%zu\n", sizeof(buf));
+    func(buf);
+}
+```
+
+假设是 32 位 MCU。
+
+问：
+
+```
+main里的sizeof(buf)是多少？
+func里的sizeof(buf)是多少？
+为什么？
+```
+
+这题和你今天的：
+
+```
+dma_buffer[8]
+```
+
+直接相关。
+```text
+main里的sizeof(buf)是8
+func里的sizeof(buf)是4
+因为在main里面的buf代表的是数组整体     计算出来的就是数组整体的大小
+而在func里面buf代表的就变成了数组第一个元素的地址了     不是整个数组了     进行了退化
+```
+---
+
+## 4. `volatile`
+
+下面程序：
+
+```
+#include <stdbool.h>
+
+bool dma_done = false;
+
+int main(void)
+{
+    while(!dma_done)
+    {
+    }
+
+    return 0;
+}
+```
+
+假设：
+
+```
+dma_done
+```
+
+会在 DMA ISR 里被修改。
+
+问：
+
+1. 为什么这里应该写：
+
+```
+volatile bool dma_done;
+```
+
+2. `volatile` 能不能保证线程安全？
+3. `volatile` 能不能保证 `++` 是原子的？
+```text
+因为dma_don实际上在中断中会发生变化    如果不加volatile   就变成全局的了    在整个程序运行周期内都是false的    就不会进行主程序的执行了
+不能保证线程安全
+也不能保证++是原子的
+
+```
+---
+
+## 5. 局部变量和全局变量
+
+你今天其实刚犯过这个问题。
+
+```
+#include <stdio.h>
+
+int rx_len = 0;
+
+void irq_handler(void)
+{
+    int rx_len = 5;
+    printf("irq = %d\n", rx_len);
+}
+
+int main(void)
+{
+    irq_handler();
+    printf("main = %d\n", rx_len);
+}
+```
+
+输出是什么？
+
+然后解释：
+
+> 为什么 ISR 里面的 `rx_len = 5` 没有修改 main 看到的 `rx_len`？
+```text
+输出是0    因为外部有一个全局定义的rx_len   而ISR的内部是一个局部变量    这个局部变量会随着ISR的结束而结束   是更改不到main函数的值
+
+```
+---
+
+## 6. `extern`
+
+假设：
+
+`dma.c`
+
+```
+int dma_done = 0;
+```
+
+`main.c`
+
+```
+extern int dma_done;
+```
+
+问：
+
+1. `extern` 有没有创建新的变量？
+2. `dma_done` 真正在哪里分配存储空间？
+3. 如果两个 `.c` 文件都写：
+
+```
+int dma_done = 0;
+```
+
+可能出现什么问题？
+```text
+没有创建新的变量
+真正在dma.c里面分配存储空间
+如果两个文件都定义    会出现变量被重复定义的警告
+```
+---
+
+## 7. RingBuffer 边界
+
+```
+#define SIZE 8
+
+typedef struct
+{
+    uint8_t buf[SIZE];
+    uint8_t read;
+    uint8_t write;
+} RingBuffer;
+```
+
+采用：
+
+```
+(read == write)
+```
+
+表示空。
+
+并且用：
+
+```
+(write + 1) % SIZE == read
+```
+
+表示满。
+
+问：
+
+1. 实际最多可以存几个字节？
+2. 为什么不是 8 个？
+3. 如果：
+
+```
+read = 6
+write = 7
+```
+
+这时候满了吗？  
+4. 如果再成功写一个，write 会到哪里？
+```text
+实际可以存7个字节
+因为read和write两个指针相当于牺牲一个空间    如果read == write是代表Ringbuffer是空的状态   所以会少一个字节的表示空间
+read = 6 write = 7 并没有满
+再写一个  write会到0
+```
+---
+
+## 8. DMA 数据流题
+
+假设：
+
+```
+uint8_t dma_buffer[8];
+```
+
+DMA：
+
+```
+PeripheralInc = Disable
+MemoryInc = Enable
+```
+
+PC 发：
+
+```
+ABCDE
+```
+
+问：
+
+1. DMA 每次读取哪个地址？
+2. 每次写入哪个地址？
+3. 如果 NDTR 初始是 8，最后 NDTR 是多少？
+4. IDLE 到来后：
+
+```
+len = 8 - NDTR;
+```
+
+结果是多少？
+```text
+每次读取的是USART的DR地址
+每次写入的是dma_buffer这个数组的地址
+最后ndtr是3
+结果是5
+```
+---
+
+## 9. 找 Bug
+
+```
+for(int i = 0; i < rx_len; i++)
+{
+    rb_write(&rb, rb.RingBuffer[i]);
+}
+```
+
+这就是你今天遇到的问题。
+
+问：
+
+1. 这行代码语法错了吗？
+2. 逻辑错在哪里？
+3. 正确应该从哪里读？
+4. 这属于哪类 bug？
+
+我希望你回答出：
+
+> 数据源/数据流错误，而不是语法错误。
+```text
+这是数据源除了问题     这样写的话就是把rb.Ringbuffer[i]里面的值再写进rb.Ringbuffer[i]，相当于真个ringbuffer没有任何的改变
+
+```
+---
+
+## 10. ISR 设计题
+
+下面两种写法，你选哪个更合理？
+
+A：
+
+```
+void USART1_IRQHandler(void)
+{
+    while(1)
+    {
+        // 解析协议
+        // printf
+        // 大量数据处理
+    }
+}
+```
+
+B：
+
+```
+void USART1_IRQHandler(void)
+{
+    // 清标志
+    // 获取长度
+    // 搬到buffer
+    // 设置flag
+}
+```
+
+然后 main/task 再做复杂处理。
+
+问：
+
+> 为什么 B 更适合嵌入式？
+```text
+B更适合   
+因为在ISR里面要快进快出     如果在中断里面停留很久的话    可能会造成主程序卡顿或者第优先级的中断无法成功进入
+```
+
+# 嵌入式工程中的 C 练习 2
+
+## 第一题：判断 DMA 新数据范围
+
+DMA 缓冲区大小为 8：
+
+```
+#define DMA_SIZE 8
+
+uint8_t dma_buffer[DMA_SIZE];
+uint16_t old_pos;
+uint16_t new_pos;
+```
+
+回答下面三种情况分别有哪些新数据：
+
+ 情况 A
+
+```
+old_pos = 2;
+new_pos = 6;
+```
+
+新数据对应哪些下标？
+
+情况 B
+
+```
+old_pos = 6;
+new_pos = 2;
+```
+
+新数据对应哪些下标？
+
+ 情况 C
+
+```
+old_pos = 4;
+new_pos = 4;
+```
+
+是否一定代表没有新数据？结合 Circular DMA 思考。
+
+---
+
+## 第二题：补全处理函数
+
+补全代码，把 DMA 新收到的数据写入 RingBuffer：
+
+```
+void DMA_ProcessData(uint16_t new_pos)
+{
+    if (new_pos > old_pos)
+    {
+        /* 补全 */
+    }
+    else if (new_pos < old_pos)
+    {
+        /* 补全 */
+    }
+
+    /* 补全 */
+}
+```
+
+可以使用：
+
+```
+bool rb_write(RingBuffer *rb, uint8_t data);
+```
+
+全局变量为：
+
+```
+#define DMA_SIZE 8
+
+uint8_t dma_buffer[DMA_SIZE];
+uint16_t old_pos;
+RingBuffer rx_ring;
+```
+
+要求正确处理：
+
+```
+old_pos = 6
+new_pos = 2
+```
+
+对应的下标：
+
+```
+6、7、0、1
+```
+
+---
+
+## 第三题：计算 DMA 当前写入位置
+
+已知：
+
+```
+#define DMA_SIZE 8
+```
+
+补全函数：
+
+```
+uint16_t DMA_GetWritePosition(void)
+{
+    uint16_t ndtr;
+
+    ndtr = DMA_GetCurrDataCounter(DMA2_Stream2);
+
+    return /* 补全 */;
+}
+```
+
+然后计算：
+
+|NDTR|new_pos|
+|---|---|
+|8|?|
+|7|?|
+|3|?|
+|1|?|
+
+思考：
+
+```
+new_pos = DMA_SIZE - NDTR;
+```
+
+得到的是“最后一个已经写入的下标”，还是“下一个要写入的位置”？
+
+---
+
+## 第四题：找出 RingBuffer 代码中的错误
+
+```
+#define BUFFER_SIZE 8
+
+typedef struct
+{
+    uint8_t buffer[BUFFER_SIZE];
+    uint8_t read;
+    uint8_t write;
+} RingBuffer;
+
+bool rb_is_full(RingBuffer *rb)
+{
+    return ((rb->read + 1) % BUFFER_SIZE) == rb->write;
+}
+
+bool rb_write(RingBuffer *rb, uint8_t data)
+{
+    if (rb_is_full(rb))
+        return false;
+
+    rb->buffer[rb->read] = data;
+    rb->read = (rb->read + 1) % BUFFER_SIZE;
+
+    return true;
+}
+```
+
+找出至少两个逻辑错误，并改成正确版本。
+
+---
+
+## 第五题：指针参数练习
+
+下面两个函数有什么区别？
+
+```
+bool rb_read(RingBuffer *rb, uint8_t data);
+```
+
+```
+bool rb_read(RingBuffer *rb, uint8_t *data);
+```
+
+如果函数需要把读出来的数据交给调用者，应该使用哪个？
+
+补全：
+
+```
+bool rb_read(RingBuffer *rb, uint8_t *data)
+{
+    if (/* RingBuffer为空 */)
+        return false;
+
+    /* 将数据传给调用者 */
+
+    /* 更新read */
+
+    return true;
+}
+```
+
+---
+
+## 第六题：位运算与中断标志
+
+已知：
+
+```
+#define USART_SR_RXNE  (1U << 5)
+#define USART_SR_IDLE  (1U << 4)
+#define USART_SR_ORE   (1U << 3)
+```
+
+假设：
+
+```
+uint32_t sr = 0x38;
+```
+
+回答：
+
+```
+sr & USART_SR_RXNE
+sr & USART_SR_IDLE
+sr & USART_SR_ORE
+```
+
+结果分别是真还是假？
+
+然后解释下面代码为什么不能写成 `== 1`：
+
+```
+if ((sr & USART_SR_RXNE) != 0)
+{
+    /* RXNE置位 */
+}
+```
+
+---
+
+## 第七题：`volatile` 判断
+
+哪些变量建议使用 `volatile`？说明理由。
+
+```
+uint8_t dma_buffer[8];
+uint16_t old_pos;
+uint16_t new_pos;
+uint8_t rx_finished;
+RingBuffer rx_ring;
+```
+
+场景：
+
+- DMA 硬件写 `dma_buffer`；
+- ISR 修改 `new_pos` 和 `rx_finished`；
+- `main()` 读取 `rx_finished`；
+- `old_pos` 只在 ISR 中使用；
+- ISR 写 RingBuffer，`main()` 读 RingBuffer。
+
+不要简单回答“共享变量都加”，要分别判断。
+
+---
+
+## 第八题：今天的综合手写题
+
+请你独立写出这个函数：
+
+```
+void USART_DMA_CheckData(void);
+```
+
+要求：
+
+1. 读取 DMA 的 `NDTR`；
+2. 计算 `new_pos`；
+3. 判断 DMA 是否回绕；
+4. 把新增数据写入 `rx_ring`；
+5. 更新 `old_pos`；
+6. RingBuffer 满时停止搬运，并记录丢包次数：
+
+```
+uint32_t rx_drop_count;
+```
+
+可以假设：
+
+```
+#define DMA_SIZE 8
+
+uint8_t dma_buffer[DMA_SIZE];
+uint16_t old_pos;
+RingBuffer rx_ring;
+
+bool rb_write(RingBuffer *rb, uint8_t data);
+```
+
+函数框架：
+
+```
+void USART_DMA_CheckData(void)
+{
+    uint16_t new_pos;
+
+    /* 1. 计算new_pos */
+
+    /* 2. 没有回绕 */
+
+    /* 3. 发生回绕 */
+
+    /* 4. 更新old_pos */
+}
+```
