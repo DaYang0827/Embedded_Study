@@ -9,10 +9,6 @@
 extern DMA_t dma1;
 extern RingBuffer_t rb;
 
-volatile uint16_t old_pos = 0;
-volatile uint16_t new_pos = 0;
-volatile uint16_t prev_old_pos = 0;
-
 USART_t usart1 =
 {
     .RCC_GPIO = RCC_AHB1Periph_GPIOA,
@@ -78,44 +74,22 @@ void USART1_IRQHandler(void)
     {
         volatile uint32_t temp;
 
-//        DMA_Cmd(dma1.DMAy_Streamx, DISABLE);
-//        while (DMA_GetCmdStatus(dma1.DMAy_Streamx) == ENABLE);
+        DMA_Cmd(dma1.DMAy_Streamx, DISABLE);
+        while (DMA_GetCmdStatus(dma1.DMAy_Streamx) == ENABLE);
 
         temp = USART1->SR;
         temp = USART1->DR;
         (void)temp;
-		
-		prev_old_pos = old_pos;
-		
-        new_pos = DmaBufferSize - DMA_GetCurrDataCounter(dma1.DMAy_Streamx);
-		
-        if (old_pos != new_pos)
+
+        uint16_t rx_len = DmaBufferSize - DMA_GetCurrDataCounter(dma1.DMAy_Streamx);
+
+        for(int i = 0; i < rx_len; i++)
         {
-            if(new_pos > old_pos)
-            {
-                for(int i = old_pos; i < new_pos; i++)
-                {
-                     rb_write(&rb, dma1.dma_buffer[i]);
-                }
-            }
-            if(new_pos < old_pos)
-            {
-                for(uint16_t i = old_pos; i < DmaBufferSize; i++)
-                    {
-                        rb_write(&rb, dma1.dma_buffer[i]);
-                    }
-
-                for(uint16_t i = 0; i < new_pos; i++)
-                    {
-                        rb_write(&rb, dma1.dma_buffer[i]);
-                    }
-            }
+            rb_write(&rb, dma1.dma_buffer[i]);
         }
-		
-		old_pos = new_pos;
 
-        DMA_ClearFlag(dma1.DMAy_Streamx, dma1.DMA_IT_Statue);
-//        DMA_SetCurrDataCounter(dma1.DMAy_Streamx, DmaBufferSize); 
-//        DMA_Cmd(dma1.DMAy_Streamx, ENABLE);
+        DMA_ClearFlag(dma1.DMAy_Streamx, dma1.DMA_FLAG);
+        DMA_SetCurrDataCounter(dma1.DMAy_Streamx, DmaBufferSize); 
+        DMA_Cmd(dma1.DMAy_Streamx, ENABLE);
     }
 }

@@ -14,7 +14,7 @@ DMA_t dma1 =
 {
     .DMAy_Streamx = DMA2_Stream2,
     .DMA_IT = DMA_IT_TC,
-    .DMA_IT_Statue = DMA_FLAG_TCIF2,
+    .DMA_FLAG = DMA_FLAG_TCIF2,
     .RCC_DMAx = RCC_AHB1Periph_DMA2,
 };
 
@@ -23,9 +23,10 @@ void dma_init(DMA_t* dma1)
     RCC_AHB1PeriphClockCmd(dma1->RCC_DMAx, ENABLE);
     
     DMA_InitTypeDef DMA_InitStruct;
+
     DMA_StructInit(&DMA_InitStruct);
 
-    DMA_InitStruct.DMA_Mode = DMA_Mode_Circular;
+    DMA_InitStruct.DMA_Mode = DMA_Mode_Normal;
     DMA_InitStruct.DMA_BufferSize = DmaBufferSize;
     DMA_InitStruct.DMA_Channel = DMA_Channel_4;
     DMA_InitStruct.DMA_DIR = DMA_DIR_PeripheralToMemory;
@@ -47,29 +48,29 @@ void dma_init(DMA_t* dma1)
 
     DMA_Cmd(dma1->DMAy_Streamx,ENABLE);
 
-//     NVIC_InitTypeDef NVIC_InitStruct;
-//     NVIC_InitStruct.NVIC_IRQChannel = DMA2_Stream2_IRQn;
-//     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-//     NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;
-//     NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;
+//    NVIC_InitTypeDef NVIC_InitStruct;
+//    NVIC_InitStruct.NVIC_IRQChannel = DMA2_Stream2_IRQn;
+//    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+//    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;
+//    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;
 
-//     NVIC_Init(&NVIC_InitStruct);
+//    NVIC_Init(&NVIC_InitStruct);
 
-//     DMA_ITConfig(dma1->DMAy_Streamx, dma1->DMA_IT, ENABLE);
+    // DMA_ITConfig(dma1->DMAy_Streamx, dma1->DMA_IT, ENABLE);
 }
 
-// void DMA2_Stream2_IRQHandler(void)
-// {
-//    if(DMA_GetITStatus(dma1.DMAy_Streamx, dma1.DMA_IT_FLAG))
+//void DMA2_Stream2_IRQHandler(void)
+//{
+//    if(DMA_GetFlagStatus(dma1.DMAy_Streamx, dma1.DMA_FLAG))
 //    {
-//        DMA_ClearITPendingBit(dma1.DMAy_Streamx, dma1.DMA_IT_FLAG);
-       
+//        DMA_ClearITPendingBit(dma1.DMAy_Streamx, dma1.DMA_FLAG);
+//        
 //        for(int i = 0; i < 8; i++)
 //        {
 //            rb_write(&rb, dma1.dma_buffer[i]);
 //        }
 //    }
-// }
+//}
 
 
 

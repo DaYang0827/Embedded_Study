@@ -14,8 +14,8 @@ typedef struct
     uint32_t RCC_DMAx;
     DMA_Stream_TypeDef* DMAy_Streamx;
 
-    uint32_t DMA_IT_Statue;
     uint32_t DMA_IT;
+    uint32_t DMA_FLAG;
 }DMA_t;
 
 

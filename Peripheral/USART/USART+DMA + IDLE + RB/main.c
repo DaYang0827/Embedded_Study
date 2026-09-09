@@ -18,7 +18,7 @@ int main(void)
 	usart_init(&usart1);
     
     uint8_t data = 0;
-	
+
     while(1)
     {
         if(rb_read(&rb, &data))
