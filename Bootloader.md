@@ -441,7 +441,8 @@ Options for Target
 ```
 
 把`Start: 0x08000000`，改成`Start: 0x08010000`。Size 则改成你给 APP 剩下的 Flash 大小。
-![[Pasted image 20260916152940.png|500]]
+<img width="782" height="587" alt="image" src="https://github.com/user-attachments/assets/085585a3-c487-4f14-88fe-91998add0ad0" />
+
 
 例如 STM32F407 1 MB Flash，APP 从 `0x08010000` 开始，那么 APP 可用区域大致是`0x08010000 ~ 0x080FFFFF`。这样链接器就会把:
 
