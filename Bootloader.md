@@ -40,13 +40,13 @@
     - **缺点**：占用额外的 Flash 存储空间（用来存 Bootloader 甚至备份区） 电子工程专辑；若 Bootloader 代码有逻辑漏洞，可能导致设备彻底变砖。
 - **应用场景**：消费电子、物联网设备、汽车电子等所有出厂后需要**日常远程固件升级（OTA）** 或售后免拆机维护的场景。
 
-|特性维度|ICP (在电路编程)|ISP (在系统编程)|IAP (在应用编程)|
-|:---:|:---:|:---:|:---:|
-|**操作时机**|研发调试、生产初烧|量产烧录、紧急救砖|售后远程升级、OTA|
-|**硬件工具**|J-Link / ST-Link 等|USB转串口线 / 串口板|无需额外工具（利用现有通信链路）|
-|**软件驱动者**|电脑端调试器软件|芯片厂家内置 ROM 代码|开发者自己写的 Bootloader 电子工程专辑|
-|**物理切换**|否（软件或调试器控制）|是（需更改 BOOT 引脚电平）|否（纯软件逻辑或命令触发）|
-|**核心目的**|代码仿真与首次固化|成本敏感型烧录与挽救系统|实现产品自身的无线/远程自我迭代 CNBLOGS|
+|   特性维度    |    ICP (在电路编程)     |   ISP (在系统编程)    |        IAP (在应用编程)        |
+| :-------: | :----------------: | :--------------: | :-----------------------: |
+| **操作时机**  |     研发调试、生产初烧      |    量产烧录、紧急救砖     |        售后远程升级、OTA         |
+| **硬件工具**  | J-Link / ST-Link 等 |  USB转串口线 / 串口板   |     无需额外工具（利用现有通信链路）      |
+| **软件驱动者** |      电脑端调试器软件      |  芯片厂家内置 ROM 代码   | 开发者自己写的 Bootloader 电子工程专辑 |
+| **物理切换**  |    否（软件或调试器控制）     | 是（需更改 BOOT 引脚电平） |       否（纯软件逻辑或命令触发）       |
+| **核心目的**  |     代码仿真与首次固化      |   成本敏感型烧录与挽救系统   | 实现产品自身的无线/远程自我迭代 CNBLOGS  |
 
 ## 1.4 OTA
 ### 1.4.1 简介
@@ -130,6 +130,7 @@ OTA升级：通过OTA方式**实现固件或软件的升级**。只要是通过�
 ## 2.5 Bootloader
 
 Bootloader（**引导加载程序**）是计算机或嵌入式系统上电后运行的第一段软件代码。
+
 ### 2.5.1 核心功能
 
 - **硬件初始化**：设置 CPU 时钟、初始化内存（RAM）、闪存（Flash）及必要的外部设备。
@@ -200,9 +201,456 @@ Bootloader（**引导加载程序**）是计算机或嵌入式系统上电后运
 5. **软复位系统**
     - 触发 CPU 软件复位（如使用 `NVIC_SystemReset`）。系统重启后将回到【第一阶段】，并因为升级标志已清除而直接跳转进新 App 运行 CNBLOGS。
 
-### 2.5.4 `BootLoader`如何跳转
+### 2.5.4 `BootLoader`跳转
+
 - 确认主程序固件存在（SP和PC的存在）
 - 获取到主程序固件的前2个字
 - （关闭所有开启的用户中断） 设置中断向量表
 - 分别给SP寄存器赋值，给PC寄存器赋值（没法用C语言实现）
 - 通过构造地址函数实现跳转Reset_Handle  
+
+## 2.6 Flash 分区
+
+使用 **STM32F407VGT6（1 MB Flash）**，Flash 从：
+
+```text
+0x0800 0000
+```
+
+开始，Sector 分布是：
+
+```text
+Sector 0   0x0800 0000   16 KB
+Sector 1   0x0800 4000   16 KB
+Sector 2   0x0800 8000   16 KB
+Sector 3   0x0800 C000   16 KB
+Sector 4   0x0801 0000   64 KB
+Sector 5   0x0802 0000   128 KB
+Sector 6   0x0804 0000   128 KB
+Sector 7   0x0806 0000   128 KB
+Sector 8   0x0808 0000   128 KB
+Sector 9   0x080A 0000   128 KB
+Sector 10  0x080C 0000   128 KB
+Sector 11  0x080E 0000   128 KB
+```
+
+整个 1 MB Flash：
+
+```text
+0x0800 0000
+      ↓
+0x080F FFFF
+```
+
+需要考虑第一个分区**16 KB 的 Bootloader 到底够不够？** Bootloader 现在已经有：
+
+```text
+USART
+DMA
+RingBuffer
+Parser
+CMD
+Flash操作
+```
+
+如果代码越来越多，16 KB 未必宽裕。所以实际学习项目里，给 Bootloader 留 **前 4 个小 Sector**：
+
+```text
+Sector 0  16 KB
+Sector 1  16 KB
+Sector 2  16 KB
+Sector 3  16 KB
+----------------
+总共 64 KB
+```
+
+于是：
+
+```text
+Bootloader：
+0x08000000 ~ 0x0800FFFF
+
+APP：
+从 Sector 4 开始
+0x08010000
+```
+
+也就是：
+
+```text
+#define BOOT_START_ADDR  0x08000000U
+#define APP_START_ADDR   0x08010000U
+```
+
+因为非常清楚：
+
+```text
+Sector 0~3
+──────────────
+永远属于 Bootloader
+
+Sector 4~11
+──────────────
+属于 APP
+```
+
+以后收到CMD_ERASE_APP,Bootloader 就知道我只能擦 Sector 4 往后的区域，绝对不能碰 Sector 0~3。
+
+```text
+STM32F407 Flash
+
+0x08000000
+┌──────────────────┐
+│ Sector 0  16KB   │
+├──────────────────┤
+│ Sector 1  16KB   │
+├──────────────────┤
+│ Sector 2  16KB   │
+├──────────────────┤
+│ Sector 3  16KB   │
+├──────────────────┤ ← 0x08010000
+│ Sector 4  64KB   │
+├──────────────────┤
+│ Sector 5 128KB   │
+├──────────────────┤
+│ Sector 6 128KB   │
+├──────────────────┤
+│ ...              │
+├──────────────────┤
+│ Sector 11 128KB  │
+└──────────────────┘
+
+Sector 0~3 → Bootloader
+Sector 4~11 → APP
+```
+
+## 2.7 MSP和中断向量表
+
+在编译/链接 STM32 工程时，**启动文件和链接脚本已经把这些内容放进固件镜像里了**；烧录只是把这个镜像写进 Flash。典型 STM32 固件开头就是中断向量表。最前面两个 32 位数据通常是
+
+```text
+Flash 起始地址 + 0x00  → 初始 MSP 值
+Flash 起始地址 + 0x04  → Reset_Handler 地址
+```
+
+比如 APP 放在0x08010000，那么：
+
+```c
+uint32_t app_msp   = *(uint32_t *)0x08010000;
+uint32_t app_reset = *(uint32_t *)0x08010004;
+```
+
+读出来的就是：
+
+```c
+app_msp   → APP 启动后应该使用的主栈顶地址
+app_reset → APP 的 Reset_Handler 入口地址
+```
+
+在 `startup_stm32f4xx.s` 里一般已经定义好了向量表，逻辑类似：
+
+```c
+__Vectors
+
+    DCD     __initial_sp
+    DCD     Reset_Handler
+    DCD     NMI_Handler
+    DCD     HardFault_Handler
+    ...
+```
+
+这里`DCD __initial_sp`，就是把“初始 MSP 值”放在向量表第 0 项。然后DCD Reset_Handler就是把 Reset_Handler 的地址放在第 1 项。所以真正流程是
+
+```text
+写 C 代码
+↓
+编译
+↓
+startup 文件 + 代码一起链接
+↓
+生成完整固件
+↓
+固件里已经包含向量表
+↓
+烧录到 Flash
+```
+
+CPU 上电复位以后，不是先执行 `main()`，而是硬件先自动干两件事：
+
+```text
+1. 读取向量表第0项 → 装入 MSP
+2. 读取向量表第1项 → 装入 PC
+```
+
+于是 PC 指向Reset_Handler，然后：
+
+```text
+Reset_Handler
+↓
+初始化 .data
+↓
+清零 .bss
+↓
+SystemInit()
+↓
+__main / C runtime
+↓
+main()
+```
+
+在做 Bootloader 跳 APP，本质上就是在**手动模拟 MCU 刚复位时做的关键动作**：
+
+```c
+__set_MSP(app_msp);
+
+AppEntry_t app_entry = (AppEntry_t)app_reset;
+
+app_entry();
+```
+
+也就是：
+
+```text
+把 MSP 换成 APP 的
+↓
+跳到 APP 的 Reset_Handler
+```
+
+所以一句话记**只要这个程序是一个正常的 STM32 可启动镜像，它的向量表里通常就已经带有 MSP 初值和 Reset_Handler 地址。不是烧录时生成，而是链接固件时就已经生成好了。**
+
+## 2.8 修改APP固件的Flash映射地址
+
+**修改 APP 的 Flash 映射地址，以及让它的 Reset_Handler / 向量表跟着新的 APP 起始地址工作**，那核心不是去“改 Reset_Handler 函数本身”，而是改 **APP 的链接地址和向量表重定位**。做Bootloader，最典型的是
+
+```text
+Bootloader: 0x08000000 开始
+APP:        0x08010000 开始
+```
+
+那么 APP 工程要做两件事：
+
+1. 让链接器把 APP 编译到 `0x08010000`
+2. 让 CPU 使用 APP 自己的向量表，而不是默认 `0x08000000` 的向量表
+
+在 Keil 里，最直观的是改这里：
+
+```
+Options for Target
+→ Target
+→ IROM1
+```
+
+把`Start: 0x08000000`，改成`Start: 0x08010000`。Size 则改成你给 APP 剩下的 Flash 大小。
+![[Pasted image 20260916152940.png|500]]
+
+例如 STM32F407 1 MB Flash，APP 从 `0x08010000` 开始，那么 APP 可用区域大致是`0x08010000 ~ 0x080FFFFF`。这样链接器就会把:
+
+```text
+向量表
+Reset_Handler
+代码
+常量
+.data 初值
+```
+
+全部按照 `0x08010000` 这个地址重新安排。注意**Reset_Handler 的代码通常不用自己改。** 因为 startup 文件里是DCD Reset_Handler 链接器看到 APP 被链接到新地址后，会自动把 `Reset_Handler` 的实际地址写进 APP 向量表的第二项。所以最终看到的可能是：
+
+```c
+0x08010000 -> 0x200xxxxx     MSP
+0x08010004 -> 0x08010xxx     Reset_Handler
+```
+
+这就是正常的。然后还需要处理向量表重定位。Cortex-M 默认中断向量表基地址通常是`0x08000000`但APP 在`0x08010000`所以 APP 启动后要把`SCB->VTOR`改成 APP 的向量表地址`SCB->VTOR = 0x08010000;`
+
+很多 STM32 工程是在SystemInit();里面处理这个事情。例如可能会看到`#define VECT_TAB_OFFSET  0x00010000U`然后`SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET;`因为`FLASH_BASE = 0x08000000`。所以：
+
+```c
+0x08000000 + 0x00010000 = 0x08010000
+```
+
+这一步非常关键。否则虽然已经跳到 APP 了，但是一旦 USART、SysTick、DMA 等中断触发，CPU 可能仍然去`0x08000000`。附近找中断向量，而不是 APP 的`0x08010000`附近找。
+
+所以 Bootloader + APP 的完整关系可以记成：
+
+```text
+Bootloader:
+0x08000000
+│
+├─ 自己的向量表
+├─ Reset_Handler
+├─ Bootloader代码
+│
+└─ 跳转到 APP
+        ↓
+
+APP:
+0x08010000
+│
+├─ APP MSP
+├─ APP Reset_Handler
+├─ APP 中断向量表
+├─ APP代码
+└─ APP数据
+```
+
+而 Bootloader 跳转时通常做：
+
+```c
+uint32_t app_msp;
+uint32_t app_reset;
+
+app_msp = *(uint32_t *)APP_ADDR;
+app_reset = *(uint32_t *)(APP_ADDR + 4);
+
+__set_MSP(app_msp);
+
+void (*app_entry)(void);
+app_entry = (void (*)(void))app_reset;
+
+app_entry();
+```
+
+然后 APP 的 `Reset_Handler` 开始执行。
+
+## 2.9 传输APP固件
+
+通过 USART 发过去的不是“几段普通 C 代码”，而是**已经编译、链接完成的 APP 固件镜像**。也就是说，中断向量表不是单片机在接收到 USART 数据以后“现创建”的。它早就在电脑上生成 APP 固件时，被链接器放进 `.bin/.hex` 里了。比如 APP 链接地址设置成`0x08010000`。那么编译链接后，这个 APP 镜像开头通常已经是
+
+```c
+0x08010000  -> MSP 初始值
+0x08010004  -> Reset_Handler 地址
+0x08010008  -> NMI_Handler
+0x0801000C  -> HardFault_Handler
+...
+```
+
+这些内容来自启动文件，例如：
+
+```c
+DCD __initial_sp
+DCD Reset_Handler
+DCD NMI_Handler
+DCD HardFault_Handler
+...
+```
+
+链接器把它们整理进最终固件。 Bootloader 做的只是：
+
+```text
+PC 上的 APP.bin
+        ↓ USART
+STM32 Bootloader 接收字节
+        ↓
+写入 Flash 0x08010000 开始的位置
+```
+
+假设 APP.bin 前 16 个字节是：
+
+```c
+00 00 02 20
+A1 23 01 08
+...
+```
+
+Bootloader 根本不知道“这4个字节是 MSP，这4个字节是 Reset_Handler。”它只是机械地：
+
+```c
+FLASH_ProgramByte(addr, byte);
+addr++;
+```
+
+所以最终这些字节被原封不动写到了：
+
+```c
+0x08010000
+0x08010001
+0x08010002
+...
+```
+
+结果看起来就像“单片机生成了向量表”，其实不是。准确流程是：
+
+```text
+APP源代码
+main.c
+startup.s
+中断函数
+        ↓
+电脑上的编译器 + 链接器
+        ↓
+生成完整 APP.bin
+其中已经包含：
+向量表 + 机器码 + 常量 + .data初始值
+        ↓
+USART发送
+        ↓
+Bootloader逐字节接收
+        ↓
+写入APP Flash区域
+```
+
+ **中断向量表属于 APP 固件本身，不是 Bootloader 在下载 APP 时创建的。** 这也是为什么 Bootloader 跳转 APP 时可以直接
+
+```c
+app_msp = *(uint32_t *)APP_START_ADDR;
+app_reset = *(uint32_t *)(APP_START_ADDR + 4);
+```
+
+因为知道APP 镜像的前 8 个字节，本来就是启动文件放进去的 MSP 和 Reset_Handler。再进一步说，如果你乱发一个普通文件，例如hello.txt到 `0x08010000`，Bootloader一样可以把它写进去。但此时`*(uint32_t *)0x08010000`读到的就只是 `"hell"` 对应的二进制数据，并不是真正的 MSP。
+
+这种程序当然也跳不起来。所以 Bootloader 下载程序时其实有一个很重要的隐含前提你发送的必须是一个正确链接到 APP 地址的可执行固件镜像$\boxed{\text{发送的必须是一个正确链接到 APP 地址的可执行固件镜像}}$而不只是“一堆程序数据”。
+
+
+APP 固件本身就已经包含了主栈地址和中断向量表启动信息，不是单片机后来临时创建的。比如 APP 链接到0x08010000那么这个 APP 固件开头通常已经排好了：
+
+```c
+0x08010000 -> MSP 初始值
+0x08010004 -> Reset_Handler 地址
+0x08010008 -> NMI_Handler
+0x0801000C -> HardFault_Handler
+...
+```
+
+这些信息来自 `startup_xxx.s` 里的中断向量表，再由链接器放进最终的 `.bin/.hex` 固件。所以通过 USART 发 APP 时，本质上是在发
+
+```text
+向量表
++
+程序机器码
++
+常量
++
+.data 初始值
++
+其他固件内容
+```
+
+Bootloader 只是把这些字节原样写进 APP 的 Flash 区域。之后才能
+
+```c
+app_msp = *(uint32_t *)APP_START_ADDR;
+app_reset = *(uint32_t *)(APP_START_ADDR + 4);
+```
+
+因为已经知道APP 固件最前面的第 0 个字就是 MSP，第 1 个字就是 Reset_Handler 地址。**APP 不是只有 `main()`，它其实是一个完整的、可以独立启动的 STM32 程序镜像。** 所以 Bootloader 跳转 APP，本质上就是“找到这个完整 APP 镜像的启动入口，然后把 CPU 控制权交给它”。
+
+## 2.10 跳转APP
+
+跳转的流程
+
+```text
+检查APP是否合法
+↓
+关中断
+↓
+关闭/清理Bootloader留下的外设和SysTick
+↓
+设置VTOR到APP向量表
+↓
+设置MSP为APP自己的栈顶
+↓
+把0x08010004当函数地址
+↓
+跳进APP Reset_Handler
+```
+
