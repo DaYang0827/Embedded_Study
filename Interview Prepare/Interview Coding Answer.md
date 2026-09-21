@@ -10,7 +10,7 @@ size_t strlen(const char *str);
 
 - **工作原理**：`strlen` 的内部实现非常简单粗暴。它接收一个内存地址，然后从这个地址开始**逐字节**向后扫描，直到遇到空字符 `\0`（ASCII 码为 0）为止。
 - **返回值**：返回 `\0` 之前的所有字符个数。**注意：计算结果不包含 `\0` 自身。**
-- **时间复杂度**：\(O(N)\)。因为必须遍历到 `\0`，字符串越长，耗时越久。
+- **时间复杂度**：(O(N))。因为必须遍历到 `\0`，字符串越长，耗时越久。
 
 需要注意的是：返回值是 `size_t`（无符号数）
 
@@ -2035,7 +2035,8 @@ void state_machine_run(void)
 {
     switch (state) {
     case STATE_IDLE:
-        if (need_send_cmd()) {
+        if (need_send_cmd()) 
+        {
             state = STATE_SEND;
         }
         break;
@@ -2047,9 +2048,12 @@ void state_machine_run(void)
         break;
 
     case STATE_WAIT:
-        if (response_has_ok()) {
+        if (response_has_ok()) 
+        {
             state = STATE_SUCCESS;
-        } else if ((uint32_t)(get_tick() - start_tick) >= 1000U) {
+        } 
+        else if ((uint32_t)(get_tick() - start_tick) >= 1000U) 
+        {
             state = STATE_ERROR;
         }
         break;
@@ -2094,7 +2098,7 @@ AA 55 LEN CMD DATA... CRC
 
 逐字节解析：
 
-```
+```c
 #define MAX_PAYLOAD 64
 
 typedef enum {
@@ -2487,7 +2491,7 @@ DMA 写一个 buffer，CPU 处理另一个 buffer。
 嵌入式软件知识体系 → 模块化设计 → Command Table
 ```
 
-```
+```c
 #include <string.h>
 #include <stdbool.h>
 
@@ -2512,8 +2516,10 @@ bool command_execute(const char *name)
         return false;
     }
 
-    for (size_t i = 0; i < sizeof(command_table) / sizeof(command_table[0]); i++) {
-        if (strcmp(name, command_table[i].name) == 0) {
+    for (size_t i = 0; i < sizeof(command_table) / sizeof(command_table[0]); i++) 
+    {
+        if (strcmp(name, command_table[i].name) == 0) 
+        {
             command_table[i].func();
             return true;
         }
@@ -2543,7 +2549,7 @@ bool command_execute(const char *name)
 嵌入式软件知识体系 → 存储与启动 → Flash / IAP
 ```
 
-```
+```c
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -3172,3 +3178,4 @@ Ping-Pong Buffer
 ```
 知道 ISR 里不能做重活，知道共享数据要考虑原子性。
 ```
+

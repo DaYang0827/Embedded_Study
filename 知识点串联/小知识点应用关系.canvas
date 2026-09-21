@@ -1,0 +1,592 @@
+{
+  "nodes": [
+    {
+      "height": 100,
+      "file": "知识点串联/00 小知识点串联图.md",
+      "y": -300,
+      "type": "file",
+      "id": "hub",
+      "width": 280,
+      "x": 0
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/01 数据类型.md",
+      "y": -80,
+      "type": "file",
+      "id": "n01",
+      "width": 210,
+      "x": -980
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/02 sizeof.md",
+      "y": -80,
+      "type": "file",
+      "id": "n02",
+      "width": 210,
+      "x": -740
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/03 static extern.md",
+      "y": 80,
+      "type": "file",
+      "id": "n03",
+      "width": 210,
+      "x": -980
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/04 const volatile.md",
+      "y": 80,
+      "type": "file",
+      "id": "n04",
+      "width": 210,
+      "x": -740
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/05 指针.md",
+      "y": -80,
+      "type": "file",
+      "id": "n05",
+      "width": 210,
+      "x": -500
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/06 数组.md",
+      "y": -180,
+      "type": "file",
+      "id": "n06",
+      "width": 210,
+      "x": -260
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/07 数组退化.md",
+      "y": -180,
+      "type": "file",
+      "id": "n07",
+      "width": 210,
+      "x": -20
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/08 字符串.md",
+      "y": -40,
+      "type": "file",
+      "id": "n08",
+      "width": 210,
+      "x": -20
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/09 结构体.md",
+      "y": 80,
+      "type": "file",
+      "id": "n09",
+      "width": 210,
+      "x": -260
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/10 函数指针.md",
+      "y": 240,
+      "type": "file",
+      "id": "n10",
+      "width": 210,
+      "x": -260
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/11 回调函数.md",
+      "y": 240,
+      "type": "file",
+      "id": "n11",
+      "width": 210,
+      "x": -20
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/12 内存对齐.md",
+      "y": 80,
+      "type": "file",
+      "id": "n12",
+      "width": 210,
+      "x": -20
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/13 寄存器映射.md",
+      "y": -80,
+      "type": "file",
+      "id": "n13",
+      "width": 210,
+      "x": 220
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/14 位操作.md",
+      "y": -80,
+      "type": "file",
+      "id": "n14",
+      "width": 210,
+      "x": 460
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/15 中断.md",
+      "y": -80,
+      "type": "file",
+      "id": "n15",
+      "width": 210,
+      "x": 700
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/16 USART.md",
+      "y": -80,
+      "type": "file",
+      "id": "n16",
+      "width": 210,
+      "x": 940
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/17 DMA.md",
+      "y": 80,
+      "type": "file",
+      "id": "n17",
+      "width": 210,
+      "x": 940
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/18 Buffer.md",
+      "y": 80,
+      "type": "file",
+      "id": "n18",
+      "width": 210,
+      "x": 700
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/19 Ring Buffer.md",
+      "y": 80,
+      "type": "file",
+      "id": "n19",
+      "width": 210,
+      "x": 460
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/20 数据帧.md",
+      "y": 240,
+      "type": "file",
+      "id": "n20",
+      "width": 210,
+      "x": 220
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/21 状态机.md",
+      "y": 240,
+      "type": "file",
+      "id": "n21",
+      "width": 210,
+      "x": 460
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/22 CRC.md",
+      "y": 240,
+      "type": "file",
+      "id": "n22",
+      "width": 210,
+      "x": 700
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/23 Flash.md",
+      "y": 240,
+      "type": "file",
+      "id": "n23",
+      "width": 210,
+      "x": 940
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/24 向量表.md",
+      "y": 430,
+      "type": "file",
+      "id": "n24",
+      "width": 210,
+      "x": 220
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/25 Reset_Handler.md",
+      "y": 430,
+      "type": "file",
+      "id": "n25",
+      "width": 210,
+      "x": 460
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/26 MSP VTOR.md",
+      "y": 430,
+      "type": "file",
+      "id": "n26",
+      "width": 210,
+      "x": 700
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/27 IAP.md",
+      "y": 430,
+      "type": "file",
+      "id": "n27",
+      "width": 210,
+      "x": 940
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/28 Bootloader跳转APP.md",
+      "y": 430,
+      "type": "file",
+      "id": "n28",
+      "width": 210,
+      "x": 1180
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/29 RTOS调度.md",
+      "y": 620,
+      "type": "file",
+      "id": "n29",
+      "width": 210,
+      "x": 220
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/30 错题复盘.md",
+      "y": 620,
+      "type": "file",
+      "id": "n30",
+      "width": 210,
+      "x": 460
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/31 Semaphore Mutex Queue.md",
+      "y": 620,
+      "type": "file",
+      "id": "n31",
+      "width": 210,
+      "x": 700
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/32 看门狗.md",
+      "y": 620,
+      "type": "file",
+      "id": "n32",
+      "width": 210,
+      "x": 940
+    },
+    {
+      "height": 70,
+      "file": "知识点串联/33 面试应用.md",
+      "y": 620,
+      "type": "file",
+      "id": "n33",
+      "width": 210,
+      "x": 1180
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "n01",
+      "fromSide": "right",
+      "toNode": "n02",
+      "toSide": "left"
+    },
+    {
+      "id": "e2",
+      "fromNode": "n02",
+      "fromSide": "right",
+      "toNode": "n05",
+      "toSide": "left"
+    },
+    {
+      "id": "e3",
+      "fromNode": "n03",
+      "fromSide": "right",
+      "toNode": "n09",
+      "toSide": "left"
+    },
+    {
+      "id": "e4",
+      "fromNode": "n04",
+      "fromSide": "right",
+      "toNode": "n13",
+      "toSide": "left"
+    },
+    {
+      "id": "e5",
+      "fromNode": "n05",
+      "fromSide": "right",
+      "toNode": "n06",
+      "toSide": "left"
+    },
+    {
+      "id": "e6",
+      "fromNode": "n06",
+      "fromSide": "right",
+      "toNode": "n07",
+      "toSide": "left"
+    },
+    {
+      "id": "e7",
+      "fromNode": "n06",
+      "fromSide": "right",
+      "toNode": "n08",
+      "toSide": "left"
+    },
+    {
+      "id": "e8",
+      "fromNode": "n05",
+      "fromSide": "right",
+      "toNode": "n09",
+      "toSide": "left"
+    },
+    {
+      "id": "e9",
+      "fromNode": "n05",
+      "fromSide": "right",
+      "toNode": "n10",
+      "toSide": "left"
+    },
+    {
+      "id": "e10",
+      "fromNode": "n10",
+      "fromSide": "right",
+      "toNode": "n11",
+      "toSide": "left"
+    },
+    {
+      "id": "e11",
+      "fromNode": "n11",
+      "fromSide": "right",
+      "toNode": "n16",
+      "toSide": "left"
+    },
+    {
+      "id": "e12",
+      "fromNode": "n11",
+      "fromSide": "right",
+      "toNode": "n29",
+      "toSide": "left"
+    },
+    {
+      "id": "e13",
+      "fromNode": "n13",
+      "fromSide": "right",
+      "toNode": "n14",
+      "toSide": "left"
+    },
+    {
+      "id": "e14",
+      "fromNode": "n14",
+      "fromSide": "right",
+      "toNode": "n15",
+      "toSide": "left"
+    },
+    {
+      "id": "e15",
+      "fromNode": "n15",
+      "fromSide": "right",
+      "toNode": "n16",
+      "toSide": "left"
+    },
+    {
+      "id": "e16",
+      "fromNode": "n16",
+      "fromSide": "right",
+      "toNode": "n17",
+      "toSide": "left"
+    },
+    {
+      "id": "e17",
+      "fromNode": "n17",
+      "fromSide": "right",
+      "toNode": "n18",
+      "toSide": "left"
+    },
+    {
+      "id": "e18",
+      "fromNode": "n18",
+      "fromSide": "right",
+      "toNode": "n19",
+      "toSide": "left"
+    },
+    {
+      "id": "e19",
+      "fromNode": "n19",
+      "fromSide": "right",
+      "toNode": "n20",
+      "toSide": "left"
+    },
+    {
+      "id": "e20",
+      "fromNode": "n20",
+      "fromSide": "right",
+      "toNode": "n21",
+      "toSide": "left"
+    },
+    {
+      "id": "e21",
+      "fromNode": "n20",
+      "fromSide": "right",
+      "toNode": "n22",
+      "toSide": "left"
+    },
+    {
+      "id": "e22",
+      "fromNode": "n22",
+      "fromSide": "right",
+      "toNode": "n27",
+      "toSide": "left"
+    },
+    {
+      "id": "e23",
+      "fromNode": "n23",
+      "fromSide": "right",
+      "toNode": "n27",
+      "toSide": "left"
+    },
+    {
+      "id": "e24",
+      "fromNode": "n24",
+      "fromSide": "right",
+      "toNode": "n25",
+      "toSide": "left"
+    },
+    {
+      "id": "e25",
+      "fromNode": "n24",
+      "fromSide": "right",
+      "toNode": "n26",
+      "toSide": "left"
+    },
+    {
+      "id": "e26",
+      "fromNode": "n25",
+      "fromSide": "right",
+      "toNode": "n28",
+      "toSide": "left"
+    },
+    {
+      "id": "e27",
+      "fromNode": "n26",
+      "fromSide": "right",
+      "toNode": "n28",
+      "toSide": "left"
+    },
+    {
+      "id": "e28",
+      "fromNode": "n10",
+      "fromSide": "right",
+      "toNode": "n28",
+      "toSide": "left"
+    },
+    {
+      "id": "e29",
+      "fromNode": "n27",
+      "fromSide": "right",
+      "toNode": "n28",
+      "toSide": "left"
+    },
+    {
+      "id": "e30",
+      "fromNode": "n29",
+      "fromSide": "right",
+      "toNode": "n31",
+      "toSide": "left"
+    },
+    {
+      "id": "e31",
+      "fromNode": "n29",
+      "fromSide": "right",
+      "toNode": "n32",
+      "toSide": "left"
+    },
+    {
+      "id": "e32",
+      "fromNode": "n28",
+      "fromSide": "right",
+      "toNode": "n33",
+      "toSide": "left"
+    },
+    {
+      "id": "e33",
+      "fromNode": "n29",
+      "fromSide": "right",
+      "toNode": "n33",
+      "toSide": "left"
+    },
+    {
+      "id": "e34",
+      "fromNode": "n30",
+      "fromSide": "right",
+      "toNode": "n33",
+      "toSide": "left"
+    },
+    {
+      "id": "hub35",
+      "fromNode": "hub",
+      "fromSide": "bottom",
+      "toNode": "n05",
+      "toSide": "top"
+    },
+    {
+      "id": "hub36",
+      "fromNode": "hub",
+      "fromSide": "bottom",
+      "toNode": "n11",
+      "toSide": "top"
+    },
+    {
+      "id": "hub37",
+      "fromNode": "hub",
+      "fromSide": "bottom",
+      "toNode": "n17",
+      "toSide": "top"
+    },
+    {
+      "id": "hub38",
+      "fromNode": "hub",
+      "fromSide": "bottom",
+      "toNode": "n19",
+      "toSide": "top"
+    },
+    {
+      "id": "hub39",
+      "fromNode": "hub",
+      "fromSide": "bottom",
+      "toNode": "n28",
+      "toSide": "top"
+    },
+    {
+      "id": "hub40",
+      "fromNode": "hub",
+      "fromSide": "bottom",
+      "toNode": "n33",
+      "toSide": "top"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "collapse-filter": false,
+  "search": "入口",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": true,
+  "showOrphans": false,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "tag:#node/核心",
+      "color": {
+        "a": 1,
+        "rgb": 15105570
+      }
+    },
+    {
+      "query": "tag:#node/C指针",
+      "color": {
+        "a": 1,
+        "rgb": 3066993
+      }
+    },
+    {
+      "query": "tag:#node/外设 OR tag:#node/数据流",
+      "color": {
+        "a": 1,
+        "rgb": 3447003
+      }
+    },
+    {
+      "query": "tag:#node/Bootloader OR tag:#node/启动",
+      "color": {
+        "a": 1,
+        "rgb": 10038562
+      }
+    },
+    {
+      "query": "tag:#node/RTOS",
+      "color": {
+        "a": 1,
+        "rgb": 9807270
+      }
+    },
+    {
+      "query": "tag:#node/面试 OR tag:#node/应用",
+      "color": {
+        "a": 1,
+        "rgb": 16753920
+      }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.7132754626224364,
+  "close": true
+}

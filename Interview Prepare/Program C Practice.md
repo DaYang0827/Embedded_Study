@@ -1,4 +1,1197 @@
+# C语言 + Bootloader练习题
+
+1. 看下面代码，回答 `a`、`p`、`*p` 分别表示什么：
+
+```
+uint32_t a = 10;
+uint32_t *p = &a;
+```
+
+如果执行：
+
+```
+*p = 20;
+```
+
+那么 `a` 最后是多少？为什么？
+```text
+a最后是20
+因为是通过指针进行更改的       可以直接把地址对应的内容进行更改
+```
+
+2. 下面两个写法有什么区别：
+
+```
+uint32_t *p;
+```
+
+和：
+
+```
+uint32_t a;
+uint32_t *p = &a;
+```
+
+为什么第一个 `p` 不能随便直接：
+
+```
+*p = 10;
+```
+
+```text
+第一个是定义了一个指针uint32_t的指针    里面允许存放一个地址    但是读取的时候会抓取32位进行读取    自增的时候也是地址大小+4
+第二个是先定义了一个uint32_t的变量a     再把a的地址给到指针p里面
+第一个不要随便直接赋值    是因为还不知道这个数值10的地址在哪
+```
+3. 已知：
+
+```
+uint32_t app_stack;
+
+app_stack = *(uint32_t *)0x08010000;
+```
+
+请分别解释：
+
+```
+0x08010000
+(uint32_t *)0x08010000
+*(uint32_t *)0x08010000
+```
+
+三者分别代表什么。
+```text
+0x08010000                 是中断向量表的第一位的地址
+(uint32_t *)0x08010000     是把这个地址强制转化成uint32_t的指针类型
+*(uint32_t *)0x08010000    是把这个地址对应的内容取出来     对应的就是栈的起始地址
+```
+4. 为什么下面这句话：
+
+```
+uint32_t app_reset_handler =
+    *(uint32_t *)(0x08010000 + 4U);
+```
+
+得到的是 Reset_Handler 的地址，而不是 Reset_Handler 的机器代码？
+```text
+0x08010000 + 4U是对应中断向量表的第二个内容
+里面存放的是Reset_Handler的地址      通过强制转化成指针再用*取出来就是Reset_Handler的地址
+```
+5. APP 起始地址是：
+
+```
+0x08010000
+```
+
+假设：
+
+```
+[0x08010000] = 0x200006A8
+[0x08010004] = 0x08010229
+```
+
+回答：
+
+```
+0x200006A8 是什么？
+0x08010229 是什么？
+```
+
+```text
+[0x08010000] = 0x200006A8   这个是栈的首地址
+[0x08010004] = 0x08010229   这个是reset handler对应的地址
+```
+6. 为什么 Bootloader 不能直接写：
+
+```
+__set_MSP(*(uint32_t *)APP_Start_ADD);
+```
+
+然后立刻跳转？
+
+为什么还要先检查：
+
+```
+MSP 是否位于 SRAM
+Reset_Handler 是否位于 APP Flash
+```
+
+```text
+需要检查msp位于sram里面    因为虽然app的msp是可以正常写到0x08010000里面   但是对应的内容可能会出问题   比如传输有问题   或者有干扰   或者app写入不完整等    所以0x08010000里面不一定存着正确的地址
+同样的也需要检查reset_handler的地址是否正确的在app flash里面
+```
+7. 某 APP：
+
+```
+APP_START = 0x08010000
+APP_END   = 0x08060000
+```
+
+读出：
+
+```
+app_reset_handler = 0x08010229
+```
+
+这个地址是否合法？
+
+如果读出：
+
+```
+app_reset_handler = 0x08000051
+```
+
+呢？
+
+分别说明原因。
+```text
+app_reset_handler = 0x08000051是不合法的      因为已经规定了app在flash里面的位置是从0x08010000到0x08060000   reset handler如果出现到了0x08000051说明已经到了Bootloader的flash里面了     属于非法访问了
+```
+
+8. 为什么：
+
+```
+Reset_Handler = 0x08010229
+```
+
+是奇数？
+
+真正的机器指令地址为什么可以理解为：
+
+```
+0x08010228
+```
+
+最低位的 `1` 有什么意义？
+```text
+最低位的1代表的是thumb状态
+```
+
+9. APP 下载到了：
+
+```
+0x08010000
+```
+
+为什么这并不能证明：
+
+```
+0x08010004
+```
+
+里面保存的 Reset_Handler 一定正确？
+```text
+
+```
+
+10. `static` 放在函数内部：
+
+```
+void func(void)
+{
+    static uint32_t count = 0;
+    count++;
+}
+```
+
+连续调用 `func()` 三次后，`count` 分别是多少？
+
+为什么它不会每次重新变成 0？
+```text
+
+```
+
+11. 比较：
+
+```
+void func(void)
+{
+    uint32_t count = 0;
+    count++;
+}
+```
+
+和：
+
+```
+void func(void)
+{
+    static uint32_t count = 0;
+    count++;
+}
+```
+
+这两个 `count` 在：
+
+```
+生命周期
+存储位置
+是否每次调用重新初始化
+```
+
+方面有什么区别？
+```text
+
+```
+
+12. 文件中写：
+
+```
+static uint32_t app_write_add = 0x08010000;
+```
+
+这个 `static` 表示什么？
+
+另一个 `.c` 文件能不能：
+
+```
+extern uint32_t app_write_add;
+```
+
+然后访问它？
+
+为什么？
+```text
+
+```
+
+13. 判断下面几个变量更可能位于 `.data`、`.bss` 还是 Stack：
+
+```
+uint32_t a;
+
+uint32_t b = 10;
+
+static uint32_t c;
+
+void func(void)
+{
+    uint32_t d;
+}
+```
+
+分别回答。
+```text
+
+```
+
+14. 为什么：
+
+```
+uint32_t a;
+```
+
+如果是全局变量，通常初始值是 0；
+
+但：
+
+```
+void func(void)
+{
+    uint32_t a;
+}
+```
+
+这个局部变量不能默认认为是 0？
+```text
+
+```
+
+15. 下面代码：
+
+```
+const uint32_t *p;
+```
+
+`const` 限制的是：
+
+```
+p 本身
+还是
+p 指向的数据
+```
+
+那下面呢：
+
+```
+uint32_t * const p = ...;
+```
+
+```text
+
+```
+
+16. 为什么访问硬件寄存器时经常看到：
+
+```
+volatile uint32_t *p;
+```
+
+如果不加 `volatile`，编译器可能做什么优化，从而导致硬件程序出问题？
+```text
+
+```
+
+17. 判断下面操作是不是典型的 Read-Modify-Write：
+
+```
+reg |= 0x01;
+```
+
+为什么这个操作不应该简单理解为“一个 CPU 动作”？
+```text
+
+```
+
+18. Flash 擦除后，STM32 Flash 通常是什么值：
+
+```
+0x00
+还是
+0xFF
+```
+
+为什么你最近 CRC 尾部不足 4 Byte 时选择补：
+
+```
+0xFF
+```
+
+比较自然？
+```text
+
+```
+
+19. 已知固件有效数据长度：
+
+```
+7 Byte
+```
+
+前 4 Byte 已经计算完 CRC。
+
+最后剩：
+
+```
+AA BB CC
+```
+
+如果规则规定不足 4 Byte 补 `FF`，那么最后送入 STM32 CRC 外设的 32-bit 数据应该是多少？
+
+注意 STM32 是 little-endian。
+```text
+
+```
+
+20. 解释下面三者的区别：
+
+```
+expected_crc
+actual_crc
+packet checksum
+```
+
+分别由谁计算？分别验证什么？
+```text
+
+```
+
+21. 你的协议现在是：
+
+```
+AA 55 | LEN | CMD | DATA | SUM
+```
+
+如果：
+
+```
+CMD = VERIFY_APP
+```
+
+为什么 `expected_crc` 更适合放在 `DATA` 里面，而不是专门设计一个：
+
+```
+WAIT_CRC
+```
+
+状态？
+```text
+
+```
+
+22. Bootloader 自己执行：
+
+```
+actual_crc = app_crc();
+```
+
+为什么不能直接说：
+
+> “CRC 已经验证成功了。”
+
+还缺什么？
+```text
+
+```
+
+23. 假设：
+
+```
+PC 上原始固件 CRC = 0x12345678
+```
+
+Bootloader 从 Flash 重新算：
+
+```
+actual_crc = 0x12345678
+```
+
+能说明什么？
+
+如果：
+
+```
+actual_crc = 0x87654321
+```
+
+又说明什么？
+```text
+
+```
+
+24. 为什么 CRC 校验成功，也不能完全替代：
+
+```
+MSP 合法性检查
+Reset_Handler 合法性检查
+```
+
+这三种检查各自解决什么问题？
+```text
+
+```
+
+25. 下面代码有没有问题：
+
+```
+bool verify_crc(void)
+{
+    if(crc == crc)
+        return true;
+
+    return false;
+}
+```
+
+为什么这完全失去了 CRC 验证的意义？
+```text
+
+```
+
+26. 下面这个流程按正确顺序排列：
+
+```
+A. 设置 APP MSP
+B. 检查 Reset_Handler
+C. 读取 APP Vector Table
+D. 设置 VTOR
+E. 跳转 Reset_Handler
+F. 检查 MSP
+```
+
+你认为正确顺序是什么？
+```text
+
+```
+
+27. 为什么 Bootloader 跳 APP 之前要处理：
+
+```
+SysTick
+中断
+DMA
+NVIC pending
+```
+
+而不仅仅是：
+
+```
+app_entry();
+```
+
+```text
+
+```
+
+28. Bootloader 跳 APP 后，Bootloader 原来的 SRAM 内容会不会立刻全部清空？
+
+APP 启动后为什么又很可能把这些内容覆盖？
+```text
+
+```
+
+29. MAP 文件是在：
+
+```
+编译阶段
+链接阶段
+烧录阶段
+```
+
+中的哪个阶段产生？
+
+为什么它能告诉你：
+
+```
+Reset_Handler 在哪里
+main 在哪里
+.data/.bss 在哪里
+Stack 在哪里
+```
+
+```text
+
+```
+
+30. 最后一题，综合题。
+
+请你不用代码，用自己的话把下面过程完整讲一遍：
+
+```
+上位机发送固件
+↓
+Bootloader接收
+↓
+写入Flash
+↓
+CRC验证
+↓
+检查Vector Table
+↓
+跳转APP
+```
+
+要求必须解释清楚：
+
+```
+expected_crc 从哪里来
+actual_crc 怎么来
+0x08010000 是什么
+0x08010004 是什么
+MSP 是什么
+Reset_Handler 是什么
+为什么要检查它们
+```
+
+```text
+
+```
+
+# C语言练习题
+
+### 1. `static` 与局部变量
+
+看代码：
+
+```
+#include <stdio.h>
+
+void test(void)
+{
+    int a = 0;
+    static int b = 0;
+
+    a++;
+    b++;
+
+    printf("%d %d\n", a, b);
+}
+
+int main(void)
+{
+    test();
+    test();
+    test();
+
+    return 0;
+}
+```
+
+请写出输出结果，并解释为什么。
+```text
+test  0 0
+test  0  1
+test  0  2
+因为函数内部的参数b是使用static声明的      改变了他的作用域和生命周期     让他的生命周期可以维持整个程序运行时间     函数结束之后  他的值还是会保留   到下一次函数进入    直到整个程序结束
+```
+
+---
+
+### 2. 指针自增
+
+```
+int a[] = {10, 20, 30, 40};
+int *p = a;
+
+printf("%d\n", *p++);
+printf("%d\n", *p);
+```
+
+输出分别是什么？
+
+重点解释：
+
+```
+*p++
+```
+
+到底是：
+
+```
+(*p)++
+```
+
+还是：
+
+```
+*(p++)
+```
+
+```text
+输出10     20
+*p++代表的是*（p++）  意思是先去出这个指针指向的内容并结束运算后     指针再进行自增
+```
+---
+
+### 3. `const`
+
+下面哪些是合法的？
+
+```
+int a = 10;
+int b = 20;
+
+const int *p1 = &a;
+int * const p2 = &a;
+const int * const p3 = &a;
+```
+
+判断下面每一句是否合法：
+
+```
+*p1 = 30;
+p1 = &b;
+
+*p2 = 30;
+p2 = &b;
+
+*p3 = 30;
+p3 = &b;
+```
+
+```text
+*p1 = 30; 不合法    const现在限定的是内容
+p1 = &b;  合法   可以对地址进行更改
+
+*p2 = 30;  合法    const现在限定的是地址
+p2 = &b;    不合法    不能对地址进行更改
+
+*p3 = 30;   不合法
+p3 = &b;   不合法    const现在对地址和内容都进行了限制
+```
+---
+
+### 4. 数组与指针
+
+```
+int a[5] = {1, 2, 3, 4, 5};
+
+int *p = a;
+```
+
+回答：
+
+```
+a[2]
+*(a + 2)
+p[2]
+*(p + 2)
+```
+
+这四个结果分别是多少？
+
+它们本质上有没有区别？
+```text
+a[2]   3
+*(a + 2)  3
+p[2]   3
+*(p + 2)  3   
+```
+---
+
+### 5. 位运算陷阱
+
+已知：
+
+```
+uint8_t status = 0x05;
+```
+
+也就是：
+
+```
+0000 0101
+```
+
+判断：
+
+```
+if (status & 0x01 == 0x01)
+```
+
+这个写法有没有问题？
+
+正确写法应该是什么？
+```text
+有问题
+这个运算的顺序会发生问题    变成了先对==进行判断    再对与进行判断
+if ((status & 0x01) == 0x01)
+```
+---
+
+### 6. 结构体指针
+
+```
+typedef struct
+{
+    uint8_t id;
+    uint16_t len;
+} Package_t;
+
+Package_t pkg;
+Package_t *p = &pkg;
+```
+
+下面两种写法是不是等价？
+
+```
+p->len = 10;
+```
+
+和：
+
+```
+(*p).len = 10;
+```
+
+如果等价，为什么？
+```text
+等价
+因为p就相当于是结构体指针     如果想读取到结构体里面的内容    就需要使用->
+他的本质就是相当于先对指针读取对应的内容再.len
+```
+---
+
+### 7. 函数参数
+
+看函数：
+
+```
+void change(int x)
+{
+    x = 100;
+}
+
+int main(void)
+{
+    int a = 10;
+    change(a);
+
+    printf("%d\n", a);
+}
+```
+
+输出是什么？
+
+如果想让 `change()` 真正修改 `a`，应该怎么改？
+```text
+void change(int* x)
+{
+    *x = 100;
+}
+
+int main(void)
+{
+    int a = 10;
+    change(&a);
+
+    printf("%d\n", a);
+}
+```
+---
+
+### 8. 二级指针
+
+```
+int a = 10;
+int *p = &a;
+int **pp = &p;
+```
+
+回答：
+
+```
+p
+*p
+pp
+*pp
+**pp
+```
+
+分别代表什么？
+
+其中哪些值相等？
+```text
+p     代表一级指针   里面存的是int类型变量的地址
+*p    代表从一级指针里面读取数据     对应a
+pp    代表二级指针     里面存的是p指针的地址
+*pp   代表对二级指针取一次内容     *pp = p 里面存的是a的地址
+**pp   代表对二级指针取两次内容    可以直接拿到a
+```
+---
+
+### 9. `sizeof`
+
+假设是 32 位 STM32：
+
+```
+uint8_t a[10];
+uint8_t *p = a;
+```
+
+回答：
+
+```
+sizeof(a)
+sizeof(p)
+```
+
+分别是多少？
+
+为什么不同？
+```text
+sizeof(a) 10    这个计算的是数组整体的大小
+sizeof(p)  4    p就代表了一个指针    计算的是指针本身的大小   他是保存了32位的地址的
+```
+---
+
+### 10. 字符串
+
+```
+char str1[] = "hello";
+char *str2 = "hello";
+```
+
+这两者有什么区别？
+
+下面操作哪个更危险？
+
+```
+str1[0] = 'H';
+str2[0] = 'H';
+```
+
+为什么？
+```text
+第二个更危险
+因为从定义来看    第二个相当于是直接给指针赋值了一个字符串     这个字符串是只读的    是不允许进行修改的
+```
+---
+
+### 11. 全局变量与 `static`
+
+`file1.c`：
+
+```
+static int count = 0;
+```
+
+`file2.c`：
+
+```
+extern int count;
+```
+
+这样能不能正常链接？
+
+为什么？
+
+如果想让 `file2.c` 能访问 `count`，应该怎么改？
+```text
+不可以正常链接
+因为static会改变一个参数的作用域    只能限定在当前的.c文件调用    不允许别的文件进行调用
+应该改成int count = 0;     再extern int count;
+```
+---
+
+### 12. 函数内 static（❌）
+
+```
+void parser(void)
+{
+    static uint8_t index = 0;
+
+    index++;
+}
+```
+
+回答：
+
+`index` 的：
+
+- 作用域是什么？
+- 生命周期是什么？
+- 一般存在哪个区域？
+```text
+作用域还是当前的parser函数范围内
+生命周期是整个程序运行范围内
+因为初始值为0   所以放在.bss里面
+```
+---
+
+### 13. 普通局部变量
+
+```c
+void func(void)
+{
+    int a;
+    printf("%d\n", a);
+}
+```
+
+`a` 是否一定是 0？
+
+为什么？
+
+它通常存在 RAM 的哪里？
+```text
+不一定
+因为这个a是在函数的局部进行定义的   如果在定义的时候没有赋初值    那这个值可能是别的内容
+通常存在stack里面      
+```
+---
+
+### 14. 指针传数组
+
+```c
+void clear(uint8_t *buf, uint16_t len)
+{
+    for (uint16_t i = 0; i < len; i++)
+    {
+        buf[i] = 0;
+    }
+}
+```
+
+调用：
+
+```
+uint8_t buffer[8] = {1,2,3,4,5,6,7,8};
+
+clear(buffer, 8);
+```
+
+为什么 `clear()` 可以直接修改 `buffer`？
+
+不是说 C 是“值传递”吗？
+```text
+因为clear的输入参数是指针       在函数里面想改变哪个值就应该传入哪个值的地址
+C确实是值传递    但只是把buffer的地址的值传了进去    并在函数内部重新定义了一个新变量来接受这个地址   如果不通过*来改变内容     函数结束函数里面的内容也会被直接释放掉
+```
+---
+
+### 15. RingBuffer 判断
+
+假设：
+
+```c
+#define SIZE 8
+
+typedef struct
+{
+    uint8_t buf[SIZE];
+    uint8_t read;
+    uint8_t write;
+} RingBuffer;
+```
+
+采用“浪费一个空间”的写法。
+
+请写出：
+
+```
+rb_isempty()
+```
+
+和：
+
+```
+rb_isfull()
+```
+
+的判断条件。
+```text
+rb_isempty() 的判断条件是rb_write == rb_read;
+rb_isfull()     ((rb_write + 1U) % SIZE) == rb_read;
+```
+---
+
+### 16. DMA 场景
+
+DMA Circular Buffer 大小：
+
+```
+#define DMA_SIZE 8
+```
+
+现在：
+
+```
+old_pos = 6;
+new_pos = 2;
+```
+
+请问新数据对应哪些下标？
+```text
+new_pos < old_pos
+说明这个DMA的buffer已经进行了回滚
+从buffer[6]写到了buffer[2]
+```
+---
+
+### 17. 状态机
+
+假设：
+
+```c
+void protocol_process(void)
+{
+    uint8_t byte;
+    static uint8_t data_index = 0;
+    static State_t state = WAIT_HEAD;
+
+    ...
+}
+```
+
+回答：
+
+为什么：
+
+```
+byte
+```
+
+适合普通局部变量，而：
+
+```
+data_index
+state
+```
+
+更适合 `static`？
+```text
+byte适合普通变量    因为保存byte并没有意义    会有新的byte一直进行替换    并且如果使用了static可能会发生跳过接受的情况    比如如果上一个数据包的最后一个字节是0xAA   这个byte如果一直保留的话    下一次数据包解析就直接进入WAIT_0x55了   会发生错包的情况
+而data_index和state需要用static进行保存     因为状态机需要一直知道当前的状态以及对应接收到的数据已经写到了哪一位
+```
+---
+
+### 18. 找 bug
+
+```c
+uint8_t *get_buffer(void)
+{
+    uint8_t buffer[16];
+
+    return buffer;
+}
+```
+
+这段代码有什么严重问题？
+
+为什么函数返回之后这个指针不可靠？
+```text
+这个buffer是内部定义的一个数组
+函数是在stack里面运行的      如果函数结束    对应的内容都会抹除
+虽然最后return buffer也会传回一个地址    但是对应的内容已经失效了    可能被别的函数内容代替了    变成悬空指针了
+```
+---
+
+### 19. 综合题
+
+看下面代码：
+
+```c
+#include <stdio.h>
+
+int *test(void)
+{
+    static int a = 10;
+    a++;
+
+    return &a;
+}
+
+int main(void)
+{
+    int *p1 = test();
+    int *p2 = test();
+
+    printf("%d %d\n", *p1, *p2);
+
+    return 0;
+}
+```
+
+输出是什么？
+
+为什么 `p1` 和 `p2` 最后看到的是同一个值？
+```text
+是
+第一次输出是12   第二次是12
+因为a是在函数内部的static定义的     生命周期被延长到了整个程序运行范围内    下一次调用的时候会直接跳过a的初始化
+```
+---
+
+### 20. 嵌入式判断题
+
+判断对错，并说明原因。
+
+1. `volatile` 可以保证变量操作是原子的。
+2. `static` 局部变量一定存在栈上。
+3. 全局变量不初始化时默认是 0。
+4. 普通局部变量不初始化时默认是 0。
+5. `const uint8_t *p` 表示 `p` 自己不能改变。
+6. `uint8_t * const p` 表示 `p` 自己不能改变。
+7. `extern` 是在定义变量。
+8. 数组名在大多数表达式里会退化成首元素指针。
+9. `count++` 一定是原子操作。
+10. `static` 文件级变量可以被其他 `.c` 文件通过 `extern` 访问。
+```text
+1.不可以
+2.不一定     static的局部变量一遍在最开始编译的时候   会直接写入ram的data里面    并不是在stack里面
+3.对    
+4.不对   如果这个变量在函数里面    如果不进行初始化   就有可能是任意值
+5. 不对   限定的是内容   禁止更改p指针指向的内容
+6.对  限定的是地址
+7.不对   不是在定义变量   而是声明这个变量在别的文件里面有
+8.对
+9.不对
+10.不对   变量被static定义之后就禁止别的.c文件进行访问了
+```
+
 # 指针第一轮
+
 ## 第一组：`&` 和 `*` 基础
 
 ### 第1题
@@ -8111,6 +9304,11 @@ new_pos = 4;
 ```
 
 是否一定代表没有新数据？结合 Circular DMA 思考。
+```text
+情况A    新数据应该对应的是6 7 0 1 2 3 
+情况B    新数据应该对应 2 3 4 5 
+情况C    新数据应该对应 4 5 6 7
+```
 
 ---
 
@@ -8163,6 +9361,32 @@ new_pos = 2
 6、7、0、1
 ```
 
+```c
+void DMA_ProcessData(uint16_t new_pos)
+{
+    if (new_pos > old_pos)
+    {
+        for(int i = old_pos; i < new_pos; i++)
+        {
+	        rb_write(RingBuffer *rb, dma_buffer[i]);
+	    }
+    }
+    else if (new_pos < old_pos)
+    {
+        for(int i = old_pos; i < DMA_SIZE; i++)
+        {
+	        rb_write(RingBuffer *rb, dma_buffer[i]);
+	    }
+	    for(int i = 0; i < new_pos; i++)
+        {
+	        rb_write(RingBuffer *rb, dma_buffer[i]);
+	    }
+    }
+
+    /* 补全 */
+}
+```
+
 ---
 
 ## 第三题：计算 DMA 当前写入位置
@@ -8188,12 +9412,12 @@ uint16_t DMA_GetWritePosition(void)
 
 然后计算：
 
-|NDTR|new_pos|
-|---|---|
-|8|?|
-|7|?|
-|3|?|
-|1|?|
+| NDTR | new_pos |
+| ---- | ------- |
+| 8    | ?       |
+| 7    | ?       |
+| 3    | ?       |
+| 1    | ?       |
 
 思考：
 
@@ -8202,6 +9426,24 @@ new_pos = DMA_SIZE - NDTR;
 ```
 
 得到的是“最后一个已经写入的下标”，还是“下一个要写入的位置”？
+```text
+uint16_t DMA_GetWritePosition(void)
+{
+    uint16_t ndtr;
+
+    ndtr = DMA_GetCurrDataCounter(DMA2_Stream2);
+    
+    uint16_t new_pos = DMA_SIZE - ndtr;
+
+    return new_pos;
+}
+| NDTR | new_pos |
+| ---- | ------- |
+| 8    | 0       |
+| 7    | 1       |
+| 3    | 5       |
+| 1    | 7       |
+```
 
 ---
 
@@ -8235,6 +9477,38 @@ bool rb_write(RingBuffer *rb, uint8_t data)
 ```
 
 找出至少两个逻辑错误，并改成正确版本。
+```text
+return ((rb->read + 1) % BUFFER_SIZE) == rb->write;  判断满应该使用write + 1 == read来判断
+rb->buffer[rb->read] = data;    这里应该是读数据  
+rb->read = (rb->read + 1) % BUFFER_SIZE;    这里也应该是读数据
+```
+
+```c
+#define BUFFER_SIZE 8
+
+typedef struct
+{
+    uint8_t buffer[BUFFER_SIZE];
+    uint8_t read;
+    uint8_t write;
+} RingBuffer;
+
+bool rb_is_full(RingBuffer *rb)
+{
+    return ((rb->write + 1) % BUFFER_SIZE) == rb->read;
+}
+
+bool rb_write(RingBuffer *rb, uint8_t data)
+{
+    if (rb_is_full(rb))
+        return false;
+
+    rb->buffer[rb->write] = data;
+    rb->write = (rb->write + 1) % BUFFER_SIZE;
+
+    return true;
+}
+```
 
 ---
 
@@ -8268,6 +9542,23 @@ bool rb_read(RingBuffer *rb, uint8_t *data)
 }
 ```
 
+```c
+//第一个函数输入参数是变量参数        第二个函数输入参数是变量的地址          应该使用第二个，如果是写入的函数才可以用第一个    第二个是读出数据    需要把函数外面的数值改变    所以需要传入地址
+
+bool rb_read(RingBuffer *rb, uint8_t *data)
+{
+    if (rb == NULL || data == NULL)
+        return false;
+
+    else
+    {
+	    *data = rb->buffer[rb->read];
+	    rb->read = (rb->read + 1U) % BufferSize;
+    }
+
+    return true;
+}
+```
 ---
 
 ## 第六题：位运算与中断标志
@@ -8305,6 +9596,15 @@ if ((sr & USART_SR_RXNE) != 0)
 }
 ```
 
+```text
+0x38   对应的二进制是  0011 1000
+sr & USART_SR_RXNE    真
+sr & USART_SR_IDLE    真
+sr & USART_SR_ORE     假
+
+sr & USART_SR_RXNE是属于位检查    只有sr的这一位是1   判断出来才是1
+```
+
 ---
 
 ## 第七题：`volatile` 判断
@@ -8328,6 +9628,13 @@ RingBuffer rx_ring;
 - ISR 写 RingBuffer，`main()` 读 RingBuffer。
 
 不要简单回答“共享变量都加”，要分别判断。
+```text
+uint8_t dma_buffer[8];    不需要加    这是一个固定不会改变的量    是dma_buffer的大小
+uint16_t old_pos;        需要加    因为在中断中需要修改这一位
+uint16_t new_pos;        需要加     在中断中要进行修改
+uint8_t rx_finished;     需要加   在中断中需要修改
+RingBuffer rx_ring;      需要加    
+```
 
 ---
 
@@ -8366,17 +9673,37 @@ bool rb_write(RingBuffer *rb, uint8_t data);
 
 函数框架：
 
-```
+```c
 void USART_DMA_CheckData(void)
 {
     uint16_t new_pos;
-
-    /* 1. 计算new_pos */
-
-    /* 2. 没有回绕 */
-
-    /* 3. 发生回绕 */
-
-    /* 4. 更新old_pos */
+	
+	new_pos = DMA_SIZE - DMA_GetCurrDataCounter(DMA2_Stream2);
+	
+	if (new_pos > old_pos)
+	{
+		for(int i = old_pos; i < new_pos; i ++)
+		{
+			rb_write(RingBuffer *rb, dma_buffer[i]);
+		}
+	}
+	
+	if (new_pos < old_pos)
+	{
+		for(int i = old_pos; i < BUFFER_ZSIZE; i ++)
+		{
+			rb_write(RingBuffer *rb, dma_buffer[i]);
+		}
+		
+		for(int i = 0; i < new_pos; i ++)
+		{
+			rb_write(RingBuffer *rb, dma_buffer[i]);
+		}
+	}
+	
+	old_pos = new_pos
 }
 ```
+
+
+

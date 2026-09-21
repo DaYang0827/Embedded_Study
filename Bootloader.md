@@ -1,3 +1,4 @@
+
 # 1 嵌入式固件固化与更新方式
 
 ## 1.1 ICP
@@ -211,6 +212,8 @@ Bootloader（**引导加载程序**）是计算机或嵌入式系统上电后运
 
 ## 2.6 Flash 分区
 
+### 2.6.1 定义
+
 使用 **STM32F407VGT6（1 MB Flash）**，Flash 从：
 
 ```text
@@ -323,6 +326,10 @@ STM32F407 Flash
 Sector 0~3 → Bootloader
 Sector 4~11 → APP
 ```
+
+### 2.6.2 对flash进行操作
+
+
 
 ## 2.7 MSP和中断向量表
 
@@ -441,9 +448,7 @@ Options for Target
 ```
 
 把`Start: 0x08000000`，改成`Start: 0x08010000`。Size 则改成你给 APP 剩下的 Flash 大小。
-<img width="782" height="587" alt="image" src="https://github.com/user-attachments/assets/085585a3-c487-4f14-88fe-91998add0ad0" />
-
-
+<img width="782" height="587" alt="image" src="https://github.com/user-attachments/assets/085585a3-c487-4f14-88fe-91998add0ad0" 
 例如 STM32F407 1 MB Flash，APP 从 `0x08010000` 开始，那么 APP 可用区域大致是`0x08010000 ~ 0x080FFFFF`。这样链接器就会把:
 
 ```text
@@ -612,7 +617,7 @@ APP 固件本身就已经包含了主栈地址和中断向量表启动信息，�
 ...
 ```
 
-这些信息来自 `startup_xxx.s` 里的中断向量表，再由链接器放进最终的 `.bin/.hex` 固件。所以通过 USART 发 APP 时，本质上是在发
+这些信息来自 `startup_xxx.s` 里的中断向量表，再由链接器放进最终的 `.bin/.hex` 固件。所以通过 USART 发 APP 时，本质上是在发:
 
 ```text
 向量表
@@ -637,21 +642,453 @@ app_reset = *(uint32_t *)(APP_START_ADDR + 4);
 
 ## 2.10 跳转APP
 
-跳转的流程
+### 2.10.1 跳转流程
 
 ```text
-检查APP是否合法
-↓
-关中断
-↓
-关闭/清理Bootloader留下的外设和SysTick
-↓
-设置VTOR到APP向量表
-↓
-设置MSP为APP自己的栈顶
-↓
-把0x08010004当函数地址
-↓
-跳进APP Reset_Handler
+检查APP 
+↓ 
+停止Bootloader使用的DMA/USART等主动外设 
+↓ 
+关闭并清理中断 
+↓ 
+关闭SysTick 
+↓ 
+切换VTOR到APP 
+↓ 
+读取APP MSP 
+↓ 
+设置MSP 
+↓ 
+读取APP Reset_Handler 
+↓ 
+通过函数指针跳转
 ```
+
+### 2.10.2 关中断清外设
+
+**Bootloader 在跳到 APP 之前，最好把自己运行期间开启的“硬件状态”收拾干净，不要把一堆正在运行的外设、中断、定时器状态直接留给 APP。** Bootloader 可能之前为了接收升级包，已经开启了 USART、DMA、定时器、SysTick、中断等东西。可跳到 APP 后，APP 并不知道这些东西现在已经处于什么状态。
+
+比如 Bootloader 开过`USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);`或者 DMA：`DMA_Cmd(DMA2_Stream2, ENABLE);`又或者 SysTick 一直在每 1 ms 产生中断。如果直接`app_entry();` 那么这些硬件**不会因为跳了函数就自动复位**。也就是说：
+
+```text
+Bootloader:
+USART1 已开启
+DMA 已开启
+SysTick 已开启
+某些 NVIC 中断已 enable
+某些 pending flag 还没清
+        ↓
+直接跳 APP
+        ↓
+这些状态仍然存在
+```
+
+这就是“Bootloader 留下的外设状态”。比如最典型的 SysTick。Bootloader 可能配置过`SysTick_Config(SystemCoreClock / 1000);` 于是 SysTick 每 1 ms 产生一次中断。跳 APP 时，如果不关`SysTick->CTRL = 0;`那么 APP 的 `Reset_Handler` 刚开始执行，还没初始化好自己的 `.data/.bss`、VTOR、中断环境，SysTick 中断就可能突然进来。这时候就可能出现：
+
+```text
+APP刚启动
+↓
+SysTick中断突然来了
+↓
+CPU根据当前VTOR找SysTick_Handler
+↓
+可能还指向Bootloader的向量表
+↓
+跑错Handler
+↓
+HardFault / 程序异常
+```
+
+所以跳之前常见会：
+
+```c
+SysTick->CTRL = 0;
+SysTick->LOAD = 0;
+SysTick->VAL  = 0;
+```
+
+分别是：
+
+```text
+CTRL = 0 → 停止 SysTick
+
+LOAD = 0 → 清除重装载值
+
+VAL = 0 → 清当前计数值
+```
+
+再比如 NVIC。Bootloader 可能开启过：
+
+```c
+USART1_IRQn
+DMA2_Stream2_IRQn
+TIM2_IRQn
+```
+
+即使现在“不想用了”，NVIC 里面对应 enable bit 仍然可能是 1。所以跳 APP 前经常会：
+
+```c
+NVIC_DisableIRQ(USART1_IRQn);
+NVIC_DisableIRQ(DMA2_Stream2_IRQn);
+```
+
+或者更彻底一点：
+
+```c
+for (int i = 0; i < 8; i++)
+{
+    NVIC->ICER[i] = 0xFFFFFFFF;
+    NVIC->ICPR[i] = 0xFFFFFFFF;
+}
+```
+
+这里：
+
+```c
+ICER
+Interrupt Clear-Enable Register
+→ 禁用中断
+
+ICPR
+Interrupt Clear-Pending Register
+→ 清 pending 状态
+```
+
+要清 pending 因为可能这个中断已经“等着执行了”。比如：
+
+```text
+USART收到数据
+↓
+RXNE flag 置位
+↓
+NVIC pending
+↓
+你正好准备跳 APP
+```
+
+即使你后来切了程序，如果 pending 没清，它可能马上就冲进 APP。
+
+---
+
+外设本身也是一样。比如 DMA 还在运行`DMA_Cmd(DMA2_Stream2, ENABLE);`直接跳 APP，DMA 还可能继续往原来的`dma_buffer`写数据。但 APP 的 RAM 初始化之后，那块地址可能已经变成别的变量了。结果就可能出现：
+
+```text
+DMA偷偷写内存
+↓
+APP变量莫名被改
+↓
+程序随机崩溃
+```
+
+所以可能需要`DMA_Cmd(DMA2_Stream2, DISABLE);`USART 也类似。如果 Bootloader 打开了`USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);`跳前最好关掉：
+
+```c
+USART_ITConfig(USART1, USART_IT_RXNE, DISABLE);
+USART_Cmd(USART1, DISABLE);
+```
+
+但这里要注意一点不一定所有项目都需要把所有外设都 `DeInit()`。
+
+最基本要求是：
+
+- 不要留下还在运行的中断
+- 不要留下 pending 中断
+- 不要留下仍然往 RAM 写数据的 DMA
+- 不要留下 SysTick 干扰 APP 启动
+
+至于 GPIO、RCC、USART 寄存器要不要全部恢复默认，看 APP 是否会重新完整初始化。如果 APP 一启动就：
+
+```c
+SystemInit();
+USART_Init();
+DMA_Init();
+GPIO_Init();
+```
+
+那么很多外设状态会被重新配置。但中断和 DMA 这种“会主动发生事情”的东西，跳转前最好处理干净。可以把它理解成搬家：
+
+```text
+Bootloader住过这间房
+↓
+开着灯
+开着水龙头
+洗衣机还在转
+闹钟还在响
+↓
+APP搬进来
+```
+
+如果不清理，APP一进来就会被这些旧状态干扰。所以比较规范的跳转流程通常是：
+
+```c
+__disable_irq();
+
+/* 停 SysTick */
+SysTick->CTRL = 0;
+SysTick->LOAD = 0;
+SysTick->VAL  = 0;
+
+/* 停 Bootloader 使用的外设 */
+DMA_Cmd(DMA2_Stream2, DISABLE);
+USART_ITConfig(USART1, USART_IT_RXNE, DISABLE);
+
+/* 清 NVIC enable / pending */
+for (int i = 0; i < 8; i++)
+{
+    NVIC->ICER[i] = 0xFFFFFFFF;
+    NVIC->ICPR[i] = 0xFFFFFFFF;
+}
+
+/* 切 APP 向量表 */
+SCB->VTOR = APP_ADDR;
+
+/* 切 APP 栈 */
+__set_MSP(*(uint32_t *)APP_ADDR);
+
+/* 跳 APP Reset_Handler */
+AppEntry_t app_entry =
+    (AppEntry_t)(*(uint32_t *)(APP_ADDR + 4));
+
+app_entry();
+```
+
+**跳 APP 不是“重新上电”，MCU 的寄存器和外设不会自动恢复默认值。** 所以 Bootloader 用过什么，APP 就可能继承什么。所谓“清理 Bootloader 留下的外设和 SysTick”，就是在交出 CPU 控制权之前，把这些可能继续干扰 APP 的硬件状态停掉或清掉。
+
+### 2.10.3 APP合法性检查
+
+
+### 2.10.4 CRC检验
+
+
+
+
+AA 55 00 02 02
+
+AA 55 04 03 11 22 33 44 B1
+
+AA 55 03 03 AA BB CC 37
+
+
+
+
+## 核心流程
+
+整体的流程分为：
+
+```text
+上位机发包
+↓
+USART收到
+↓
+DMA搬到buffer
+↓
+RingBuffer缓存
+↓
+Parser从RingBuffer取字节
+↓
+解析成：
+LEN / CMD / DATA
+↓
+cmd_handle()
+↓
+根据CMD执行动作
+```
+
+然后 CMD 只有几种：
+
+```
+ERASE_APP
+→ 擦Flash
+
+WRITE_APP
+→ 把DATA写进APP Flash
+
+VERIFY_APP
+→ 计算Flash里的CRC
+→ 和上位机提供的CRC比较
+
+JUMP_APP
+→ 检查MSP
+→ 检查Reset_Handler
+→ 切VTOR/MSP
+→ 跳APP
+```
+
+其实你的 Bootloader 本质就这么简单。
+
+你现在之所以绕，是因为你脑子里可能是这种状态：
+
+```
+CRC
+MSP
+AA55
+Flash
+Reset_Handler
+SUM
+WAIT_DATA
+VTOR
+DMA
+APP_SIZE
+expected_crc
+```
+
+全部平铺在一起。
+
+但实际上它们不是同一层。
+
+你要开始用“分层”去看。
+
+比如：
+
+```
+第1层：接收数据
+USART + DMA + RingBuffer
+
+第2层：解析协议
+Parser
+
+第3层：执行命令
+CMD
+
+第4层：底层操作
+Flash / CRC / Jump
+```
+
+只要这么一分，你会立刻清楚很多。
+
+比如你刚才为什么会想加：
+
+```
+WAIT_CRC
+```
+
+因为你把：
+
+> “CRC 是一个功能”
+
+误放成了：
+
+> “CRC 是协议状态机的一部分”
+
+但其实如果你的 CRC 是 `VERIFY_APP` 命令携带的参数，那么它只是：
+
+```
+DATA的一部分
+```
+
+所以 Parser 根本不需要知道“这是CRC”。
+
+Parser只负责：
+
+```
+收到多少字节？
+CMD是什么？
+DATA是什么？
+SUM对不对？
+```
+
+至于：
+
+```
+DATA里的4个字节到底代表CRC、版本号、地址还是固件大小
+```
+
+那是 CMD 层负责解释。
+
+这就是“分层思维”。
+
+你现在可以把每个模块的职责记成一句话：
+
+```
+DMA：
+搬数据
+
+RingBuffer：
+存数据
+
+Parser：
+拆包
+
+CMD：
+决定干什么
+
+Flash：
+真正写数据
+
+CRC：
+验证数据
+
+Jump：
+把CPU控制权交给APP
+```
+
+这样就不会混。
+
+你现在也先别急着加：
+
+```
+Firmware Header
+版本号
+签名
+ACK重传
+序列号
+Boot flag
+双分区
+```
+
+这些都会让你更绕。
+
+你现在应该先把当前 Bootloader 收敛成最小完整版本：
+
+```
+AA55 + LEN + CMD + DATA + SUM
+↓
+ERASE
+↓
+WRITE
+↓
+VERIFY CRC
+↓
+JUMP
+```
+
+然后自己画一张流程图。
+
+比如：
+
+```
+PC
+ |
+ | AA55 LEN CMD DATA SUM
+ v
+USART
+ |
+ v
+DMA
+ |
+ v
+RingBuffer
+ |
+ v
+Parser
+ |
+ v
+Package_t
+ |
+ v
+cmd_handle()
+ |
+ +---- ERASE_APP ----> erase_app()
+ |
+ +---- WRITE_APP ----> write_app()
+ |
+ +---- VERIFY_APP ---> app_crc()
+ |
+ +---- JUMP_APP -----> jump_app()
+```
+
+你把这张图每天看两次，比继续加新功能有用。
+
+
+
 

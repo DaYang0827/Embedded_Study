@@ -1,6 +1,5 @@
 ❗
 1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣🔟
-
 # 1 C 程序与基础类型
 ## 1.1 C语言基本数据类型以及大小
 
@@ -41,7 +40,6 @@ int 是个“变色龙” (可移植性问题)
 关键字（keyword）是由 **C 语言标准预先规定、具有特殊语法含义的单词，不能作为变量名、函数名或结构体成员名**
 
 在C90中有32个对应的关键字，之后还有C99以及C11的新增关键字
-
 ```text
 auto        break      case        char        const       continue    default
 dodouble    else       enum        extern      float       for         goto
@@ -4911,6 +4909,7 @@ typedef struct
 ```
 
 整个结构体可能占几十个 Byte。如果：`spi_init(spi1_flash1);`直接值传递，就可能需要复制整个结构体。而：`spi_init(&spi1_flash1);`只需要传递：一个地址  STM32F407 是32位地址，因此普通数据指针通常就是：4 Byte  于是：
+
 ```text
 大结构体
    ↓
@@ -4936,7 +4935,7 @@ uint8_t get_status(void)
 
 //也可以返回指针：
 
-uint8_t * get_buffer(void)
+uint8_t* get_buffer(void)
 {
     return rx_buffer;
 }
@@ -4959,9 +4958,7 @@ void led_on(void)
 
 #### 3.1.3.1 返回数据
 
-嵌入式喜欢return 0/-1
-
-如：
+嵌入式喜欢`return 0/-1` 如：
 ```c
 int Flash_Write(uint8_t *data)
 {
@@ -4971,7 +4968,6 @@ int Flash_Write(uint8_t *data)
     }  
     // 写Flash  
     return 0;
-
 }
 ```
 
