@@ -599,7 +599,13 @@ Reset_Handler 是什么
 ```
 
 ```text
-
+expected_crc 是上位机对整个APP固件包程序内容进行计算得出的
+actual_crc 是Bootloader通过对APP写入flash里面的内容   进行计算得出的
+0x08010000 是APP程序的msp位置
+0x08010004 是APP的restet handler地址存储的地方
+MSP 是APP的栈首地址位置
+Reset_Handler 是程序重启需要执行操作的地址存储
+检查它们  是为了确保上位机发送的数据和Bootloader接受的数据是相同的     以及app写入的数据是正常的   不是非法数据
 ```
 
 # C语言练习题
