@@ -1,9 +1,4 @@
 [
-  "number-headings-obsidian",
-  "line-arrange",
-  "quickadd",
-  "obsidian-style-settings",
-  "obsidian-excalidraw-plugin",
-  "obsidian-tasks-plugin",
-  "obsidian-git"
+  "obsidian-git",
+  "obsidian-style-settings"
 ]
