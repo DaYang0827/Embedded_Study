@@ -402,7 +402,8 @@ packet checksum
 分别由谁计算？分别验证什么？
 ```text
 expect是由上位机计算的     是对app这个固件包在上位机上就算出来一个CRC编码    要与Bootloader计算出来的进行配对
-actual 是由Bootloader进行计算的      把flash写入的内容进行crc的计算    
+actual 是由Bootloader进行计算的      把flash写入的内容进行crc的计算    想要和上位机计算出来的进行对比   如果不正确就是CRC校验失败    说明这个数据包有问题
+sum计算的是单个数据包的内容     把cmd+len+data的内容加起来   看第八位是不是和数据传输的sum相同   如果不相同   说明这次的数据包在传输的时候发生的干扰    要丢弃这次的数据包
 ```
 
 21. 你的协议现在是：
@@ -425,7 +426,7 @@ WAIT_CRC
 
 状态？
 ```text
-
+因为可以直接CMD等于verify的指令   然后直接传进去一个crc的值   直接对两个crc进行判断     不用再专门分一个状态出来进行等待
 ```
 
 22. Bootloader 自己执行：
@@ -440,7 +441,7 @@ actual_crc = app_crc();
 
 还缺什么？
 ```text
-
+因为不管传输什么数据    这个
 ```
 
 23. 假设：
