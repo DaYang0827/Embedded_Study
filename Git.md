@@ -102,7 +102,7 @@ main
 
 ---
 
-## 6 `Untracked files`
+##  `Untracked files`
 
 执行`git status`可以看到：
 
@@ -134,7 +134,7 @@ Knowledge/
 所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
 
 
-## 7 `git add .`
+##  `git add .`
 
 执行：
 
@@ -142,19 +142,9 @@ Knowledge/
 git add .
 ```
 
-意思是**把当前目录所有新增/修改内容加入暂存区。** `.` 代表**当前目录**所以`git add .` 可以理解成：
+意思是**把当前目录所有新增/修改内容加入暂存区。** `.` 代表**当前目录**所以`git add .` 可以理解成$\boxed{\text{把当前所有变化准备好，等待 commit}}$
 
-把当前所有变化准备好，等待 commit\boxed{\text{把当前所有变化准备好，等待 commit}}
-
-注意：
-
-```
-git add .
-```
-
-并没有上传 GitHub。
-
-只是：
+**注意`git add .`并没有上传 GitHub**。只是：
 
 ```
 Working Directory
@@ -162,27 +152,14 @@ Working Directory
 Staging Area
 ```
 
----
 
-# 8 `git commit`
-
-然后：
+##  `git commit`
 
 ```
 git commit -m "Initial Knowledge sync"
 ```
 
-意思是：
-
-> 把暂存区当前状态保存成一个 Git 版本。
-
-这一步很重要。
-
-Commit 可以理解成：
-
-给当前文件状态拍一张快照\boxed{\text{给当前文件状态拍一张快照}}
-
-比如：
+意思是**把暂存区当前状态保存成一个 Git 版本**。这一步很重要。Commit 可以理解成$\boxed{\text{给当前文件状态拍一张快照}}$ 比如：
 
 ```
 commit A
@@ -195,99 +172,39 @@ commit C
 修改 Bootloader 内容
 ```
 
-以后你可以回到任意历史版本。
+以后你可以回到任意历史版本。所以$\boxed{\text{Git 的核心其实不是同步，而是版本管理}}$ GitHub 只是把这些 commit 放到了云端。
 
-所以：
+##  `git push`
 
-Git 的核心其实不是同步，而是版本管理\boxed{\text{Git 的核心其实不是同步，而是版本管理}}
-
-GitHub 只是把这些 commit 放到了云端。
-
----
-
-# 9 `git push`
-
-你执行：
+执行：
 
 ```
 git push -u origin main
 ```
 
-拆开看：
+拆开看`git push` = 上传本地 commit。`origin` = 上传到哪个远程仓库。 `main` = 上传哪个 branch。所以`git push origin main` 意思就是$\boxed{\text{把本地 main 分支上传到 origin}}$
 
-```
-git push
-```
+而`-u` 作用是建立 upstream。以后 Git 就知道：
 
-= 上传本地 commit。
-
-```
-origin
-```
-
-= 上传到哪个远程仓库。
-
-```
-main
-```
-
-= 上传哪个 branch。
-
-所以：
-
-```
-git push origin main
-```
-
-意思就是：
-
-把本地 main 分支上传到 origin\boxed{\text{把本地 main 分支上传到 origin}}
-
-而：
-
-```
--u
-```
-
-作用是建立 upstream。
-
-以后 Git 就知道：
-
-```
+```text
 本地 main
 ↔
 origin/main
 ```
 
-所以后面就可以直接：
+所以后面就可以直接`git push` 不需要每次写`git push origin main`
 
-```
-git push
-```
+## `git pull`
 
-不需要每次写：
-
-```
-git push origin main
-```
-
----
-
-# 10 `git pull`
-
-你之前执行：
+执行：
 
 ```
 git pull origin main
 ```
 
-意思就是：
+意思就是$\boxed{\text{把 GitHub 上 origin/main 的修改拉下来}}$ 本质上是：
 
-把 GitHub 上 origin/main 的修改拉下来\boxed{\text{把 GitHub 上 origin/main 的修改拉下来}}
-
-本质上是：
-
-```
+```text
 GitHub
   ↓
 Local
