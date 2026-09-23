@@ -1,5 +1,5 @@
-
-## 1. Git 仓库是什么
+# 1 Git
+## 1.1 Git 仓库是什么
 
 原来的 Obsidian 文件夹，比如：
 
@@ -27,83 +27,11 @@ Obsidian Vault
 └─ .git/
 ```
 
-同一个文件夹既可以是：
+同一个文件夹既可以是`\text{Obsidian Vault}` 也是`\text{Git Repository}` 这就是为什么不需要重新创建 Obsidian Vault。
 
-Obsidian Vault\text{Obsidian Vault}
+## 1.2 Local Repository 和 Remote Repository
 
-也是：
-
-Git Repository\text{Git Repository}
-
-这就是为什么你不需要重新创建 Obsidian Vault。
-
----
-
-## 2. `git status`
-
-你最开始执行：
-
-```
-git status
-```
-
-出现：
-
-```
-fatal: not a git repository
-```
-
-说明：
-
-当前目录还没有 ‘.git‘\boxed{\text{当前目录还没有 `.git`}}
-
-执行 `git init` 以后，再运行：
-
-```
-git status
-```
-
-就可以看到：
-
-```
-On branch main
-```
-
-以及哪些文件：
-
-- modified
-- untracked
-- staged
-
-所以：
-
-git status=查看当前Git仓库状态\boxed{\texttt{git status} = 查看当前 Git 仓库状态}
-
-这是你以后排查 Git 问题最常用的命令之一。
-
----
-
-# 3. Local Repository 和 Remote Repository
-
-你电脑上的：
-
-```
-C:\Users\...\Obsidian Vault\Knowledge
-```
-
-属于：
-
-Local Repository\boxed{\text{Local Repository}}
-
-而 GitHub 上的：
-
-```
-github.com/DaYang0827/Knowledge
-```
-
-属于：
-
-Remote Repository\boxed{\text{Remote Repository}}
+电脑上的`C:\Users\...\Obsidian Vault\Knowledge`属于$\boxed{\text{Local Repository}}$ 而 GitHub 上的`github.com/DaYang0827/Knowledge` 属于`\boxed{\text{Remote Repository}}`
 
 Git 的核心就是在这两者之间同步：
 
@@ -115,9 +43,19 @@ GitHub
 Local
 ```
 
----
+# 2 指令
+## 2.1 `git status`
 
-# 4. `origin` 是什么
+最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
+
+- modified
+- untracked
+- staged
+
+所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
+
+
+# 3 `origin` 是什么
 
 你执行过：
 
@@ -174,7 +112,7 @@ git remote add github ...
 
 ---
 
-# 5. branch：main 是什么
+# 4 branch：main 是什么
 
 你一开始看到：
 
@@ -224,7 +162,7 @@ main branch\boxed{\text{main branch}}
 
 ---
 
-# 6. Git 的三个区域
+# 5 Git 的三个区域
 
 这个非常重要。
 
@@ -250,7 +188,7 @@ GitHub
 
 ---
 
-# 7. `Untracked files`
+# 6 `Untracked files`
 
 你执行：
 
@@ -292,7 +230,7 @@ Untracked = 文件存在，但还没加入 Git 管理\boxed{\text{Untracked 
 
 ---
 
-# 8. `git add .`
+# 7 `git add .`
 
 你执行：
 
@@ -338,7 +276,7 @@ Staging Area
 
 ---
 
-# 9. `git commit`
+# 8 `git commit`
 
 然后：
 
@@ -379,7 +317,7 @@ GitHub 只是把这些 commit 放到了云端。
 
 ---
 
-# 10. `git push`
+# 9 `git push`
 
 你执行：
 
@@ -447,7 +385,7 @@ git push origin main
 
 ---
 
-# 11. `git pull`
+# 10 `git pull`
 
 你之前执行：
 
@@ -483,7 +421,7 @@ Local <--pull--- Remote
 
 ---
 
-# 12. 为什么你会遇到 `non-fast-forward`
+# 11 为什么你会遇到 `non-fast-forward`
 
 你 push Knowledge 时出现：
 
@@ -557,7 +495,7 @@ git push
 
 ---
 
-# 13. `--allow-unrelated-histories`
+# 12 `--allow-unrelated-histories`
 
 你执行过：
 
@@ -619,7 +557,7 @@ B /
 
 ---
 
-# 14. Merge 是什么
+# 13 Merge 是什么
 
 你 pull 时进入 Vim，看到：
 
@@ -659,7 +597,7 @@ M 就是 merge commit。
 
 ---
 
-# 15. Vim 为什么突然出现
+# 14 Vim 为什么突然出现
 
 Git 需要你输入：
 
@@ -715,7 +653,7 @@ Enter
 
 ---
 
-# 16. GitHub 为什么不能直接用密码
+# 15 GitHub 为什么不能直接用密码
 
 你当时出现：
 
@@ -749,7 +687,7 @@ Contents → Read and write
 
 ---
 
-# 17. 一个仓库可以有多个 Token
+# 16 一个仓库可以有多个 Token
 
 你之前还问过这个。
 
@@ -774,7 +712,7 @@ Token 只是：
 
 ---
 
-# 18. Obsidian Git 到底帮你做了什么
+# 17 Obsidian Git 到底帮你做了什么
 
 你现在开了：
 
@@ -819,7 +757,7 @@ GitHub
 
 ---
 
-# 19. 你现在整套同步结构
+# 18 你现在整套同步结构
 
 你现在实际上已经搭出了：
 
@@ -844,7 +782,7 @@ GitHub 相当于中间的远程仓库。
 
 ---
 
-# 20. 以后正常工作时，只需要记四个命令
+# 19 以后正常工作时，只需要记四个命令
 
 如果哪一天 Obsidian Git 插件坏了，你手动同步其实只需要：
 
@@ -879,7 +817,7 @@ status→add→commit→pull→push\boxed{ status \rightarrow add \rightarrow co
 
 ---
 
-## 最后给你一个 Git 心智模型
+## 19.1 最后给你一个 Git 心智模型
 
 以后不要把 Git 理解成“云盘同步”。
 
