@@ -88,16 +88,16 @@ void (*callback)(void) = led_on;
 
 ## 2.1 常见基本类型
 
-| 类型 | 含义 | STM32F407 常见大小 | 标准保证 |
-|---|---|---:|---|
-| `char` | 字符/小整数 | 1 字节 | `sizeof(char)` 永远为 1 |
-| `short` | 短整型 | 2 字节 | 至少 16 位 |
-| `int` | 基本整型 | 4 字节 | 至少 16 位 |
-| `long` | 长整型 | 4 字节 | 至少 32 位 |
-| `long long` | 长长整型 | 8 字节 | 至少 64 位 |
-| `float` | 单精度浮点 | 4 字节 | 实现相关 |
-| `double` | 双精度浮点 | 8 字节 | 精度不低于 `float` |
-| `long double` | 扩展浮点 | 实现相关 | 实现相关 |
+|      类型       |   含义   | STM32F407 常见大小 |         标准保证         |
+| :-----------: | :----: | :------------: | :------------------: |
+|    `char`     | 字符/小整数 |      1 字节      | `sizeof(char)` 永远为 1 |
+|    `short`    |  短整型   |      2 字节      |       至少 16 位        |
+|     `int`     |  基本整型  |      4 字节      |       至少 16 位        |
+|    `long`     |  长整型   |      4 字节      |       至少 32 位        |
+|  `long long`  |  长长整型  |      8 字节      |       至少 64 位        |
+|    `float`    | 单精度浮点  |      4 字节      |         实现相关         |
+|   `double`    | 双精度浮点  |      8 字节      |    精度不低于 `float`     |
+| `long double` |  扩展浮点  |      实现相关      |         实现相关         |
 
 需要区分三种层级：
 
@@ -181,9 +181,9 @@ char text[] = "A";
 
 二者区别：
 
-| 表达式 | 含义 | 内存内容 |
-|---|---|---|
-| `'A'` | 字符常量 | 字符编码值 |
+|  表达式  |   含义   |      内存内容      |
+| :---: | :----: | :------------: |
+| `'A'` |  字符常量  |     字符编码值      |
 | `"A"` | 字符串字面量 | `'A'` 和结尾 `\0` |
 
 在标准 C 中，普通字符常量 `'A'` 的类型是 `int`，但通常可以存入 `char`：
@@ -225,7 +225,7 @@ sizeof(array[0]);    // 单个元素大小
 
 该宏只适用于真正的数组对象，不适用于已经退化成指针的函数参数。
 
----
+
 
 # 3. C 语言关键字概览
 
@@ -244,14 +244,14 @@ volatile  while
 
 ## 3.2 常见分类
 
-| 类别 | 关键字 |
-|---|---|
-| 基本类型 | `char`、`short`、`int`、`long`、`signed`、`unsigned`、`float`、`double`、`void` |
-| 流程控制 | `if`、`else`、`switch`、`case`、`default`、`for`、`while`、`do`、`break`、`continue`、`goto`、`return` |
-| 自定义类型 | `struct`、`union`、`enum`、`typedef` |
-| 存储与链接 | `auto`、`register`、`static`、`extern` |
-| 类型限定 | `const`、`volatile` |
-| 其他 | `sizeof` |
+|  类别   |                                             关键字                                             |
+| :---: | :-----------------------------------------------------------------------------------------: |
+| 基本类型  |           `char`、`short`、`int`、`long`、`signed`、`unsigned`、`float`、`double`、`void`           |
+| 流程控制  | `if`、`else`、`switch`、`case`、`default`、`for`、`while`、`do`、`break`、`continue`、`goto`、`return` |
+| 自定义类型 |                              `struct`、`union`、`enum`、`typedef`                              |
+| 存储与链接 |                             `auto`、`register`、`static`、`extern`                             |
+| 类型限定  |                                     `const`、`volatile`                                      |
+|  其他   |                                          `sizeof`                                           |
 
 C99/C11 还增加了 `_Bool`、`inline`、`restrict`、`_Atomic` 等关键字。
 
