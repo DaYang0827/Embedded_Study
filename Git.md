@@ -62,31 +62,11 @@ origin  https://github.com/.../Knowledge.git (push)
 
 ---
 
-# 4 branch：main 是什么
+##  branch：main 
 
-你一开始看到：
+一开始看到`(master)` 后来执行`git branch -M main` 于是变成`(main)`
 
-```
-(master)
-```
-
-后来执行：
-
-```
-git branch -M main
-```
-
-于是变成：
-
-```
-(main)
-```
-
-Branch 就是：
-
-代码/文件历史的一条开发线\boxed{\text{代码/文件历史的一条开发线}}
-
-比如：
+Branch 就是$\boxed{\text{代码/文件历史的一条开发线}}$ 比如：
 
 ```
 main
@@ -96,41 +76,15 @@ main
 ├─ commit C
 ```
 
-你现在只有一个主要分支：
-
-```
-main
-```
-
-所以 Obsidian 笔记都是在：
-
-main branch\boxed{\text{main branch}}
-
-上同步。
-
-`git branch -M main` 就是把当前 branch 强制重命名为 `main`。
+现在只有一个主要分支`main` 所以 Obsidian 笔记都是在$\boxed{\text{main branch}}$ 上同步。`git branch -M main` 就是把当前 branch 强制重命名为 `main`。
 
 ---
 
-# 2 指令
-## 2.1 `git status`
-
-最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
-
-- modified
-- untracked
-- staged
-
-所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
-
-
-# 5 Git 的三个区域
-
-这个非常重要。
+## Git 的分区
 
 Git 可以粗略理解成三个区域：
 
-```
+```text
 工作区
 Working Directory
       ↓ git add
@@ -149,6 +103,18 @@ GitHub
 工作区→暂存区→本地仓库→GitHub\boxed{ 工作区 \rightarrow 暂存区 \rightarrow 本地仓库 \rightarrow GitHub }
 
 ---
+
+# 2 指令
+## 2.1 `git status`
+
+最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
+
+- modified
+- untracked
+- staged
+
+所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
+
 
 # 6 `Untracked files`
 
