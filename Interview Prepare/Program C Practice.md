@@ -514,7 +514,17 @@ F. 检查 MSP
 
 你认为正确顺序是什么？
 ```text
-DACFBE
+C. 读取 APP Vector Table
+↓
+F. 检查 MSP
+↓
+B. 检查 Reset_Handler
+↓
+D. 设置 VTOR
+↓
+A. 设置 APP MSP
+↓
+E. 跳转 Reset_Handler
 ```
 
 27. 为什么 Bootloader 跳 APP 之前要处理：
@@ -564,9 +574,35 @@ Stack 在哪里
 ```
 
 ```text
-MAP文件一般在编译阶段产生
-通过看map文件    可以看到所有中断   中断向量表   FLASH  RAM的地址都在哪里    如果程序发生错误可以通过register和map文件搭配起来去分析指针在哪里发生了错误
+MAP 是链接阶段的产物。
+
+把整个流程记成：
+
+.c
+↓ 编译
+.o
+
+↓ 链接
+
+.axf / .elf
+.map
+.bin / .hex
+
+↓ 烧录
+
+MCU Flash
 ```
+
+所以 MAP 能告诉你：
+
+```
+Reset_Handler → 最终被链接到哪里
+main → 最终被链接到哪里
+.data → RAM什么地方
+.bss → RAM什么地方
+```
+
+因为这些地址正是**链接器决定的**。
 
 30. 最后一题，综合题。
 

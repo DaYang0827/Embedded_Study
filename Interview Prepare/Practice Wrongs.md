@@ -691,4 +691,83 @@ void parser(void)
 因为初始值为0   所以放在.bss里面
 ```
 
+## 1.12 MAP 文件
+
+MAP 文件是在
+
+```
+编译阶段
+链接阶段
+烧录阶段
+```
+
+中的哪个阶段产生？
+
+为什么它能告诉你：
+
+```
+Reset_Handler 在哪里
+main 在哪里
+.data/.bss 在哪里
+Stack 在哪里
+```
+
+**MAP 是链接阶段的产物**。
+
+```
+把整个流程记成：
+
+.c
+↓ 编译
+.o
+
+↓ 链接
+
+.axf / .elf
+.map
+.bin / .hex
+
+↓ 烧录
+
+MCU Flash
+```
+
+所以 MAP 能告诉你：
+
+```
+Reset_Handler → 最终被链接到哪里
+main → 最终被链接到哪里
+.data → RAM什么地方
+.bss → RAM什么地方
+```
+
+因为这些地址正是**链接器决定的**。
+
+
+## 1.13 流程按正确顺序排列（❌）
+
+```
+A. 设置 APP MSP
+B. 检查 Reset_Handler
+C. 读取 APP Vector Table
+D. 设置 VTOR
+E. 跳转 Reset_Handler
+F. 检查 MSP
+```
+
+你认为正确顺序是什么？
+
+```text
+C. 读取 APP Vector Table
+↓
+F. 检查 MSP
+↓
+B. 检查 Reset_Handler
+↓
+D. 设置 VTOR
+↓
+A. 设置 APP MSP
+↓
+E. 跳转 Reset_Handler
+```
 
