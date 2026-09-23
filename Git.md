@@ -1,42 +1,25 @@
-可以。我把你刚刚从 **Obsidian 本地 Vault → Git 初始化 → 连接 GitHub → Pull → Commit → Push → 自动同步** 这一整套操作，整理成一套你以后能直接复习的 Git 知识点。
 
 ## 1. Git 仓库是什么
 
-你原来的 Obsidian 文件夹，比如：
+原来的 Obsidian 文件夹，比如：
 
-```
+```text
 Daily_life/
 Knowledge/
 ```
 
 本来只是普通文件夹。
 
-执行：
+执行`git init`以后，Git 会在里面生成一个隐藏目录`.git/` 于是这个文件夹就变成：
 
-```
-git init
-```
-
-以后，Git 会在里面生成一个隐藏目录：
-
-```
-.git/
-```
-
-于是这个文件夹就变成：
-
-```
+```text
 普通文件夹 + .git
 = Git repository
 ```
 
-也就是说：
+也就是说$\boxed{\text{Git 仓库的核心标志就是 `.git` 目录}}$ 所以可以理解成：
 
-Git 仓库的核心标志就是 ‘.git‘ 目录\boxed{\text{Git 仓库的核心标志就是 `.git` 目录}}
-
-所以你可以理解成：
-
-```
+```text
 Obsidian Vault
 ├─ .obsidian/
 ├─ 笔记.md
