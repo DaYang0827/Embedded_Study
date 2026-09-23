@@ -27,6 +27,28 @@ Obsidian Vault
 
 同一个文件夹既可以是`\text{Obsidian Vault}` 也是`\text{Git Repository}` 这就是为什么不需要重新创建 Obsidian Vault。
 
+## Git 分区
+
+Git 可以粗略理解成三个区域：
+
+```text
+工作区
+Working Directory
+      ↓ git add
+暂存区
+Staging Area
+      ↓ git commit
+本地仓库
+Local Repository
+      ↓ git push
+远程仓库
+GitHub
+```
+
+你可以记成$\boxed{ 工作区 \rightarrow 暂存区 \rightarrow 本地仓库 \rightarrow GitHub }$
+
+---
+
 ## 1.2 Local Repository 和 Remote Repository
 
 电脑上的`C:\Users\...\Obsidian Vault\Knowledge`属于$\boxed{\text{Local Repository}}$ 而 GitHub 上的`github.com/DaYang0827/Knowledge` 属于`\boxed{\text{Remote Repository}}`
@@ -80,29 +102,25 @@ main
 
 ---
 
-## Git 的分区
+## 6 `Untracked files`
 
-Git 可以粗略理解成三个区域：
+执行`git status`可以看到：
 
 ```text
-工作区
-Working Directory
-      ↓ git add
-暂存区
-Staging Area
-      ↓ git commit
-本地仓库
-Local Repository
-      ↓ git push
-远程仓库
-GitHub
+Untracked files:
+    .obsidian/
+    xxx.md
 ```
 
-你可以记成：
+意思就是**Git 看到了这些文件，但是目前还没有开始跟踪**。例如：
 
-工作区→暂存区→本地仓库→GitHub\boxed{ 工作区 \rightarrow 暂存区 \rightarrow 本地仓库 \rightarrow GitHub }
+```
+Knowledge/
+├─ abc.md      ← Git知道它存在
+└─ picture.png ← 但还没追踪
+```
 
----
+这时候`git add .`才会让 Git 开始跟踪它们。所以$\boxed{\text{Untracked = 文件存在，但还没加入 Git 管理}}$
 
 # 2 指令
 ## 2.1 `git status`
@@ -116,73 +134,15 @@ GitHub
 所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
 
 
-# 6 `Untracked files`
+## 7 `git add .`
 
-你执行：
+执行：
 
-```
-git status
-```
-
-以后看到：
-
-```
-Untracked files:
-    .obsidian/
-    xxx.md
-```
-
-意思就是：
-
-> Git 看到了这些文件，但是目前还没有开始跟踪。
-
-例如：
-
-```
-Knowledge/
-├─ abc.md      ← Git知道它存在
-└─ picture.png ← 但还没追踪
-```
-
-这时候：
-
-```
+```text
 git add .
 ```
 
-才会让 Git 开始跟踪它们。
-
-所以：
-
-Untracked = 文件存在，但还没加入 Git 管理\boxed{\text{Untracked = 文件存在，但还没加入 Git 管理}}
-
----
-
-# 7 `git add .`
-
-你执行：
-
-```
-git add .
-```
-
-意思是：
-
-> 把当前目录所有新增/修改内容加入暂存区。
-
-`.` 代表：
-
-```
-当前目录
-```
-
-所以：
-
-```
-git add .
-```
-
-可以理解成：
+意思是**把当前目录所有新增/修改内容加入暂存区。** `.` 代表**当前目录**所以`git add .` 可以理解成：
 
 把当前所有变化准备好，等待 commit\boxed{\text{把当前所有变化准备好，等待 commit}}
 
