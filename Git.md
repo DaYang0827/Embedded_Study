@@ -41,72 +41,24 @@ GitHub
 Local
 ```
 
-# 2 指令
-## 2.1 `git status`
+##  `origin` 
 
-最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
+执行`git remote add origin https://github.com/DaYang0827/Knowledge.git` 这条命令的意思不是“上传”。而是告诉 Git**以后我把这个 GitHub 仓库称为 `origin`。** 所以`origin` 只是一个远程仓库别名。完整关系：
 
-- modified
-- untracked
-- staged
-
-所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
-
-
-# 3 `origin` 是什么
-
-你执行过：
-
-```
-git remote add origin https://github.com/DaYang0827/Knowledge.git
-```
-
-这条命令的意思不是“上传”。
-
-而是告诉 Git：
-
-> 以后我把这个 GitHub 仓库称为 `origin`。
-
-所以：
-
-```
-origin
-```
-
-只是一个远程仓库别名。
-
-完整关系：
-
-```
+```text
 origin
     ↓
 https://github.com/DaYang0827/Knowledge.git
 ```
 
-查看可以用：
+查看可以用`git remote -v`,例如：
 
-```
-git remote -v
-```
-
-例如：
-
-```
+```c
 origin  https://github.com/.../Knowledge.git (fetch)
 origin  https://github.com/.../Knowledge.git (push)
 ```
 
-所以：
-
-origin=远程仓库的默认名字\boxed{\texttt{origin} = 远程仓库的默认名字}
-
-它并不是 GitHub 专属关键字，你甚至可以写：
-
-```
-git remote add github ...
-```
-
-只是大家约定俗成使用 `origin`。
+所以$\boxed{\texttt{origin} = 远程仓库的默认名字}$ 它并不是 GitHub 专属关键字，甚至可以写`git remote add github ...` 只是大家约定俗成使用 `origin`。
 
 ---
 
@@ -159,6 +111,18 @@ main branch\boxed{\text{main branch}}
 `git branch -M main` 就是把当前 branch 强制重命名为 `main`。
 
 ---
+
+# 2 指令
+## 2.1 `git status`
+
+最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
+
+- modified
+- untracked
+- staged
+
+所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
+
 
 # 5 Git 的三个区域
 
