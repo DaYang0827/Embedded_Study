@@ -27,7 +27,7 @@ Obsidian Vault
 
 同一个文件夹既可以是`\text{Obsidian Vault}` 也是`\text{Git Repository}` 这就是为什么不需要重新创建 Obsidian Vault。
 
-## Git 分区
+## 1.2 Git 分区
 
 Git 可以粗略理解成三个区域：
 
@@ -49,7 +49,7 @@ GitHub
 
 ---
 
-## 1.2 Local Repository 和 Remote Repository
+## 1.3 Local Repository 和 Remote Repository
 
 电脑上的`C:\Users\...\Obsidian Vault\Knowledge`属于$\boxed{\text{Local Repository}}$ 而 GitHub 上的`github.com/DaYang0827/Knowledge` 属于`\boxed{\text{Remote Repository}}`
 
@@ -63,7 +63,7 @@ GitHub
 Local
 ```
 
-##  `origin` 
+## 1.4 `origin` 
 
 执行`git remote add origin https://github.com/DaYang0827/Knowledge.git` 这条命令的意思不是“上传”。而是告诉 Git**以后我把这个 GitHub 仓库称为 `origin`。** 所以`origin` 只是一个远程仓库别名。完整关系：
 
@@ -84,7 +84,7 @@ origin  https://github.com/.../Knowledge.git (push)
 
 ---
 
-##  branch：main 
+## 1.5 branch：main 
 
 一开始看到`(master)` 后来执行`git branch -M main` 于是变成`(main)`
 
@@ -102,7 +102,7 @@ main
 
 ---
 
-##  `Untracked files`
+## 1.6 `Untracked files`
 
 执行`git status`可以看到：
 
@@ -122,6 +122,28 @@ Knowledge/
 
 这时候`git add .`才会让 Git 开始跟踪它们。所以$\boxed{\text{Untracked = 文件存在，但还没加入 Git 管理}}$
 
+## 1.7 Git 模型
+
+不要把 Git 理解成“云盘同步”。应该理解成：
+
+```text
+文件发生修改
+      ↓
+Git发现变化
+      ↓
+add：我要记录这些变化
+      ↓
+commit：保存成本地版本
+      ↓
+push：把版本上传GitHub
+      ↓
+另一台设备pull
+      ↓
+获得这个版本
+```
+
+最核心的一句话是$\boxed{\text{Git 管的是“版本历史”，GitHub 保存的是“远程版本历史”。}}$
+
 # 2 指令
 ## 2.1 `git status`
 
@@ -133,8 +155,7 @@ Knowledge/
 
 所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
 
-
-##  `git add .`
+## 2.2 `git add .`
 
 执行：
 
@@ -153,7 +174,7 @@ Staging Area
 ```
 
 
-##  `git commit`
+## 2.3 `git commit`
 
 ```
 git commit -m "Initial Knowledge sync"
@@ -174,7 +195,7 @@ commit C
 
 以后你可以回到任意历史版本。所以$\boxed{\text{Git 的核心其实不是同步，而是版本管理}}$ GitHub 只是把这些 commit 放到了云端。
 
-##  `git push`
+## 2.4 `git push`
 
 执行：
 
@@ -194,7 +215,7 @@ origin/main
 
 所以后面就可以直接`git push` 不需要每次写`git push origin main`
 
-## `git pull`
+## 2.5 `git pull`
 
 执行：
 
@@ -226,7 +247,40 @@ Local <--pull--- Remote
 
 ---
 
-# 11 为什么你会遇到 `non-fast-forward`
+## 2.6 核心四个命令
+
+手动同步其实只需要：
+
+```
+git status
+```
+
+查看状态。
+
+```
+git add .
+```
+
+把修改放到暂存区。
+
+```
+git commit -m "update notes"
+```
+
+保存一个版本。
+
+```
+git pull
+git push
+```
+
+同步 GitHub。
+
+所以核心其实就是$\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }$
+
+---
+
+# 3 为什么你会遇到 `non-fast-forward`
 
 你 push Knowledge 时出现：
 
@@ -300,7 +354,7 @@ git push
 
 ---
 
-# 12 `--allow-unrelated-histories`
+# 4 `--allow-unrelated-histories`
 
 你执行过：
 
@@ -362,7 +416,7 @@ B /
 
 ---
 
-# 13 Merge 是什么
+# 5 Merge 是什么
 
 你 pull 时进入 Vim，看到：
 
@@ -402,7 +456,7 @@ M 就是 merge commit。
 
 ---
 
-# 14 Vim 为什么突然出现
+# 6 Vim 为什么突然出现
 
 Git 需要你输入：
 
@@ -458,7 +512,7 @@ Enter
 
 ---
 
-# 15 GitHub 为什么不能直接用密码
+# 7 GitHub 为什么不能直接用密码
 
 你当时出现：
 
@@ -492,7 +546,7 @@ Contents → Read and write
 
 ---
 
-# 16 一个仓库可以有多个 Token
+# 8 一个仓库可以有多个 Token
 
 你之前还问过这个。
 
@@ -517,7 +571,7 @@ Token 只是：
 
 ---
 
-# 17 Obsidian Git 到底帮你做了什么
+# 9 Obsidian Git 到底帮你做了什么
 
 你现在开了：
 
@@ -562,7 +616,7 @@ GitHub
 
 ---
 
-# 18 你现在整套同步结构
+# 10 你现在整套同步结构
 
 你现在实际上已经搭出了：
 
@@ -587,67 +641,3 @@ GitHub 相当于中间的远程仓库。
 
 ---
 
-# 19 以后正常工作时，只需要记四个命令
-
-如果哪一天 Obsidian Git 插件坏了，你手动同步其实只需要：
-
-```
-git status
-```
-
-查看状态。
-
-```
-git add .
-```
-
-把修改放到暂存区。
-
-```
-git commit -m "update notes"
-```
-
-保存一个版本。
-
-```
-git pull
-git push
-```
-
-同步 GitHub。
-
-所以核心其实就是：
-
-status→add→commit→pull→push\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }
-
----
-
-## 19.1 最后给你一个 Git 心智模型
-
-以后不要把 Git 理解成“云盘同步”。
-
-应该理解成：
-
-```
-文件发生修改
-      ↓
-Git发现变化
-      ↓
-add：我要记录这些变化
-      ↓
-commit：保存成本地版本
-      ↓
-push：把版本上传GitHub
-      ↓
-另一台设备pull
-      ↓
-获得这个版本
-```
-
-最核心的一句话是：
-
-Git 管的是“版本历史”，GitHub 保存的是“远程版本历史”。\boxed{\text{Git 管的是“版本历史”，GitHub 保存的是“远程版本历史”。}}
-
-而 Obsidian Git，只是在帮你自动完成这一系列动作。
-
-你刚才这次实际上已经把 Git 里非常核心的一整套流程都亲手走了一遍：**init、remote、branch、status、add、commit、pull、merge、push、authentication**。这比单独背 Git 命令有用得多。
