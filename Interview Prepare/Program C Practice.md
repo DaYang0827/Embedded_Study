@@ -1,3 +1,620 @@
+# C基础 + 嵌入式面试 + 结合你Bootloader项目
+
+1. 解释下面三者区别：
+
+```
+uint32_t a = 10;
+uint32_t *p = &a;
+uint32_t **pp = &p;
+```
+
+分别说明：
+
+```
+a
+p
+*p
+pp
+*pp
+**pp
+```
+
+各是什么。
+
+2. 下面代码有没有问题，为什么？
+
+```
+uint32_t *p;
+*p = 100;
+```
+
+如果有问题，面试时你会怎么解释“野指针”？
+
+3. 下面两个指针有什么区别：
+
+```
+const uint32_t *p1;
+uint32_t * const p2 = ...;
+```
+
+再解释：
+
+```
+const uint32_t * const p3 = ...;
+```
+
+限制了什么。
+
+4. 解释：
+
+```
+volatile uint32_t flag;
+```
+
+为什么嵌入式程序里经常用 `volatile`？
+
+`volatile` 能不能保证原子性？
+
+5. 为什么：
+
+```
+count++;
+```
+
+不是原子操作？
+
+它底层大概经历哪几个步骤？
+
+6. 如果：
+
+```
+volatile uint32_t count;
+```
+
+主循环和中断都执行：
+
+```
+count++;
+```
+
+会不会绝对安全？
+
+为什么？
+
+7. 解释下面这个操作：
+
+```
+reg |= (1U << 3);
+```
+
+它是怎么把 bit3 置 1 的？
+
+为什么这是 Read-Modify-Write？
+
+8. 如果想把 bit3 清 0，应该怎么写？
+
+解释：
+
+```
+reg &= ~(1U << 3);
+```
+
+每一步在做什么。
+
+9. 下面变量分别更可能放在哪里：
+
+```
+uint32_t a;
+uint32_t b = 10;
+static uint32_t c;
+static uint32_t d = 20;
+
+void func(void)
+{
+    uint32_t e;
+    static uint32_t f;
+}
+```
+
+分别判断：
+
+```
+.data
+.bss
+Stack
+```
+
+10. 为什么全局变量：
+
+```
+uint32_t a;
+```
+
+默认是 0，
+
+但函数内部：
+
+```
+void func(void)
+{
+    uint32_t a;
+}
+```
+
+不能默认是 0？
+
+11. 解释函数内 `static`：
+
+```
+void func(void)
+{
+    static uint32_t count = 0;
+    count++;
+}
+```
+
+它的：
+
+```
+作用域
+生命周期
+存储位置
+初始化次数
+```
+
+分别是什么。
+
+12. 文件作用域：
+
+```
+static uint32_t value;
+```
+
+为什么其他 `.c` 文件不能：
+
+```
+extern uint32_t value;
+```
+
+访问它？
+
+13. 解释：
+
+```
+extern uint32_t value;
+```
+
+`extern` 是“定义变量”还是“声明变量”？
+
+什么时候真正分配内存？
+
+14. 面试官问：
+
+> `static` 在 C 语言里有哪几种作用？
+
+你怎么回答？
+
+15. 面试官问：
+
+> `.data` 和 `.bss` 有什么区别？
+
+请按嵌入式角度回答，不只说“一个初始化，一个没初始化”。
+
+16. 为什么 `.data` 在运行时位于 RAM，但它的初始值又和 Flash 有关系？
+17. MCU 上电后，`.bss` 是谁清零的？
+
+是硬件自动清零，还是启动代码/C runtime 做的？
+
+18. 什么是 Stack？
+
+它主要存什么？
+
+19. 什么是 Heap？
+
+和 Stack 最大区别是什么？
+
+20. 嵌入式里为什么经常不推荐大量动态内存分配？
+21. 什么是 MSP？
+
+什么是 PSP？
+
+在 Cortex-M 里分别通常在什么情况下使用？
+
+22. 为什么 Bootloader 跳 APP 时需要：
+
+```
+__set_MSP(app_stack);
+```
+
+不能继续用 Bootloader 自己的 MSP 吗？
+
+23. APP Vector Table 第 0 项是什么？
+
+第 1 项是什么？
+
+后面通常是什么？
+
+24. 为什么：
+
+```
+0x08010000
+```
+
+不是 Reset_Handler 机器代码起点？
+
+25. 如果：
+
+```
+[0x08010000] = 0x200006A8
+[0x08010004] = 0x08010229
+```
+
+请解释这两行分别表示什么。
+
+26. 为什么 `Reset_Handler = 0x08010229` 是奇数？
+
+最低位的 `1` 表示什么？
+
+27. Bootloader 为什么要检查：
+
+```
+MSP 是否在 SRAM
+Reset_Handler 是否在 APP Flash
+```
+
+即使 APP 已经写到 `0x08010000` 了，为什么还要检查？
+
+28. CRC 校验成功以后，为什么还不能直接说明 APP 一定能运行？
+29. `expected_crc` 和 `actual_crc` 分别是谁算的？
+
+为什么必须来自两个独立来源？
+
+30. 如果 Bootloader 自己这样写：
+
+```
+uint32_t crc = app_crc();
+
+if(crc == crc)
+{
+    return true;
+}
+```
+
+为什么这个校验毫无意义？
+
+31. 你现在协议是：
+
+```
+AA 55 | LEN | CMD | DATA | SUM
+```
+
+分别解释每一部分作用。
+
+32. 为什么 Parser 不应该直接判断：
+
+```
+DATA 是 CRC
+DATA 是版本号
+DATA 是固件
+```
+
+这应该由谁判断？
+
+33. 解释你现在这几个模块分别负责什么：
+
+```
+USART
+DMA
+RingBuffer
+Parser
+CMD
+Flash
+CRC
+Jump
+```
+
+34. 为什么 DMA 不能完全代替 RingBuffer？
+35. Circular DMA 中：
+
+```
+old_pos
+new_pos
+NDTR
+```
+
+分别是什么作用？
+
+36. 如果 DMA 是 Circular 模式，发生：
+
+```
+old_pos = 6
+new_pos = 2
+```
+
+说明什么情况？
+
+37. RingBuffer 为什么通常需要：
+
+```
+read index
+write index
+```
+
+两个位置？
+
+38. RingBuffer 判断空通常为什么是：
+
+```
+read == write
+```
+
+判断满为什么不能也直接用：
+
+```
+read == write
+```
+
+39. 面试官问：
+
+> 你为什么在 Bootloader 里使用状态机解析协议？
+
+你怎么回答？
+
+40. 你当前 Parser 有：
+
+```
+WAIT_AA
+WAIT_55
+WAIT_LEN
+WAIT_CMD
+WAIT_DATA
+WAIT_SUM
+```
+
+为什么这种方式比“收到一包后直接 memcpy 然后解析”更适合串口流？
+
+41. 如果串口出现：
+
+```
+AA AA 55 ...
+```
+
+状态机应该怎么处理比较合理？
+
+42. 如果：
+
+```
+LEN > PackageDataSize
+```
+
+为什么要立刻丢包？
+
+43. 如果 checksum 错误，为什么不能继续执行 `cmd_handle()`？
+44. `SUM` 和整个固件 CRC 有什么区别？
+45. Flash 擦除后为什么通常是：
+
+```
+0xFF
+```
+
+46. Flash 编程为什么通常是：
+
+```
+1 → 0
+```
+
+而：
+
+```
+0 → 1
+```
+
+一般需要先擦除？
+
+47. 为什么 Flash 擦除单位通常不是 1 Byte，而是 Sector/Page？
+48. 你的 Bootloader 为什么要做：
+
+```
+flash_unlock();
+...
+flash_lock();
+```
+
+49. 为什么不能让 APP 写入地址超过：
+
+```
+APP_END_ADD
+```
+
+50. 如果：
+
+```
+app_write_add + package->len > APP_END_ADD
+```
+
+为什么必须拒绝写入？
+
+51. 面试官问：
+
+> 你这个 Bootloader 如何防止把自己擦掉？
+
+你怎么回答？
+
+52. 如果 APP 大小不是 4 Byte 整数倍，CRC 怎么处理？
+53. 为什么你最后不足 4 Byte 时补 `0xFF`？
+54. 如果上位机补 `0x00`，Bootloader 补 `0xFF`，会发生什么？
+55. 为什么 `app_size` 现在放在 RAM 里存在隐患？
+
+MCU 复位后会发生什么？
+
+56. 如果以后要做更完整 Bootloader，可以把哪些信息放进 Firmware Header？
+57. 什么是 Magic Number？
+
+为什么 Firmware Header 里经常放一个 magic？
+
+58. 为什么 Bootloader 跳 APP 前要处理：
+
+```
+SysTick
+DMA
+NVIC pending
+中断
+```
+
+59. 为什么“跳 APP”不是“重新复位 MCU”？
+60. 如果 APP 跳转后马上 HardFault，你会按什么顺序排查？
+
+这一题很重要，请你自己列调试流程。
+
+61. MAP 文件是什么阶段生成的？
+62. MAP 文件和 ELF/AXF 有什么区别？
+63. MAP 文件最适合解决哪些问题？
+64. 如果 PC 在：
+
+```
+0x080105A4
+```
+
+发生 HardFault，
+
+你怎么利用 MAP 判断它落在哪个函数附近？
+
+65. Keil Debug 里：
+
+```
+Memory
+Watch
+Registers
+Call Stack
+Disassembly
+Peripherals
+```
+
+分别适合看什么？
+
+66. 如果某变量值突然异常，你会优先看哪几个窗口？
+67. 如果某个寄存器一直没变化，你会怎么判断是：
+
+```
+代码没执行
+寄存器没写进去
+还是外设条件没满足
+```
+
+68. 面试官问：
+
+> 你这个 Bootloader 项目最大的难点是什么？
+
+你不能回答“CRC很难”，你会怎么从工程角度回答？
+
+69. 面试官问：
+
+> 这个 Bootloader 是你自己写的吗？
+
+你怎么诚实又有竞争力地回答？
+
+70. 面试官问：
+
+> 你在这个项目里真正学到了什么？
+
+你怎么回答，才能体现：
+
+```
+C基础
+STM32底层
+协议设计
+Flash
+调试
+架构
+```
+
+71. 面试官问：
+
+> 如果让你重新设计这个 Bootloader，你会改进什么？
+
+你至少说出 5 点。
+
+72. 面试官问：
+
+> 你的 Bootloader 如何保证升级过程中掉电不会把设备变砖？
+
+你现在版本还没实现，也没关系，请说设计思路。
+
+73. 面试官问：
+
+> CRC 能防止恶意篡改吗？
+
+为什么不能？
+
+74. 如果要防止恶意固件，需要增加什么机制？
+75. 面试官问：
+
+> 为什么你用 RingBuffer，不直接在中断里处理整个协议？
+
+76. 为什么不建议在 ISR 里面做大量：
+
+```
+字符串打印
+Flash写入
+复杂协议解析
+```
+
+77. 面试官问：
+
+> 中断和主循环同时访问变量时需要注意什么？
+
+你至少说出：
+
+```
+volatile
+atomicity
+race condition
+critical section
+```
+
+之间的区别。
+
+78. `volatile` 和 `const` 能不能一起用？
+
+例如：
+
+```
+volatile const uint32_t *reg;
+```
+
+这可能表示什么？
+
+79. 为什么硬件状态寄存器经常可以理解成：
+
+```
+volatile const
+```
+
+语义？
+
+80. 最后一题，模拟面试。
+
+面试官问：
+
+> 请你在 3 分钟内介绍你的 Bootloader 项目。
+
+你自己组织一段回答，必须覆盖：
+
+```
+项目目的
+Flash分区
+USART/DMA/RingBuffer
+协议状态机
+Flash升级
+CRC验证
+APP合法性检查
+跳转APP
+调试方法
+你自己的收获
+```
+
+这套题比你上一套更偏“面试实战”。
+
 # C语言 + Bootloader练习题
 
 1. 看下面代码，回答 `a`、`p`、`*p` 分别表示什么：
