@@ -49,6 +49,28 @@ GitHub
 
 ---
 
+## 1.7 Git 模型
+
+不要把 Git 理解成“云盘同步”。应该理解成：
+
+```text
+文件发生修改
+      ↓
+Git发现变化
+      ↓
+add：我要记录这些变化
+      ↓
+commit：保存成本地版本
+      ↓
+push：把版本上传GitHub
+      ↓
+另一台设备pull
+      ↓
+获得这个版本
+```
+
+最核心的一句话是$\boxed{\text{Git 管的是“版本历史”，GitHub 保存的是“远程版本历史”。}}$
+
 ## 1.3 Local Repository 和 Remote Repository
 
 电脑上的`C:\Users\...\Obsidian Vault\Knowledge`属于$\boxed{\text{Local Repository}}$ 而 GitHub 上的`github.com/DaYang0827/Knowledge` 属于`\boxed{\text{Remote Repository}}`
@@ -122,27 +144,79 @@ Knowledge/
 
 这时候`git add .`才会让 Git 开始跟踪它们。所以$\boxed{\text{Untracked = 文件存在，但还没加入 Git 管理}}$
 
-## 1.7 Git 模型
+##   `non-fast-forward`
 
-不要把 Git 理解成“云盘同步”。应该理解成：
+你 push Knowledge 时出现：
 
-```text
-文件发生修改
-      ↓
-Git发现变化
-      ↓
-add：我要记录这些变化
-      ↓
-commit：保存成本地版本
-      ↓
-push：把版本上传GitHub
-      ↓
-另一台设备pull
-      ↓
-获得这个版本
+```
+[rejected] main -> main (non-fast-forward)
 ```
 
-最核心的一句话是$\boxed{\text{Git 管的是“版本历史”，GitHub 保存的是“远程版本历史”。}}$
+这是这次最重要的 Git 知识点之一。
+
+当时情况是：
+
+```
+本地：
+A → B
+
+GitHub：
+A → C
+```
+
+也就是：
+
+远程有本地没有的提交\text{远程有本地没有的提交}
+
+Git 不允许你直接：
+
+```
+B 覆盖 C
+```
+
+因为这可能会把别人/远程已有内容删掉。
+
+所以 Git 告诉你：
+
+> 先 pull。
+
+也就是：
+
+```
+A → B
+ \
+  C
+```
+
+先把 B 和 C 合并：
+
+```
+A → B
+     \
+      Merge
+     /
+A → C
+```
+
+最后再 push。
+
+所以：
+
+non-fast-forward = 远程历史领先/分叉了\boxed{\text{non-fast-forward = 远程历史领先/分叉了}}
+
+解决思路通常是：
+
+```
+git pull
+```
+
+然后再：
+
+```
+git push
+```
+
+---
 
 # 2 指令
 ## 2.1 `git status`
@@ -277,80 +351,6 @@ git push
 同步 GitHub。
 
 所以核心其实就是$\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }$
-
----
-
-# 3 为什么你会遇到 `non-fast-forward`
-
-你 push Knowledge 时出现：
-
-```
-[rejected] main -> main (non-fast-forward)
-```
-
-这是这次最重要的 Git 知识点之一。
-
-当时情况是：
-
-```
-本地：
-A → B
-
-GitHub：
-A → C
-```
-
-也就是：
-
-远程有本地没有的提交\text{远程有本地没有的提交}
-
-Git 不允许你直接：
-
-```
-B 覆盖 C
-```
-
-因为这可能会把别人/远程已有内容删掉。
-
-所以 Git 告诉你：
-
-> 先 pull。
-
-也就是：
-
-```
-A → B
- \
-  C
-```
-
-先把 B 和 C 合并：
-
-```
-A → B
-     \
-      Merge
-     /
-A → C
-```
-
-最后再 push。
-
-所以：
-
-non-fast-forward = 远程历史领先/分叉了\boxed{\text{non-fast-forward = 远程历史领先/分叉了}}
-
-解决思路通常是：
-
-```
-git pull
-```
-
-然后再：
-
-```
-git push
-```
 
 ---
 
