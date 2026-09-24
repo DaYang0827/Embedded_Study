@@ -49,7 +49,7 @@ GitHub
 
 ---
 
-## 1.7 Git 模型
+## 1.3 Git 模型
 
 不要把 Git 理解成“云盘同步”。应该理解成：
 
@@ -71,7 +71,7 @@ push：把版本上传GitHub
 
 最核心的一句话是$\boxed{\text{Git 管的是“版本历史”，GitHub 保存的是“远程版本历史”。}}$
 
-## 1.3 Local Repository 和 Remote Repository
+## 1.4 Local Repository 和 Remote Repository
 
 电脑上的`C:\Users\...\Obsidian Vault\Knowledge`属于$\boxed{\text{Local Repository}}$ 而 GitHub 上的`github.com/DaYang0827/Knowledge` 属于`\boxed{\text{Remote Repository}}`
 
@@ -85,7 +85,7 @@ GitHub
 Local
 ```
 
-## 1.4 `origin` 
+## 1.5 `origin` 
 
 执行`git remote add origin https://github.com/DaYang0827/Knowledge.git` 这条命令的意思不是“上传”。而是告诉 Git**以后我把这个 GitHub 仓库称为 `origin`。** 所以`origin` 只是一个远程仓库别名。完整关系：
 
@@ -106,7 +106,7 @@ origin  https://github.com/.../Knowledge.git (push)
 
 ---
 
-## 1.5 branch：main 
+## 1.6 branch：main 
 
 一开始看到`(master)` 后来执行`git branch -M main` 于是变成`(main)`
 
@@ -124,7 +124,7 @@ main
 
 ---
 
-## 1.6 `Untracked files`
+## 1.7 `Untracked files`
 
 执行`git status`可以看到：
 
@@ -144,7 +144,7 @@ Knowledge/
 
 这时候`git add .`才会让 Git 开始跟踪它们。所以$\boxed{\text{Untracked = 文件存在，但还没加入 Git 管理}}$
 
-##   `non-fast-forward`
+## 1.8 `non-fast-forward`
 
  push vault 时出现：
 
@@ -184,7 +184,7 @@ A → C
 
 ---
 
-## `--allow-unrelated-histories`
+## 1.9 `--allow-unrelated-histories`
 
 出现
 
@@ -242,7 +242,7 @@ B /
 
 一般只有**第一次把两个独立仓库接起来**时会用到。以后正常同步通常不需要。
 
-## Merge 
+## 1.10 Merge 
 
  pull 时进入 Vim，看到：
 
@@ -250,11 +250,7 @@ B /
 Merge branch 'main' ...
 ```
 
-说明 Git 正在创建：\boxed{\text{Merge Commit}}
-
-Merge 就是：
-
-> 把两个不同历史线合并成一条。
+说明 Git 正在创建：$\boxed{\text{Merge Commit}}$ Merge 就是**把两个不同历史线合并成一条**。
 
 例如：
 
@@ -278,9 +274,7 @@ A     M
 
 M 就是 merge commit。
 
----
-
-##  Vim 
+## 1.11 Vim 
 
 Git 需要输入：
 
