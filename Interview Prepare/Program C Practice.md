@@ -342,7 +342,9 @@ Reset_Handler 是否在 APP Flash
 28. `expected_crc` 和 `actual_crc` 分别是谁算的？
 
 为什么必须来自两个独立来源？
+```text
 
+```
 30. 如果 Bootloader 自己这样写：
 
 ```
@@ -355,7 +357,9 @@ if(crc == crc)
 ```
 
 为什么这个校验毫无意义？
+```text
 
+```
 31. 你现在协议是：
 
 ```
@@ -363,7 +367,9 @@ AA 55 | LEN | CMD | DATA | SUM
 ```
 
 分别解释每一部分作用。
+```text
 
+```
 32. 为什么 Parser 不应该直接判断：
 
 ```
@@ -373,7 +379,9 @@ DATA 是固件
 ```
 
 这应该由谁判断？
+```text
 
+```
 33. 解释你现在这几个模块分别负责什么：
 
 ```
@@ -387,8 +395,14 @@ CRC
 Jump
 ```
 
+```text
+
+```
 34. 为什么 DMA 不能完全代替 RingBuffer？
-35. Circular DMA 中：
+```text
+
+```
+34. Circular DMA 中：
 
 ```
 old_pos
