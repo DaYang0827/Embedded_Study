@@ -146,15 +146,13 @@ Knowledge/
 
 ##   `non-fast-forward`
 
-你 push Knowledge 时出现：
+ push vault 时出现：
 
 ```
 [rejected] main -> main (non-fast-forward)
 ```
 
-这是这次最重要的 Git 知识点之一。
-
-当时情况是：
+情况是：
 
 ```
 本地：
@@ -164,9 +162,7 @@ GitHub：
 A → C
 ```
 
-也就是：
-
-远程有本地没有的提交\text{远程有本地没有的提交}
+也就是$\box\text{远程有本地没有的提交}$
 
 Git 不允许你直接：
 
