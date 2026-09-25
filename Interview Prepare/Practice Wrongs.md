@@ -802,3 +802,21 @@ malloc/free
 可能碎片化
 ```
 
+## 1.16 MSP和PSP（❗）
+
+在 Cortex-M 里分别通常在什么情况下使用？
+
+```text
+MSP = Main Stack Pointer
+PSP = Process Stack Pointer
+
+MSP：
+复位后默认使用
+异常/中断 Handler mode 使用
+裸机程序通常主要使用 MSP
+
+PSP：
+通常用于 Thread mode
+RTOS 常给不同任务使用 PSP
+```
+
