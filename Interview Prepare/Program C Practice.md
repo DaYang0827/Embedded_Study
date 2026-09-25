@@ -466,7 +466,7 @@ NDTR
 
 分别是什么作用？
 ```text
-
+在circular里面首先需要NDTR   这个是DMA自己buffer的大小
 ```
 
 36. 如果 DMA 是 Circular 模式，发生：
@@ -477,6 +477,9 @@ new_pos = 2
 ```
 
 说明什么情况？
+```text
+
+```
 
 37. RingBuffer 为什么通常需要：
 
@@ -486,6 +489,9 @@ write index
 ```
 
 两个位置？
+```text
+
+```
 
 38. RingBuffer 判断空通常为什么是：
 
@@ -499,11 +505,18 @@ read == write
 read == write
 ```
 
+```text
+
+```
+
 39. 面试官问：
 
 > 你为什么在 Bootloader 里使用状态机解析协议？
 
 你怎么回答？
+```text
+
+```
 
 40. 你当前 Parser 有：
 
@@ -517,6 +530,9 @@ WAIT_SUM
 ```
 
 为什么这种方式比“收到一包后直接 memcpy 然后解析”更适合串口流？
+```text
+
+```
 
 41. 如果串口出现：
 
@@ -525,6 +541,9 @@ AA AA 55 ...
 ```
 
 状态机应该怎么处理比较合理？
+```text
+
+```
 
 42. 如果：
 
@@ -533,13 +552,27 @@ LEN > PackageDataSize
 ```
 
 为什么要立刻丢包？
+```text
+
+```
 
 43. 如果 checksum 错误，为什么不能继续执行 `cmd_handle()`？
+```text
+
+```
+
 44. `SUM` 和整个固件 CRC 有什么区别？
+```text
+
+```
 45. Flash 擦除后为什么通常是：
 
 ```
 0xFF
+```
+
+```text
+
 ```
 
 46. Flash 编程为什么通常是：
@@ -555,8 +588,15 @@ LEN > PackageDataSize
 ```
 
 一般需要先擦除？
+```text
+
+```
 
 47. 为什么 Flash 擦除单位通常不是 1 Byte，而是 Sector/Page？
+
+```text
+
+```
 48. 你的 Bootloader 为什么要做：
 
 ```
@@ -565,10 +605,18 @@ flash_unlock();
 flash_lock();
 ```
 
+```text
+
+```
+
 49. 为什么不能让 APP 写入地址超过：
 
 ```
 APP_END_ADD
+```
+
+```text
+
 ```
 
 50. 如果：
@@ -579,23 +627,53 @@ app_write_add + package->len > APP_END_ADD
 
 为什么必须拒绝写入？
 
+```text
+
+```
+
 51. 面试官问：
 
 > 你这个 Bootloader 如何防止把自己擦掉？
 
 你怎么回答？
 
+```text
+
+```
+
 52. 如果 APP 大小不是 4 Byte 整数倍，CRC 怎么处理？
+```text
+
+```
+
 53. 为什么你最后不足 4 Byte 时补 `0xFF`？
+```text
+
+```
+
 54. 如果上位机补 `0x00`，Bootloader 补 `0xFF`，会发生什么？
+```text
+
+```
+
 55. 为什么 `app_size` 现在放在 RAM 里存在隐患？
 
 MCU 复位后会发生什么？
+```text
+
+```
 
 56. 如果以后要做更完整 Bootloader，可以把哪些信息放进 Firmware Header？
+```text
+
+```
+
 57. 什么是 Magic Number？
 
 为什么 Firmware Header 里经常放一个 magic？
+```text
+
+```
 
 58. 为什么 Bootloader 跳 APP 前要处理：
 
@@ -605,6 +683,11 @@ DMA
 NVIC pending
 中断
 ```
+
+```text
+
+```
+
 
 59. 为什么“跳 APP”不是“重新复位 MCU”？
 60. 如果 APP 跳转后马上 HardFault，你会按什么顺序排查？
