@@ -466,7 +466,9 @@ NDTR
 
 分别是什么作用？
 ```text
-在circular里面首先需要NDTR   这个是DMA自己buffer的大小
+在circular里面首先需要NDTR   这个是DMA自己buffer的大小    
+old pos代表的是这一次buffer写入的地点
+new pos代表的是下一次数据进入之后应该从哪里开始写
 ```
 
 36. 如果 DMA 是 Circular 模式，发生：
@@ -478,7 +480,9 @@ new_pos = 2
 
 说明什么情况？
 ```text
-
+因为new pos比old pos小   说明dma的buffer已经发生了循环
+所以这次数据存储的从buffer的第6位一直到结束  又从头开始到1
+而new pos = 2代表的是下一次数据应该从buffer的第二位开始写起
 ```
 
 37. RingBuffer 为什么通常需要：
@@ -490,7 +494,7 @@ write index
 
 两个位置？
 ```text
-
+因为RingBuffer也是循环的     需要通过read index和write index来判断生产和消费的对应位置   来判断RingBuffer是满了还是空着
 ```
 
 38. RingBuffer 判断空通常为什么是：
@@ -506,7 +510,7 @@ read == write
 ```
 
 ```text
-
+判断空用read == write代表
 ```
 
 39. 面试官问：
