@@ -100,7 +100,7 @@ C语言手撕 60%
 
 ## 1. strlen
 
-```
+```c
 #include <stddef.h>
 
 size_t my_strlen(const char *str)
@@ -137,7 +137,7 @@ size_t my_strlen(const char *str)
 
 ## 2. strcpy
 
-```
+```c
 char *my_strcpy(char *dst, const char *src)
 {
     char *ret = dst;
@@ -174,7 +174,7 @@ char *my_strcpy(char *dst, const char *src)
 
 ## 3. strncpy
 
-```
+```c
 char *my_strncpy(char *dst, const char *src, size_t n)
 {
     char *ret = dst;
@@ -216,7 +216,7 @@ dst[n - 1] = '\0';
 
 ## 4. strcmp
 
-```
+```c
 int my_strcmp(const char *s1, const char *s2)
 {
     if (s1 == NULL || s2 == NULL) {
