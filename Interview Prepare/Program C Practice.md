@@ -481,7 +481,31 @@ jump是跳转到APP程序进行执行
 ```
 34. 为什么 DMA 不能完全代替 RingBuffer？
 ```text
-dma不能直接代替RingBuffer    因为dma接收的是USART的数据     想通过硬件搬运的方式来减少USART的中断    如果直接写入RingBuffer里面   就需要每次接收USART的数据都进入中断     
+真正区别是：
+
+DMA解决：
+谁负责把数据从 USART DR 搬到 RAM？
+
+RingBuffer解决：
+生产速度和消费速度不一致时，数据怎么缓存和管理？
+
+所以：
+
+USART
+↓
+DMA负责搬到 dma_buffer
+↓
+CPU把新增区域推进 RingBuffer
+↓
+Parser慢慢消费
+```
+
+DMA 是**传输机制**。
+
+RingBuffer 是**软件缓冲数据结构**。
+
+它们不在一个层次，所以不能互相替代。
+
 ```
 34. Circular DMA 中：
 
