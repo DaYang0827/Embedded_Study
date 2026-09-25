@@ -446,11 +446,15 @@ Jump
 USART是用来串口接收数据的
 dma使用来搬运数据的    这样就不用使用USART的中断了   通过硬件先搬运外设
 RingBuffer是把dma接收到的数据再搬运到RingBuffer里面    等待CPU的数据解析
-parser使用
+parser是用来对接收的数据帧进行判断     哪里是数据的起始以及对应的一个数据帧里面都是什么内容保存下来
+cmd是用来对接收到的数据进行解析的    先判断数据帧里面的cmd对应的命令指令来完成对应的操作
+flash是固件写入的地方     要把APP的数据写入到flash里面等待app的执行
+crc是用来判断上位机的固件内容和Bootloader接收到的内容是否有问题
+jump是跳转到APP程序进行执行
 ```
 34. 为什么 DMA 不能完全代替 RingBuffer？
 ```text
-
+dma不能直接代替RingBuffer    因为dma接收的是USART的数据     想通过硬件搬运的方式来减少USART的中断    如果直接写入RingBuffer里面   就需要每次接收USART的数据都进入中断     
 ```
 34. Circular DMA 中：
 
@@ -461,6 +465,9 @@ NDTR
 ```
 
 分别是什么作用？
+```text
+
+```
 
 36. 如果 DMA 是 Circular 模式，发生：
 
