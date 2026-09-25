@@ -3006,7 +3006,7 @@ int get_next(void)
 
 > **④ 多个执行上下文访问同一个共享变量时，要考虑临界区、锁或者原子操作。**
 
-## race condition
+## 2.2 Race condition
 
 
 # 3 数据缓冲与数据流管理 
@@ -3059,7 +3059,621 @@ Buffer
 Buffer 就像： **临时仓库。** 
 
 ## 3.2 链表
+### 3.2.1 定义
 
+数组是这样存的：
+
+```text
+arr:
+
+[10][20][30][40]
+ ↑   ↑   ↑   ↑
+连续内存
+```
+
+每个元素紧挨着。
+
+链表则不要求连续：
+
+```text
+┌──────┬──────┐
+│  10  │ next │
+└──────┴───┬──┘
+           ↓
+        ┌──────┬──────┐
+        │  20  │ next │
+        └──────┴───┬──┘
+                   ↓
+                ┌──────┬──────┐
+                │  30  │ NULL │
+                └──────┴──────┘
+```
+
+**每个节点包含：数据 + 下一个节点的地址**
+
+因此链表本质上就是**通过指针把一堆节点串起来**。
+
+### 3.2.2 基本语法
+
+通常定义：
+
+```c
+struct Node
+{
+    int data;
+    struct Node* next;
+};
+```
+
+这里`int data;`保存数据。而`struct Node* next;`   保存下一个 `Node` 的地址。
+
+例如：
+
+```c
+node1.data = 10
+node1.next = &node2
+
+node2.data = 20
+node2.next = &node3
+
+node3.data = 30
+node3.next = NULL
+```
+
+最终：
+
+```c
+node1 → node2 → node3 → NULL
+```
+
+ ❗ **next 必须是指针**,不能写：
+
+```c
+struct Node
+{
+    int data;
+    struct Node next;
+};
+```
+
+因为会发生无限递归：
+
+```text
+Node里面有Node
+    ↓
+这个Node里面又有Node
+    ↓
+又有Node
+    ↓
+……
+```
+
+编译器根本不知道：`sizeof(struct Node)`应该是多少。所以**必须写：`struct Node* next;`指针大小是固定的。这样结构体大小才能确定。**
+
+在用typedef定义链表结构体的时候应该使用
+
+```c
+typedef struct Node     // 1. 编译器：记住了，现在有一个类型叫“struct Node”
+{   
+    int data;           
+    struct Node* next;  // 2. 编译器：哦，这是一个指向“struct Node”的指针，合情合理！
+} Node;                 // 3. 编译器：好，顺便给“struct Node”取个短别名叫“Node”。
+```
+
+不能使用
+```c
+typedef struct           // 1. 编译器：哦，你在定义一个无名结构体。
+{       
+    int data;           
+    struct Node* next;  // 2. 编译器报错！💥 “struct Node”是什么鬼？我没见过！
+} Node;                 // 3. 编译器：哦，原来它的名字叫 Node 啊... 
+                        //    可惜在第2行时我已经不认得报错了。
+```
+
+### 3.2.3 头指针
+
+头指针head不是第一个节点  应该是：**`head` 保存第一个节点的地址。**
+
+```c
+struct Node* head;
+```
+
+它保存**第一个节点的地址**。
+
+例如：
+
+```text
+head
+ ↓
+[10|next] → [20|next] → [30|NULL]
+```
+
+如果：`head == NULL` 就表示：链表为空      这一点和：`int *p = NULL;`本质是一样的。
+
+`head->data` 表达的不是在访问 `head` 自己的数据。而是**根据 `head` 里面的地址找到 Node，再访问 Node 的 `data`**。
+
+---
+
+手动创建一个链表（先不考虑 `malloc`）
+
+```c
+struct Node node1;
+struct Node node2;
+struct Node node3;
+
+node1.data = 10;
+node2.data = 20;
+node3.data = 30;
+
+node1.next = &node2;
+node2.next = &node3;
+node3.next = NULL;
+
+struct Node* head = &node1;
+```
+
+现在：
+
+```text
+head
+ ↓
+node1        node2        node3
+[10| • ] → [20| • ] → [30|NULL]
+```
+
+### 3.2.4 相关应用
+
+1️⃣ 使用malloc创建链表
+
+如果不使用malloc，而只是单纯的使用结构体进行创建：
+
+```c
+struct Node node1;
+struct Node node2;
+```
+
+节点数量是提前确定的。但链表真正的优势在于：**可以运行时动态增加节点。** 所以经常使用：`malloc()` 例如：
+
+```c
+struct Node* node;
+
+node = malloc(sizeof(struct Node));
+```
+
+现在：`node`  指向一块足够存放：`struct Node`  的堆内存。使用malloc定义的好处是 假设：
+
+```c
+struct Node
+{
+    int data;
+    struct Node* next;
+};
+```
+
+在64位系统中，可能占：
+
+```text
+data        4 byte
+padding     4 byte
+next        8 byte
+-----------------
+总共        16 byte
+```
+
+于是：`malloc(sizeof(struct Node));`  就是向堆申请：16字节用于存一个节点。
+
+----
+2️⃣创建创建节点函数
+
+```c
+struct Node*  create_node(int data)
+{
+    struct Node* new_node;
+
+    new_node = malloc(sizeof(struct Node));
+
+    if (new_node == NULL)
+    {
+        return NULL;
+    }
+
+    new_node->data = data;
+    new_node->next = NULL;
+
+    return new_node;
+}
+```
+
+然后：
+
+```c
+struct Node*  node1 = create_node(10);
+struct Node*  node2 = create_node(20);
+struct Node*  node3 = create_node(30);
+```
+
+连接：
+
+```c
+node1->next = node2;
+node2->next = node3;
+```
+
+最后：
+
+```text
+node1
+ ↓
+10 → 20 → 30 → NULL
+```
+
+---
+
+3️⃣ 访问链表
+
+如果：
+
+```c
+struct Node* p = head;
+```
+
+那么：`p->data`  就是第一个节点的数据：10   而：`p->next` 就是：node2 的地址
+
+所以：`p = p->next;`就是： 指针移动到下一个节点。 
+
+然后：`p->data`就是：20
+
+再：`p = p->next;`就到：30
+
+---
+4️⃣ 头插法
+
+链表：
+
+```text
+head
+ ↓
+10 → 20 → 30 → NULL
+```
+
+现在要插入5    最终：
+
+```text
+head
+ ↓
+5 → 10 → 20 → 30 → NULL
+```
+
+只需要两步。
+
+第一步：
+
+```
+new_node->next = head;
+```
+
+此时：
+
+```
+new_node
+ ↓
+5 ─────────┐
+           ↓
+head → 10 → 20 → 30 → NULL
+```
+
+第二步：
+
+```
+head = new_node;
+```
+
+变成：
+
+```
+head
+ ↓
+5 → 10 → 20 → 30 → NULL
+```
+
+代码：
+
+```c
+new_node->next = head;
+head = new_node;
+```
+
+这两句是链表必会代码。
+
+对应函数，使用二级指针进行函数定义     这样可以直接更改一级指针的内容
+
+```c
+void insert_head(struct Node* *head, int data)
+{
+    struct Node* new_node = malloc(sizeof(struct Node));
+
+    if (new_node == NULL)
+    {
+        return;
+    }
+
+    new_node->data = data;
+
+    new_node->next = *head;
+
+    *head = new_node;
+}
+```
+
+使用：
+
+```c
+head = insert_head(head, 10);
+head = insert_head(head, 20);
+head = insert_head(head, 30);
+```
+
+结果注意是：
+
+```text
+30 → 20 → 10 → NULL
+```
+
+因为每一次都插在最前面。
+
+---
+5️⃣ 尾插法
+
+假设：
+
+```text
+10 → 20 → 30 → NULL
+```
+
+插入40    目标：
+
+```text
+10 → 20 → 30 → 40 → NULL
+```
+
+首先找到最后一个节点。
+
+```c
+struct Node*  p = head;
+
+while (p->next != NULL)
+{
+    p = p->next;
+}
+```
+
+这里为什么是：
+
+```c
+p->next != NULL
+```
+
+而不是：
+
+```c
+p != NULL
+```
+
+因为我们希望循环结束时：
+
+```text
+p
+↓
+30 → NULL
+```
+
+也就是让 `p` 停在：**最后一个真正节点。**  然后：`p->next = new_node;`  就完成了。  完整函数为：
+
+```c
+void push_back(Node* *head, int value)
+{
+    Node* node;
+    Node* cur;
+
+    if (head == NULL) {
+        return;
+    }
+
+    node = create_node(value);
+    if (node == NULL) {
+        return;
+    }
+
+    if (*head == NULL) {
+        *head = node;
+        return;
+    }
+
+    cur = *head;
+    while (cur->next != NULL) {
+        cur = cur->next;
+    }
+
+    cur->next = node;
+}
+```
+
+---
+6️⃣ 删除节点
+
+这是链表最重要的部分之一。
+
+假设：
+
+```text
+10 → 20 → 30 → 40 → NULL
+```
+
+删除30     最终
+
+```text
+10 → 20 → 40 → NULL
+```
+
+实际上并不需要移动链表，只需要让：`20.next`  原来的`20.next → 30` 变成`20.next → 40`也就是：20 → 40      然后**释放 `30`**。 一定要记得使用`free`对内存进行释放    否则会出现内存泄漏
+
+完整的函数编写为
+
+```c
+void delete_node(Node* *head, int value)
+{
+    Node*  cur;
+    Node*  prev = NULL;
+
+    if (head == NULL || *head == NULL) 
+    {
+        return;
+    }
+
+    cur = *head;
+
+    while (cur != NULL) 
+    {
+        if (cur->data == value) 
+        {
+            if (prev == NULL) 
+            {
+                *head = cur->next;
+            } 
+            else 
+            {
+                prev->next = cur->next;
+            }
+
+            free(cur);   //注意这里的fre释放
+            return;
+        }
+        prev = cur;
+        cur = cur->next;
+    }
+}
+```
+
+---
+
+一个完整的单链表为
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct Node
+{
+    int data;
+    struct Node* next;
+} Node;
+
+Node* create_node(int data)    //创建节点
+{
+    Node* new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return NULL;
+    }
+
+    new_node->data = data;
+    new_node->next = NULL;
+
+    return new_node;
+}
+
+Node* insert_head(Node* head, int data)   //插入头指针
+{
+    Node* new_node = create_node(data);
+
+    if (new_node == NULL)
+    {
+        return head;
+    }
+
+    new_node->next = head;
+
+    return new_node;
+}
+
+Node* insert_tail(Node* head, int data)  //尾插法
+{
+    Node* new_node = create_node(data);
+
+    if (new_node == NULL)
+    {
+        return head;
+    }
+
+    if (head == NULL)
+    {
+        return new_node;
+    }
+
+    Node* p = head;
+
+    while (p->next != NULL)
+    {
+        p = p->next;
+    }
+
+    p->next = new_node;
+
+    return head;
+}
+
+void print_list(Node* head)  //打印整个链表
+{
+    Node* p = head;
+
+    while (p != NULL)
+    {
+        printf("%d -> ", p->data);
+
+        p = p->next;
+    }
+
+    printf("NULL\n");
+}
+
+void free_list(Node* head)   //释放内存
+{
+    Node* temp;
+
+    while (head != NULL)
+    {
+        temp = head;
+
+        head = head->next;
+
+        free(temp);
+    }
+}
+
+int main(void)    //主函数
+{
+    Node* head = NULL;
+
+    head = insert_tail(head, 10);
+    head = insert_tail(head, 20);
+    head = insert_tail(head, 30);
+
+    print_list(head);
+
+    head = insert_head(head, 5);
+
+    print_list(head);
+
+    free_list(head);
+
+    return 0;
+}
+```
+
+### 3.2.5 注意事项(❗)
+
+1. **链表修改顺序非常重要**，必须先`new_node->next = head;`保存旧链表入口。然后才能`head = new_node;`否则旧链表入口就没了。
+2. 
 
 ## 3.3 Ring Buffer
 
