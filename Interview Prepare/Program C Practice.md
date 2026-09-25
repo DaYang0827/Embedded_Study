@@ -310,7 +310,9 @@ heap是堆    最大的区别是和stack是对向生长的   从下向上生长�
 
 在 Cortex-M 里分别通常在什么情况下使用？
 ```text
-MSP是main stack point值得是主指针的
+MSP是main stack point指得是主指针的对应地址
+psp是Program stack point 代表的是程序执行的指针位置
+msp主要是保存首指针的地址
 ```
 22. 为什么 Bootloader 跳 APP 时需要：
 
@@ -320,7 +322,7 @@ __set_MSP(app_stack);
 
 不能继续用 Bootloader 自己的 MSP 吗？
 ```text
-
+因为Bootloader和app是两个独立的程序     都有属于自己的中断向量表       进入app程序之后就要调用属于app的栈和中断向量表   否则会发生互相干扰
 ```
 23. APP Vector Table 第 0 项是什么？
 
@@ -328,7 +330,9 @@ __set_MSP(app_stack);
 
 后面通常是什么？
 ```text
-
+0项是masp
+第一项就是reset handler对应的地址
+后面通常是正常的中断对应的查找地址
 ```
 24. 为什么：
 
@@ -338,7 +342,7 @@ __set_MSP(app_stack);
 
 不是 Reset_Handler 机器代码起点？
 ```text
-
+因为这个是msp的地址     里面存放的是主指针对应的地址   并不是rest handler的七点
 ```
 25. 如果：
 
@@ -349,7 +353,7 @@ __set_MSP(app_stack);
 
 请解释这两行分别表示什么。
 ```text
-
+第一行代表msp保存的地址是0x200006A8  代表
 ```
 26. 为什么 `Reset_Handler = 0x08010229` 是奇数？
 
