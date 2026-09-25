@@ -744,7 +744,7 @@ main → 最终被链接到哪里
 因为这些地址正是**链接器决定的**。
 
 
-## 1.13 流程按正确顺序排列（❌）
+## 1.13 Bootloader流程排列（❌）
 
 ```
 A. 设置 APP MSP
@@ -769,5 +769,36 @@ D. 设置 VTOR
 A. 设置 APP MSP
 ↓
 E. 跳转 Reset_Handler
+```
+
+## 1.14 `.data` 和 `.bss` 有什么区别？（❌）
+
+请按嵌入式角度回答，不只说“一个初始化，一个没初始化”。
+```text
+.data：
+运行地址在 RAM
+初始值存储在 Flash
+启动时 C runtime 从 Flash copy 到 RAM
+
+.bss：
+运行地址在 RAM
+Flash 不需要保存一堆 0
+启动时 C runtime 清零
+```
+
+## 1.15 Heap和 Stack 最大区别是什么？（❗）
+```text
+Stack：
+自动管理
+函数调用自动分配/释放
+速度快
+生命周期跟调用关系密切
+
+Heap：
+动态分配
+malloc/free
+程序员负责管理
+生命周期可以跨函数
+可能碎片化
 ```
 
