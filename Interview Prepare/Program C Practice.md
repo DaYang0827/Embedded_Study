@@ -664,7 +664,7 @@ sum是计算的每个数据帧是否正确      crc算的是app整个固件包�
 ```text
 flash的单位并不是字节
 他是以片区划分的
-在需用的时候擦除所对应的片区
+在需用的时候擦除所对应的片区      
 ```
 48. 你的 Bootloader 为什么要做：
 
@@ -675,7 +675,9 @@ flash_lock();
 ```
 
 ```text
-
+因为这是flash的固定 
+在正常情况下禁止对flash进行更改
+需要先对flash进行解锁     完成修改之后再上锁
 ```
 
 49. 为什么不能让 APP 写入地址超过：
@@ -685,7 +687,7 @@ APP_END_ADD
 ```
 
 ```text
-
+因为超过app end add就代表不属于APP的flash范围了       是运行不到那里的
 ```
 
 50. 如果：
@@ -697,7 +699,7 @@ app_write_add + package->len > APP_END_ADD
 为什么必须拒绝写入？
 
 ```text
-
+和49问是一样的情况
 ```
 
 51. 面试官问：
@@ -707,29 +709,30 @@ app_write_add + package->len > APP_END_ADD
 你怎么回答？
 
 ```text
-
+对Bootloader所在的flash区域是不会进行开锁的
+防止误擦除Bootloader所在的片区
 ```
 
 52. 如果 APP 大小不是 4 Byte 整数倍，CRC 怎么处理？
 ```text
-
+CRC再后面进行补位      全补位1   补成32为再进行计算     需要上位机发送的expect crc也是这样的标准
 ```
 
 53. 为什么你最后不足 4 Byte 时补 `0xFF`？
 ```text
-
+和52问一样
 ```
 
 54. 如果上位机补 `0x00`，Bootloader 补 `0xFF`，会发生什么？
 ```text
-
+两个crc计算的结果一定是不一样的      crc的验证通过不了
 ```
 
 55. 为什么 `app_size` 现在放在 RAM 里存在隐患？
 
 MCU 复位后会发生什么？
 ```text
-
+如果app size放在ram里面    MCU重新复位
 ```
 
 56. 如果以后要做更完整 Bootloader，可以把哪些信息放进 Firmware Header？
