@@ -857,9 +857,27 @@ Peripherals
 
 分别适合看什么？
 ```text
-memory适合看flash里面的内容
-watch适合看变量数据的变化
-register适合看msp和pc等保存的地址
+Memory
+→ 看某个地址里的实际数据
+→ Flash/RAM
+
+Watch
+→ 看C变量/表达式实时值
+
+Registers
+→ 看CPU寄存器
+→ PC LR MSP PSP xPSR
+
+Call Stack
+→ 看当前函数是谁
+→ 是谁调用来的
+
+Disassembly
+→ 看C代码对应机器指令
+→ 精确定位PC
+
+Peripherals
+→ 看USART/DMA/RCC/GPIO/FLASH等外设寄存器
 ```
 
 66. 如果某变量值突然异常，你会优先看哪几个窗口？

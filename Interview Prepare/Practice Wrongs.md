@@ -919,3 +919,83 @@ WAIT_SUM
 9. 用MAP/Disassembly
    把PC对应到具体函数/指令
 ```
+
+## Keil Debug
+
+```
+Memory
+Watch
+Registers
+Call Stack
+Disassembly
+Peripherals
+```
+
+分别适合看什么？
+```text
+Memory
+→ 看某个地址里的实际数据
+→ Flash/RAM
+
+Watch
+→ 看C变量/表达式实时值
+
+Registers
+→ 看CPU寄存器
+→ PC LR MSP PSP xPSR
+
+Call Stack
+→ 看当前函数是谁
+→ 是谁调用来的
+
+Disassembly
+→ 看C代码对应机器指令
+→ 精确定位PC
+
+Peripherals
+→ 看USART/DMA/RCC/GPIO/FLASH等外设寄存器
+```
+
+## 寄存器没有变化原因判断
+
+如果某个寄存器一直没变化，你会怎么判断是：
+
+```
+代码没执行
+寄存器没写进去
+还是外设条件没满足
+```
+
+假设：
+
+```
+USART1->CR1 |= USART_CR1_RXNEIE;
+```
+
+排查：
+
+```
+① 代码有没有执行？
+→ 在这一行下 breakpoint
+
+② 写之前寄存器多少？
+→ Peripheral/Register窗口看
+
+③ 单步执行写操作
+
+④ 写之后有没有变化？
+→ 如果没有，看这个bit是否可写
+→ 是否需要先开外设时钟
+→ 是否被硬件自动清除
+
+⑤ 如果寄存器已经设置正确
+但功能还是没发生
+→ 检查外设前置条件
+   RCC clock
+   GPIO AF
+   NVIC
+   DMA
+   状态flag
+```
+
+所以调试应该是 **程序执行 → 寄存器配置 → 硬件条件** 一层一层排。
