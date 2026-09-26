@@ -625,12 +625,12 @@ LEN > PackageDataSize
 
 43. 如果 checksum 错误，为什么不能继续执行 `cmd_handle()`？
 ```text
-
+sum错误说明  这个数据帧的发送被干扰    发生了错误     已经有问题了    就不用再进cmd了
 ```
 
 44. `SUM` 和整个固件 CRC 有什么区别？
 ```text
-
+sum是计算的每个数据帧是否正确      crc算的是app整个固件包是否正确
 ```
 45. Flash 擦除后为什么通常是：
 
@@ -639,7 +639,7 @@ LEN > PackageDataSize
 ```
 
 ```text
-
+因为flash只能从0写到1     不支持从1到0    所以擦除之后全是FFFFF
 ```
 
 46. Flash 编程为什么通常是：
@@ -656,13 +656,15 @@ LEN > PackageDataSize
 
 一般需要先擦除？
 ```text
-
+因为flash本身就是FFFF  代表里面本身就全是1      如果不擦除    会和之前的0发生重叠
 ```
 
 47. 为什么 Flash 擦除单位通常不是 1 Byte，而是 Sector/Page？
 
 ```text
-
+flash的单位并不是字节
+他是以片区划分的
+在需用的时候擦除所对应的片区
 ```
 48. 你的 Bootloader 为什么要做：
 
