@@ -766,19 +766,24 @@ NVIC pending
 
 59. 为什么“跳 APP”不是“重新复位 MCU”？
 ```text
-
+因为跳入APP只是进入flash的不同区域去执行程序
+重新复位MCU是断电重连
+重新复位MCU最先进去的也是Bootloader程序
 ```
 
 60. 如果 APP 跳转后马上 HardFault，你会按什么顺序排查？
 
 这一题很重要，请你自己列调试流程。
 ```text
-
+我会优先排查APP的程序写入是否有问题
+APP的flash范围和msp这些信息是否有问题
+检查栈指针是不是真的到了APP的sram区域
+去看register的msp的指向
 ```
 
 61. MAP 文件是什么阶段生成的？
 ```text
-
+是在链接的时候生成
 ```
 
 62. MAP 文件和 ELF/AXF 有什么区别？
@@ -787,6 +792,11 @@ NVIC pending
 ```
 
 63. MAP 文件最适合解决哪些问题？
+```text
+最适合看对应生成的程序有多大
+各个中断对应的饿执行地址码都在哪里
+```
+
 64. 如果 PC 在：
 
 ```
@@ -797,7 +807,7 @@ NVIC pending
 
 你怎么利用 MAP 判断它落在哪个函数附近？
 ```text
-
+直接去找这个地址在map里面是谁的函数内部
 ```
 
 65. Keil Debug 里：
@@ -813,7 +823,9 @@ Peripherals
 
 分别适合看什么？
 ```text
-
+memory适合看flash里面的内容
+watch适合看变量数据的变化
+register适合看msp和pc等保存的
 ```
 
 66. 如果某变量值突然异常，你会优先看哪几个窗口？
