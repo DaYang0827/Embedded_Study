@@ -825,12 +825,12 @@ Peripherals
 ```text
 memory适合看flash里面的内容
 watch适合看变量数据的变化
-register适合看msp和pc等保存的
+register适合看msp和pc等保存的地址
 ```
 
 66. 如果某变量值突然异常，你会优先看哪几个窗口？
 ```text
-
+优先看watch窗口
 ```
 
 67. 如果某个寄存器一直没变化，你会怎么判断是：
@@ -850,7 +850,8 @@ register适合看msp和pc等保存的
 
 你不能回答“CRC很难”，你会怎么从工程角度回答？
 ```text
-
+怎么去搭建USART的IDLE模式    以及怎么把USART和bma以及RingBuffer连接起来
+怎么定义parser去看
 ```
 
 69. 面试官问：
