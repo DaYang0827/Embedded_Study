@@ -732,19 +732,21 @@ CRC再后面进行补位      全补位1   补成32为再进行计算     需要
 
 MCU 复位后会发生什么？
 ```text
-如果app size放在ram里面    MCU重新复位
+如果app size放在ram里面    MCU重新复位之后   就会把ram stack里面的内容清空    从而丢失对应的size值
 ```
 
 56. 如果以后要做更完整 Bootloader，可以把哪些信息放进 Firmware Header？
 ```text
-
+应该放入version
+magic header
+app size等信息
 ```
 
 57. 什么是 Magic Number？
 
 为什么 Firmware Header 里经常放一个 magic？
 ```text
-
+magic number和数据帧的起始是一样的     相当于在海量的数据里面寻找哪里是APP固件数据的开头    确定整个传输内容的起始位置
 ```
 
 58. 为什么 Bootloader 跳 APP 前要处理：
