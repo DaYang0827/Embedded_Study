@@ -775,10 +775,44 @@ NVIC pending
 
 这一题很重要，请你自己列调试流程。
 ```text
-我会优先排查APP的程序写入是否有问题
-APP的flash范围和msp这些信息是否有问题
-检查栈指针是不是真的到了APP的sram区域
-去看register的msp的指向
+1. 检查APP镜像是否完整
+   CRC是否正确
+
+2. 检查Vector Table
+   [APP_START]     → MSP
+   [APP_START+4]   → Reset_Handler
+
+3. 检查MSP
+   是否在有效SRAM范围
+   是否满足对齐
+
+4. 检查Reset_Handler
+   是否在APP Flash
+   bit0是否为1
+
+5. 检查VTOR
+   是否已经切换到APP_START
+
+6. 检查Bootloader残留状态
+   SysTick
+   NVIC enable/pending
+   DMA
+   USART等
+
+7. 查看Fault寄存器
+   SCB->CFSR
+   SCB->HFSR
+   SCB->BFAR
+   SCB->MMFAR
+
+8. 看发生异常时的
+   PC
+   LR
+   MSP
+   Call Stack
+
+9. 用MAP/Disassembly
+   把PC对应到具体函数/指令
 ```
 
 61. MAP 文件是什么阶段生成的？

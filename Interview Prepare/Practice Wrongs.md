@@ -875,3 +875,47 @@ WAIT_SUM
 状态机的优势是：一个 byte 一个 byte 地重建帧边界，因此更适合流式串口。
 ```
 
+## 1.19 Hardfault（❗）
+如果 APP 跳转后马上 HardFault，你会按什么顺序排查？
+
+这一题很重要，请你自己列调试流程。
+```text
+1. 检查APP镜像是否完整
+   CRC是否正确
+
+2. 检查Vector Table
+   [APP_START]     → MSP
+   [APP_START+4]   → Reset_Handler
+
+3. 检查MSP
+   是否在有效SRAM范围
+   是否满足对齐
+
+4. 检查Reset_Handler
+   是否在APP Flash
+   bit0是否为1
+
+5. 检查VTOR
+   是否已经切换到APP_START
+
+6. 检查Bootloader残留状态
+   SysTick
+   NVIC enable/pending
+   DMA
+   USART等
+
+7. 查看Fault寄存器
+   SCB->CFSR
+   SCB->HFSR
+   SCB->BFAR
+   SCB->MMFAR
+
+8. 看发生异常时的
+   PC
+   LR
+   MSP
+   Call Stack
+
+9. 用MAP/Disassembly
+   把PC对应到具体函数/指令
+```
