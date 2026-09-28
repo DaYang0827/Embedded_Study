@@ -78,7 +78,6 @@ printf("%d\n", *(p + 2));    33
 printf("%d\n", a[2]);    33
 ```
 
-
 ## 1.3 函数里修改指针本身（❗）
 
 ```
@@ -201,6 +200,7 @@ int main(void)
     UART_RegisterCallback(app_uart_receive);
 }
 ```
+
 ## 1.5 typedef callback（❗）
 
 解释下面代码：
@@ -667,7 +667,7 @@ arr + 1    对应的是2    即数组第二个元素
  
  `&arr` 这个非常重要。类型不是 `int *`，而是：`int (*)[5]`读作： 指向“5 个 int 数组”的指针。
  
-## 1.11 函数内 static（❌）
+## 1.11  函数内 static（❌）
 
 ```
 void parser(void)
@@ -920,7 +920,7 @@ WAIT_SUM
    把PC对应到具体函数/指令
 ```
 
-## Keil Debug
+## 1.20 Keil Debug
 
 ```
 Memory
@@ -956,7 +956,7 @@ Peripherals
 → 看USART/DMA/RCC/GPIO/FLASH等外设寄存器
 ```
 
-## 寄存器没有变化原因判断
+## 1.21 寄存器没有变化原因判断
 
 如果某个寄存器一直没变化，你会怎么判断是：
 
