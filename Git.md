@@ -296,6 +296,336 @@ Enter
 
 
 # 2 指令
+## `-`和`--`
+
+`-` 和 `--`，本质上是在命令行里表示**选项（option / flag）** 的两种常见写法。最简单记$\boxed{- \text{ 通常表示短选项}} \]\[ \boxed{-- \text{ 通常表示长选项}
+$
+比如：
+
+```
+git branch -M main
+```
+
+这里：
+
+```
+-M
+```
+
+就是短选项。
+
+而：
+
+```
+git rm --cached file.txt
+```
+
+这里：
+
+```
+--cached
+```
+
+就是长选项。
+
+它们本质上都是在告诉程序：
+
+> “除了执行这个命令之外，我还要你用某种特殊方式执行。”
+
+例如：
+
+```
+git rm file.txt
+```
+
+默认是：
+
+> 删除本地文件 + 从 Git 跟踪中移除。
+
+但：
+
+```
+git rm --cached file.txt
+```
+
+加了：
+
+```
+--cached
+```
+
+以后就变成：
+
+> 只从 Git index 里移除，本地文件保留。
+
+也就是说：
+
+```
+git rm
+```
+
+是主命令，
+
+```
+--cached
+```
+
+是在修改这个命令的行为。
+
+再看你之前用过的：
+
+```
+git push -u origin main
+```
+
+这里：
+
+```
+-u
+```
+
+是一个短选项，作用是设置 upstream。
+
+完整一点其实相当于：
+
+```
+git push --set-upstream origin main
+```
+
+也就是说：
+
+```
+-u
+```
+
+和：
+
+```
+--set-upstream
+```
+
+表达的是同一个意思。
+
+所以很多命令都有：
+
+```
+短写法
+-long?
+```
+
+准确说是：
+
+```
+短写法：-u
+长写法：--set-upstream
+```
+
+短写法方便敲，长写法方便读。
+
+比如常见的：
+
+```
+git commit -m "message"
+```
+
+这里：
+
+```
+-m
+```
+
+就是：
+
+```
+message
+```
+
+选项。
+
+再比如：
+
+```
+git rm -r folder/
+```
+
+这里：
+
+```
+-r
+```
+
+就是 recursive，递归。
+
+长写法有些程序会写成：
+
+```
+--recursive
+```
+
+不过 Git 某些子命令不一定每个短参数都有完全对应的长参数，具体要看命令帮助。
+
+还有一个你以后会经常看到的点：多个短选项有时可以合并。
+
+比如在很多 Unix 命令里：
+
+```
+ls -l -a
+```
+
+可以写成：
+
+```
+ls -la
+```
+
+也就是：
+
+```
+-l
+-a
+```
+
+合并成：
+
+```
+-la
+```
+
+但长选项一般不能这么合并：
+
+```
+--cached
+--force
+```
+
+通常要分开写。
+
+你可以这样理解：
+
+```
+-   → 单字母 shorthand
+--  → 完整单词 option
+```
+
+比如：
+
+```
+-u
+-m
+-r
+-f
+```
+
+都是短选项。
+
+```
+--cached
+--force
+--help
+--version
+```
+
+都是长选项。
+
+还有一个很重要的特殊情况：
+
+```
+--
+```
+
+单独两个横线，有时不是“长选项”，而是表示：
+
+> 后面的东西不再当参数选项解析，而是当普通文件名/位置参数处理。
+
+例如：
+
+```
+rm -- -test.txt
+```
+
+如果文件名真的叫：
+
+```
+-test.txt
+```
+
+那直接：
+
+```
+rm -test.txt
+```
+
+程序可能以为 `-t -e -s...` 是选项。
+
+所以：
+
+```
+rm -- -test.txt
+```
+
+中的：
+
+```
+--
+```
+
+意思是：
+
+> 选项到这里结束，后面的 `-test.txt` 是文件名。
+
+这个在 Linux/Git Bash 里很常见。
+
+所以你最后可以整理成：
+
+```
+-command
+```
+
+准确说不是这样，应该是：
+
+```
+-command?
+```
+
+不对，应该记：
+
+```
+- x      短选项，例如 -m -u -r
+--word   长选项，例如 --cached --force
+--       结束选项解析
+```
+
+对应到你现在学的 Git：
+
+```
+git commit -m "message"
+```
+
+`-m` = 短选项。
+
+```
+git push -u origin main
+```
+
+`-u` = 短选项。
+
+```
+git rm --cached file.txt
+```
+
+`--cached` = 长选项。
+
+```
+git pull origin main --allow-unrelated-histories
+```
+
+`--allow-unrelated-histories` = 长选项。
+
+所以最核心一句：
+
+\[ \boxed{\text{`-` 多用于短选项，`--` 多用于长选项；它们都在改变命令的执行方式。}} \]
+
+
 ## 2.1 `git status`
 
 最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
@@ -432,11 +762,11 @@ git push
 
 所以核心其实就是$\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }$
 
-## git rm
+## 2.7 git rm
 
 最核心先记住$\boxed{\texttt{git rm} = 从 Git 跟踪中删除文件，并且默认也删除本地文件}$ 而$\boxed{\texttt{git rm --cached} = 只让 Git 停止跟踪，本地文件保留}$ 这两个区别非常关键。
 
-###  `rm` 和 `git rm`
+### 2.7.1 `rm` 和 `git rm`
 
 先区分系统命令：
 
@@ -483,7 +813,7 @@ git add file.txt
 
 只是 Git 帮你一步做完。
 
-### `git rm file`
+### 2.7.2 `git rm file`
 
 比如：
 
@@ -539,7 +869,7 @@ git commit
 git push
 ```
 
-### `git rm --cached`
+### 2.7.3 `git rm --cached`
 
 比如：
 
@@ -587,10 +917,61 @@ git push
 
 这时候以后本地 `workspace.json` 再变化，Git 就不管了。
 
+### 2.7.4 总结
+
+```
+Working Directory
+↓
+Staging Area
+↓
+Local Repository
+```
+
+那么普通：
+
+```
+git rm file.txt
+```
+
+会同时影响：
+
+```
+Working Directory
+和
+Staging Area
+```
+
+而：
+
+```
+git rm --cached file.txt
+```
+
+只影响：
+
+```
+Staging Area / Index
+```
+
+工作区文件保留。
 
 
+```text
+我要本地和 GitHub 都删
+→ git rm file
 
-## 2.7 gitignore
+我要本地保留，但 Git 不再管
+→ git rm --cached file
+
+我要停止跟踪整个目录
+→ git rm -r --cached folder/
+
+我要连目录一起删
+→ git rm -r folder/
+```
+
+
+## 2.8 gitignore
 
 `.gitignore` 本质上就是一个 **“告诉 Git 哪些文件不要纳入版本管理”** 的规则文件。最核心的理解是：
 
@@ -605,7 +986,7 @@ Git 默认都能看到
 
 但这里有一个关键点$\boxed{\text{`.gitignore` 只对“还没被 Git 跟踪”的文件直接生效}}$ 如果某个文件以前已经 `git add` + `commit` 过了，单纯把它写进 `.gitignore`，Git 还是会继续跟踪它。
 
-### 2.7.1 最常见的 `.gitignore` 写法
+### 2.8.1 最常见的 `.gitignore` 写法
 
 忽略一个具体文件：
 
@@ -637,9 +1018,9 @@ app.log
 
 都会被忽略。
 
-### 2.7.2 符号含义
+### 2.8.2 符号含义
 
-#### 2.7.2.1 `*` 
+#### 2.8.2.1 `*` 
 
 `*` 是**通配符**。
 
@@ -671,7 +1052,7 @@ temp123
 temporary
 ```
 
-#### 2.7.2.2 `?` 
+#### 2.8.2.2 `?` 
 
 `?` 匹配一个字符。
 
@@ -696,7 +1077,7 @@ file10.txt
 
 因为 `?` 只代表一个字符。
 
-#### 2.7.2.3 `/` 
+#### 2.8.2.3 `/` 
 
 这个很重要。如果写`build/` 通常表示仓库里名为 `build` 的目录都可能被匹配。
 
@@ -719,7 +1100,7 @@ repo/
 
 所以前面的 `/` 表示$\boxed{\text{从仓库根目录开始匹配}}$ 
 
-#### 2.7.2.4 `!` 
+#### 2.8.2.4 `!` 
 
 `!` 表示**前面虽然忽略了，但这个文件我要保留**。
 
@@ -738,7 +1119,7 @@ error.log       忽略
 important.log   不忽略
 ```
 
-#### 2.7.2.5 `#`
+#### 2.8.2.5 `#`
 
 以 `#` 开头：
 
