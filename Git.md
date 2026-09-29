@@ -182,8 +182,6 @@ A → C
 
 最后再 push。所以$\boxed{\text{non-fast-forward = 远程历史领先/分叉了}}$ 解决思路通常是`git pull` 然后再`git push`
 
----
-
 ## 1.9 `--allow-unrelated-histories`
 
 出现
@@ -431,5 +429,7 @@ git push
 
 所以核心其实就是$\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }$
 
----
+## gitignore
+
+
 
