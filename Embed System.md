@@ -2940,15 +2940,7 @@ BFAR = 0xFFFFFFFF
 
 6. **看 MSP / PSP，检查栈。**
 
-尤其你现在做 Bootloader，非常重要。
-
-如果跳 APP 之后 HardFault：
-
-```
-先看 MSP
-```
-
-正常应该已经变成 APP Vector Table 第0项里的值，例如：
+尤其你现在做 Bootloader，非常重要。如果跳 APP 之后 HardFault先看 MSP。正常应该已经变成 APP Vector Table 第0项里的值，例如：
 
 ```
 MSP = 0x200006A8
@@ -2975,7 +2967,7 @@ MSP = 0x200006A8
 
 7. **Bootloader 跳 APP 时，按这个专项流程查。**
 
-这是你现在最实用的一套：
+这是现在最实用的一套：
 
 ```
 ① 看 0x08010000
@@ -3011,7 +3003,7 @@ MSP = 0x200006A8
 
 ---
 
-8. **常见 HardFault 原因你要有条件反射。**
+8. **常见 HardFault 原因要有条件反射。**
 
 看到 HardFault，优先想到：
 
@@ -3125,11 +3117,7 @@ R0 R1 R2 R3 R12 LR PC xPSR
 
 那个才是真正完整的 HardFault 分析。
 
-你现在先把这一句记牢：
-
-> **HardFault 分析 = 先找“炸在哪”，再找“为什么炸”。**
-
-也就是：
+先把这一句记牢**HardFault 分析 = 先找“炸在哪”，再找“为什么炸”。** 也就是：
 
 ```
 PC / MAP / Disassembly
