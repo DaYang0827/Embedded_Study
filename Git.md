@@ -429,7 +429,182 @@ git push
 
 所以核心其实就是$\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }$
 
-## gitignore
+## 2.7 gitignore
 
+`.gitignore` 本质上就是一个 **“告诉 Git 哪些文件不要纳入版本管理”** 的规则文件。最核心的理解是：
 
+```text
+工作目录里有文件
+↓
+Git 默认都能看到
+↓
+.gitignore 告诉 Git：
+这些文件别管
+```
+
+但这里有一个关键点$\boxed{\text{`.gitignore` 只对“还没被 Git 跟踪”的文件直接生效}}$ 如果某个文件以前已经 `git add` + `commit` 过了，单纯把它写进 `.gitignore`，Git 还是会继续跟踪它。
+
+### 2.7.1 最常见的 `.gitignore` 写法
+
+忽略一个具体文件：
+
+```
+secret.txt
+```
+
+忽略一个文件夹：
+
+```
+build/
+```
+
+忽略某一类后缀：
+
+```
+*.log
+```
+
+表示所有 `.log` 文件都忽略。
+
+比如：
+
+```
+debug.log
+error.log
+app.log
+```
+
+都会被忽略。
+
+### 符号含义
+
+####  `*` 
+
+`*` 是**通配符**。
+
+比如：
+
+```
+*.tmp
+```
+
+表示忽略所有：
+
+```
+xxx.tmp
+abc.tmp
+test.tmp
+```
+
+再比如：
+
+```
+temp*
+```
+
+会匹配：
+
+```
+temp
+temp123
+temporary
+```
+
+---
+
+####  `?` 
+
+`?` 匹配一个字符。
+
+例如：
+
+```
+file?.txt
+```
+
+会匹配：
+
+```
+file1.txt
+fileA.txt
+```
+
+但不会匹配：
+
+```
+file10.txt
+```
+
+因为 `?` 只代表一个字符。
+
+---
+
+## 2.10 `/` 的含义
+
+这个很重要。
+
+如果你写：
+
+```
+build/
+```
+
+通常表示仓库里名为 `build` 的目录都可能被匹配。
+
+如果写：
+
+```
+/build/
+```
+
+表示只忽略**仓库根目录下的 build**。
+
+例如：
+
+```
+repo/
+├─ build/          ← 忽略
+└─ project/
+   └─ build/       ← 不匹配 /build/
+```
+
+所以前面的 `/` 表示：
+
+\[ \boxed{\text{从仓库根目录开始匹配}} \]
+
+---
+
+## 2.11 `!` 是反向规则
+
+`!` 表示：
+
+> 前面虽然忽略了，但这个文件我要保留。
+
+例如：
+
+```
+*.log
+!important.log
+```
+
+意思：
+
+```
+debug.log       忽略
+error.log       忽略
+important.log   不忽略
+```
+
+---
+
+## 2.12 注释
+
+以 `#` 开头：
+
+```
+# Ignore log files
+*.log
+```
+
+这一行只是说明，不会生效。
 
