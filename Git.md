@@ -399,7 +399,7 @@ Local <--pull--- Remote
 
 ---
 
-## 2.6 核心四个命令
+## 2.6 核心命令
 
 手动同步其实只需要：
 
@@ -429,6 +429,11 @@ git push
 同步 GitHub。
 
 所以核心其实就是$\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }$
+
+## git rm
+
+最核心先记住$\boxed{\texttt{git rm} = 从 Git 跟踪中删除文件，并且默认也删除本地文件}$ 而$\boxed{\text{git rm --cached} = 只让 Git 停止跟踪，本地文件保留}$ 这两个区别非常关键。
+
 
 ## 2.7 gitignore
 
