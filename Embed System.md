@@ -2179,7 +2179,7 @@ while(1);
 
 ### 1.5.3 SCB
 
-SCB 全称：System Control Block，中文：**系统控制块**。它不是 STM32 普通外设，而是： **ARM Cortex-M 内核自带的一组系统控制寄存器。**
+SCB 全称：System Control Block，中文**系统控制块**。它不是 STM32 普通外设，而是 **ARM Cortex-M 内核自带的一组系统控制寄存器。**
 
 可以这样理解 STM32：
 
@@ -2200,17 +2200,13 @@ STM32
       └── ADC
 ```
 
-所以：USART1->DR 是 STM32 外设寄存器。
-
-但是：SCB->VTOR 属于： ARM Cortex-M4 内核控制寄存器。
+所以`USART1->DR` 是 STM32 外设寄存器。但是`SCB->VTOR` 属于ARM Cortex-M4 内核控制寄存器。
 
 ---
 
 SCB 具体管什么
 
-SCB 相当于： **CPU 内核的系统管理控制台。**
-
-常见成员包括：
+SCB 相当于： **CPU 内核的系统管理控制台。** 常见成员包括：
 ```text
 VTOR
 AIRCR
@@ -2220,9 +2216,7 @@ CFSR
 HFSR
 ```
 
-`SCB->VTOR = 0x08010000;`意思： 告诉 Cortex-M：以后发生异常/中断时，去 `0x08010000` 开始找向量表。
-
-这里：
+`SCB->VTOR = 0x08010000;` 意思是告诉 Cortex-M以后发生异常/中断时，去 `0x08010000` 开始找向量表。这里：
 
 ```text
 SCB
@@ -2867,11 +2861,7 @@ BusFault
 UsageFault
 ```
 
-可以把它理解成：
-
-> HardFault 只是“总报警”，CFSR 告诉你下面具体哪类问题。
-
-例如常见：
+可以把它理解成**HardFault 只是“总报警”，CFSR 告诉你下面具体哪类问题**。例如常见：
 
 ```
 PRECISERR
@@ -2901,17 +2891,7 @@ INVPC
 SCB->HFSR
 ```
 
-很常见的是：
-
-```
-FORCED = 1
-```
-
-这通常表示：
-
-> 原本是 BusFault / MemManageFault / UsageFault，但没有被单独处理，于是升级成 HardFault。
-
-也就是说：
+很常见的是`FORCED = 1`这通常表示原本是 BusFault / MemManageFault / UsageFault，但没有被单独处理，于是升级成 HardFault。也就是说：
 
 ```
 HFSR告诉你：
@@ -2939,9 +2919,7 @@ MMFAR
 → MemManage Fault Address Register
 ```
 
-如果对应 valid 位有效，就可以直接看到：
-
-> CPU 当时访问了哪个非法地址。
+如果对应 valid 位有效，就可以直接看到**CPU 当时访问了哪个非法地址**。
 
 比如：
 
