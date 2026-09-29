@@ -2325,47 +2325,30 @@ CFSR
 
 1. BusFault
 
-   例如PRECISERR 代表：
+   例如PRECISERR 代表精确的数据总线访问错误。比如：
 
-> 精确的数据总线访问错误。
+   ```c
+	uint32_t *p = (uint32_t *)0x12345678;
+	uint32_t a = *p;
+   ```
 
-比如：
+   CPU 访问非法地址，就可能触发。
 
-```
-uint32_t *p = (uint32_t *)0x12345678;
-uint32_t a = *p;
-```
+   还有IBUSERR表示CPU 取指令的时候访问失败。比如：
 
-CPU 访问非法地址，就可能触发。
-
-还有：
-
-```
-IBUSERR
-```
-
-表示：
-
-> CPU 取指令的时候访问失败。
-
-这对 Bootloader 特别重要。
-
-比如：
-
-```
+```c
 app_entry = (pFunction)0x12345679;
 app_entry();
 ```
 
-CPU 跳到了根本不存在的代码区取指令，就可能出错。
+   CPU 跳到了根本不存在的代码区取指令，就可能出错。
 
 ---
-
-### UsageFault
+2.  UsageFault
 
 常见：
 
-```
+```c
 UNALIGNED
 DIVBYZERO
 INVSTATE
