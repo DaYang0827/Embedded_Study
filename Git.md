@@ -368,6 +368,19 @@ git push --set-upstream origin main
 
 所以最核心一句$\boxed{\text{`-` 多用于短选项，`--` 多用于长选项；它们都在改变命令的执行方式。}}$
 
+|      命令      |    常见选项     |       含义       |        记忆         |
+| :----------: | :---------: | :------------: | :---------------: |
+| `git commit` |    `-m`     | commit message |  **m = message**  |
+|  `git push`  |    `-u`     |  设置 upstream   | **u = upstream**  |
+| `git branch` |    `-M`     |    强制重命名分支     | Move/rename，可先记功能 |
+|   `git rm`   |    `-r`     |     递归处理目录     | **r = recursive** |
+|   `git rm`   | `--cached`  | 只移除 index，不删本地 |   cached/index    |
+|  `git add`   |    `-A`     |     暂存全部变化     |    **A = All**    |
+|  `git log`   | `--oneline` |  一个 commit 一行  |       看名字就懂       |
+|  `git log`   |  `--graph`  |     显示分支图      |     graph = 图     |
+|  `git pull`  | `--rebase`  | pull 后用 rebase |   后面学 rebase 再记   |
+|  `git push`  |  `--force`  |      强制推送      |    force = 强制     |
+
 ## 2.1 `git status`
 
 最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
