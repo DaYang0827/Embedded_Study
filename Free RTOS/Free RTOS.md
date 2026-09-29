@@ -2,6 +2,7 @@
 ![[Pasted image 20260828163923.png]]
 
 其中 **Zephyr复盘和Linux基础可以穿插进行**
+
 # 1 FreeRTOS
 
 `RTOS` （Real Time Operating System，中文就是实时操作系统）

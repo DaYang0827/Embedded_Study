@@ -296,7 +296,7 @@ Enter
 
 
 # 2 指令
-## `-`和`--`
+## 2.1 `-`和`--`
 
 `-` 和 `--`，本质上是在命令行里表示**选项（option / flag）** 的两种常见写法。最简单记$\boxed{- \text{ 通常表示短选项}}$  $\boxed{-- \text{ 通常表示长选项}}$
 
@@ -381,7 +381,7 @@ git push --set-upstream origin main
 |  `git pull`  | `--rebase`  | pull 后用 rebase |   后面学 rebase 再记   |
 |  `git push`  |  `--force`  |      强制推送      |    force = 强制     |
 
-## 2.1 `git status`
+## 2.2 `git status`
 
 最开始执行`git status` 出现`fatal: not a git repository` 说明$\boxed{\text{当前目录还没有 `.git`}}$ 执行 `git init` 以后，再运行`git status` 就可以看到`On branch main` 以及哪些文件：
 
@@ -391,7 +391,7 @@ git push --set-upstream origin main
 
 所以$\boxed{\texttt{git status} = 查看当前 Git 仓库状态}$ 这是以后排查 Git 问题最常用的命令之一。
 
-## 2.2 `git add .`
+## 2.3 `git add .`
 
 执行：
 
@@ -411,7 +411,7 @@ Staging Area
 
 `git add` 后，文件进入暂存区并开始被 Git 纳入版本控制流程；commit 后才正式进入版本历史。
 
-## 2.3 `git commit`
+## 2.4 `git commit`
 
 ```
 git commit -m "Initial Knowledge sync"
@@ -434,7 +434,7 @@ commit C
 
 `commit` 更好、更生动的翻译应该是：**“存档”**、**“快照”** 或 **“递交存证”**。在 Git 里，**`git commit` 执行的就是这个“新建存档”的动作**。它把当前代码所有文件的状态死死地冻结这一刻，生成一个专属的“读档哈希值”。以后哪怕你把项目删光了，只要通过这个“存档”，你就能瞬间完成“时光倒流（读档）”。
 
-## 2.4 `git push`
+## 2.5 `git push`
 
 执行：
 
@@ -454,7 +454,7 @@ origin/main
 
 所以后面就可以直接`git push` 不需要每次写`git push origin main`
 
-## 2.5 `git pull`
+## 2.6 `git pull`
 
 执行：
 
@@ -486,7 +486,7 @@ Local <--pull--- Remote
 
 ---
 
-## 2.6 核心命令
+## 2.7 核心命令
 
 手动同步其实只需要：
 
@@ -517,11 +517,11 @@ git push
 
 所以核心其实就是$\boxed{ status \rightarrow add \rightarrow commit \rightarrow pull \rightarrow push }$
 
-## 2.7 git rm
+## 2.8 git rm
 
 最核心先记住$\boxed{\texttt{git rm} = 从 Git 跟踪中删除文件，并且默认也删除本地文件}$ 而$\boxed{\texttt{git rm --cached} = 只让 Git 停止跟踪，本地文件保留}$ 这两个区别非常关键。
 
-### 2.7.1 `rm` 和 `git rm`
+### 2.8.1 `rm` 和 `git rm`
 
 先区分系统命令：
 
@@ -568,7 +568,7 @@ git add file.txt
 
 只是 Git 帮你一步做完。
 
-### 2.7.2 `git rm file`
+### 2.8.2 `git rm file`
 
 比如：
 
@@ -624,7 +624,7 @@ git commit
 git push
 ```
 
-### 2.7.3 `git rm --cached`
+### 2.8.3 `git rm --cached`
 
 比如：
 
@@ -672,7 +672,7 @@ git push
 
 这时候以后本地 `workspace.json` 再变化，Git 就不管了。
 
-### 2.7.4 总结
+### 2.8.4 总结
 
 ```
 Working Directory
@@ -726,7 +726,7 @@ Staging Area / Index
 ```
 
 
-## 2.8 gitignore
+## 2.9 gitignore
 
 `.gitignore` 本质上就是一个 **“告诉 Git 哪些文件不要纳入版本管理”** 的规则文件。最核心的理解是：
 
@@ -741,7 +741,7 @@ Git 默认都能看到
 
 但这里有一个关键点$\boxed{\text{`.gitignore` 只对“还没被 Git 跟踪”的文件直接生效}}$ 如果某个文件以前已经 `git add` + `commit` 过了，单纯把它写进 `.gitignore`，Git 还是会继续跟踪它。
 
-### 2.8.1 最常见的 `.gitignore` 写法
+### 2.9.1 最常见的 `.gitignore` 写法
 
 忽略一个具体文件：
 
@@ -773,9 +773,9 @@ app.log
 
 都会被忽略。
 
-### 2.8.2 符号含义
+### 2.9.2 符号含义
 
-#### 2.8.2.1 `*` 
+#### 2.9.2.1 `*` 
 
 `*` 是**通配符**。
 
@@ -807,7 +807,7 @@ temp123
 temporary
 ```
 
-#### 2.8.2.2 `?` 
+#### 2.9.2.2 `?` 
 
 `?` 匹配一个字符。
 
@@ -832,7 +832,7 @@ file10.txt
 
 因为 `?` 只代表一个字符。
 
-#### 2.8.2.3 `/` 
+#### 2.9.2.3 `/` 
 
 这个很重要。如果写`build/` 通常表示仓库里名为 `build` 的目录都可能被匹配。
 
@@ -855,7 +855,7 @@ repo/
 
 所以前面的 `/` 表示$\boxed{\text{从仓库根目录开始匹配}}$ 
 
-#### 2.8.2.4 `!` 
+#### 2.9.2.4 `!` 
 
 `!` 表示**前面虽然忽略了，但这个文件我要保留**。
 
@@ -874,7 +874,7 @@ error.log       忽略
 important.log   不忽略
 ```
 
-#### 2.8.2.5 `#`
+#### 2.9.2.5 `#`
 
 以 `#` 开头：
 
