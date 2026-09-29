@@ -324,6 +324,7 @@ Working Directory
 Staging Area
 ```
 
+`git add` 后，文件进入暂存区并开始被 Git 纳入版本控制流程；commit 后才正式进入版本历史。
 
 ## 2.3 `git commit`
 
