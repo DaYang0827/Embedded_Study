@@ -2231,6 +2231,713 @@ SCB里面的一个寄存器
 所以不要把：SCB 和：VTOR当成同一级别。
 ```
 
+---
+
+## 1. SCB 和 USART/DMA 有什么区别
+
+你平时看到：
+
+```
+USART1->SR
+DMA2_Stream2->NDTR
+GPIOA->MODER
+FLASH->CR
+```
+
+这些属于 STM32 外设。
+
+而：
+
+```
+SCB->VTOR
+SCB->CFSR
+SCB->HFSR
+```
+
+属于 Cortex-M 内核。
+
+可以理解：
+
+```
+STM32F407
+├── ARM Cortex-M4 内核
+│   ├── SCB
+│   ├── NVIC
+│   ├── SysTick
+│   └── CPU寄存器 R0~R15 / MSP / PSP
+│
+└── STM32外设
+    ├── USART
+    ├── DMA
+    ├── GPIO
+    ├── FLASH
+    └── TIM
+```
+
+所以 SCB 更偏“CPU 核心管理”。
+
+---
+
+## 2. 你目前最重要的 SCB 寄存器
+
+你现在不用把 SCB 所有寄存器都背下来。
+
+先重点掌握：
+
+```
+VTOR
+CFSR
+HFSR
+BFAR
+MMFAR
+AIRCR
+SHCSR
+CCR
+```
+
+其中你当前最重要的是前 5 个。
+
+---
+
+# 3. SCB->VTOR
+
+这个你已经在 Bootloader 用过了。
+
+`VTOR`：
+
+```
+Vector Table Offset Register
+```
+
+作用：
+
+> 告诉 Cortex-M：当前中断向量表在哪里。
+
+比如 MCU 正常从 Bootloader 启动：
+
+```
+VTOR = 0x08000000
+```
+
+那么发生 USART 中断时，CPU 去：
+
+```
+0x08000000 + USART对应Vector偏移
+```
+
+找 Handler 地址。
+
+当你准备跳 APP：
+
+```
+SCB->VTOR = 0x08010000;
+```
+
+意思就是：
+
+> 从现在开始，异常和中断都使用 APP 的 Vector Table。
+
+所以：
+
+```
+Bootloader：
+VTOR = 0x08000000
+
+跳APP后：
+VTOR = 0x08010000
+```
+
+这也是为什么你 Bootloader 跳转时必须处理 VTOR。
+
+如果你只：
+
+```
+app_entry();
+```
+
+但没改 VTOR，那么 APP 运行以后发生中断，CPU 可能还是去 Bootloader 的 Vector Table 查 Handler。
+
+这就可能出问题。
+
+---
+
+# 4. SCB->CFSR
+
+这个是 HardFault 分析里最重要的一个。
+
+```
+SCB->CFSR
+```
+
+全称：
+
+```
+Configurable Fault Status Register
+```
+
+它实际上是把三个 Fault 状态寄存器拼在一起：
+
+```
+31                     16 15         8 7          0
+┌────────────────────────┬────────────┬────────────┐
+│ UsageFault Status      │ BusFault   │ MemManage  │
+│ UFSR                   │ BFSR       │ MMFSR      │
+└────────────────────────┴────────────┴────────────┘
+```
+
+也就是说：
+
+```
+CFSR
+├── MemManage Fault
+├── BusFault
+└── UsageFault
+```
+
+所以 HardFault 时你看到：
+
+```
+uint32_t cfsr = SCB->CFSR;
+```
+
+就是在问：
+
+> “到底是哪一种底层 Fault 导致了问题？”
+
+---
+
+## 5. CFSR 里面常见的几种错误
+
+### BusFault
+
+例如：
+
+```
+PRECISERR
+```
+
+代表：
+
+> 精确的数据总线访问错误。
+
+比如：
+
+```
+uint32_t *p = (uint32_t *)0x12345678;
+uint32_t a = *p;
+```
+
+CPU 访问非法地址，就可能触发。
+
+还有：
+
+```
+IBUSERR
+```
+
+表示：
+
+> CPU 取指令的时候访问失败。
+
+这对 Bootloader 特别重要。
+
+比如：
+
+```
+app_entry = (pFunction)0x12345679;
+app_entry();
+```
+
+CPU 跳到了根本不存在的代码区取指令，就可能出错。
+
+---
+
+### UsageFault
+
+常见：
+
+```
+UNALIGNED
+DIVBYZERO
+INVSTATE
+INVPC
+```
+
+比如：
+
+```
+DIVBYZERO
+```
+
+除 0。
+
+```
+INVSTATE
+```
+
+CPU 状态非法，例如 Thumb 状态有问题。
+
+这就是为什么你检查：
+
+```
+(app_reset_handler & 1U)
+```
+
+很重要。
+
+Cortex-M 必须运行 Thumb 指令。
+
+---
+
+# 6. SCB->HFSR
+
+```
+SCB->HFSR
+```
+
+全称：
+
+```
+HardFault Status Register
+```
+
+其中一个特别重要：
+
+```
+FORCED
+```
+
+如果：
+
+```
+HFSR.FORCED = 1
+```
+
+通常表示：
+
+> 原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。
+
+所以：
+
+```
+HardFault
+↓
+先看 HFSR
+↓
+FORCED = 1
+↓
+继续看 CFSR
+```
+
+就像：
+
+```
+HFSR：
+告诉你“这是别人升级上来的”
+
+CFSR：
+告诉你“原来的错误具体是什么”
+```
+
+---
+
+# 7. SCB->BFAR
+
+```
+SCB->BFAR
+```
+
+全称：
+
+```
+BusFault Address Register
+```
+
+作用：
+
+> 如果发生 BusFault，并且地址有效，它会保存导致错误的那个地址。
+
+例如：
+
+```
+uint32_t *p = (uint32_t *)0x60000000;
+uint32_t data = *p;
+```
+
+结果 BusFault。
+
+可能：
+
+```
+BFAR = 0x60000000
+```
+
+那你一看就知道：
+
+> CPU 当时访问这个地址炸了。
+
+但要注意：
+
+> 不是每次 BusFault，BFAR 都一定有效。
+
+要结合 CFSR 里的：
+
+```
+BFARVALID
+```
+
+一起看。
+
+如果：
+
+```
+BFARVALID = 1
+```
+
+才说明：
+
+```
+BFAR里的地址可信
+```
+
+---
+
+# 8. SCB->MMFAR
+
+```
+SCB->MMFAR
+```
+
+全称：
+
+```
+MemManage Fault Address Register
+```
+
+作用和 BFAR 类似。
+
+区别：
+
+```
+BFAR
+→ BusFault导致的非法地址
+
+MMFAR
+→ MemManage Fault导致的非法地址
+```
+
+如果以后用了 MPU：
+
+```
+Memory Protection Unit
+```
+
+比如你访问了禁止访问的区域，就可能触发 MemManage Fault。
+
+目前你裸机 STM32 项目里：
+
+> BFAR 通常比 MMFAR 更常见。
+
+---
+
+# 9. SCB->AIRCR
+
+这个也是经常见到的：
+
+```
+SCB->AIRCR
+```
+
+全称：
+
+```
+Application Interrupt and Reset Control Register
+```
+
+可以控制一些：
+
+```
+系统复位
+中断优先级分组
+```
+
+比如软件复位常见 CMSIS 写法：
+
+```
+NVIC_SystemReset();
+```
+
+底层最终就和：
+
+```
+SCB->AIRCR
+```
+
+有关。
+
+所以以后你看到：
+
+```
+NVIC_SystemReset();
+```
+
+可以理解成：
+
+> 通过 Cortex-M 系统控制寄存器请求 MCU Reset。
+
+---
+
+# 10. SCB->SHCSR
+
+```
+SCB->SHCSR
+```
+
+全称：
+
+```
+System Handler Control and State Register
+```
+
+它主要用于控制：
+
+```
+MemManage Fault
+BusFault
+UsageFault
+```
+
+这些系统异常是否使能，以及状态。
+
+很多项目默认没有单独处理这些 Fault。
+
+于是：
+
+```
+BusFault
+↓
+没有单独Handler
+↓
+升级
+↓
+HardFault
+```
+
+所以你经常最后只看到：
+
+```
+HardFault_Handler()
+```
+
+但真正原因其实是 CFSR 里的 BusFault。
+
+---
+
+# 11. SCB->CCR
+
+```
+SCB->CCR
+```
+
+全称：
+
+```
+Configuration and Control Register
+```
+
+可以控制 Cortex-M 的一些运行行为。
+
+比如常见：
+
+```
+UNALIGN_TRP
+DIV_0_TRP
+```
+
+例如打开：
+
+```
+DIV_0_TRP
+```
+
+以后执行整数除 0：
+
+```
+a = b / 0;
+```
+
+就可以主动触发 UsageFault。
+
+这个非常适合 Debug，因为否则某些错误行为可能不容易直接暴露。
+
+---
+
+# 12. SCB 和你 Bootloader 的关系
+
+你现在的 Bootloader 里，SCB 主要有两个用途。
+
+第一个：
+
+```
+SCB->VTOR = APP_Start_ADD;
+```
+
+负责：
+
+> 把 Vector Table 从 Bootloader 切到 APP。
+
+第二个：
+
+如果跳 APP 后 HardFault：
+
+```
+SCB->CFSR
+SCB->HFSR
+SCB->BFAR
+SCB->MMFAR
+```
+
+负责：
+
+> 告诉你为什么炸。
+
+所以你可以直接建立这个关系：
+
+```
+正常跳转：
+SCB->VTOR
+
+发生异常：
+SCB->CFSR
+SCB->HFSR
+SCB->BFAR
+SCB->MMFAR
+```
+
+---
+
+# 13. 一次 HardFault 实战怎么用 SCB
+
+假设你：
+
+```
+app_entry();
+```
+
+之后马上：
+
+```
+HardFault_Handler
+```
+
+你可以 Watch：
+
+```
+SCB->VTOR
+SCB->CFSR
+SCB->HFSR
+SCB->BFAR
+SCB->MMFAR
+```
+
+比如看到：
+
+```
+VTOR = 0x08010000
+```
+
+说明 Vector Table 已经切过去。
+
+然后：
+
+```
+HFSR
+FORCED = 1
+```
+
+说明是其他 Fault 升级。
+
+再看：
+
+```
+CFSR
+PRECISERR = 1
+BFARVALID = 1
+```
+
+然后：
+
+```
+BFAR = 0x12345678
+```
+
+这时候你的分析就可以是：
+
+```
+HardFault
+↓
+FORCED
+↓
+来自BusFault
+↓
+PRECISERR
+↓
+非法数据访问
+↓
+BFAR = 0x12345678
+↓
+查是谁访问了0x12345678
+```
+
+然后再结合：
+
+```
+PC
+LR
+Call Stack
+MAP
+Disassembly
+```
+
+就可以定位代码。
+
+---
+
+# 14. 你现在需要记住的 SCB 框架
+
+不用背所有位。
+
+先背：
+
+```
+SCB
+│
+├── VTOR
+│   └── Vector Table在哪里
+│
+├── CFSR
+│   └── 具体是什么Fault
+│
+├── HFSR
+│   └── 为什么进入HardFault
+│
+├── BFAR
+│   └── BusFault访问了哪个地址
+│
+├── MMFAR
+│   └── MemManage访问了哪个地址
+│
+├── AIRCR
+│   └── Reset / priority grouping
+│
+├── SHCSR
+│   └── 系统Fault开关/状态
+│
+└── CCR
+    └── Cortex-M运行控制
+```
+
+
 #### 1.5.4 VTOR（向量表偏移寄存器）
 
 **VTOR** 的全称是 **Vector Table Offset Register（向量表偏移寄存器）**。如果把**中断向量表**比作 CPU 桌上的《紧急突发事件客服通讯录》，那么 **VTOR 寄存器就是控制这本通讯录摆放位置的“物理底座”** 在普通的单片机程序中，芯片内部只有一套代码，中断向量表默认死死固化在物理 FLASH 的大门口（`0x08000000`）。CPU 只要发生任何中断，都会雷打不动地去这里查表。
