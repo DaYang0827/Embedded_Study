@@ -1262,7 +1262,7 @@ main()
 
 `.data` 中存放：
 
-```
+```text
 已经初始化的全局变量
 已经初始化的 static 变量
 ```
@@ -1517,7 +1517,7 @@ main()
 add()
 ```
 
-都在 Flash。但运行到add(10, 20);CPU 必须记住`add()` 执行完以后我要回 main 的哪里？这个“返回地址”就非常关键。通常 CPU 会通过寄存器和栈保存调用现场。可以粗略理解成：
+都在 Flash。但运行到`add(10, 20);`CPU 必须记住`add()` 执行完以后我要回 main 的哪里？这个“返回地址”就非常关键。通常 CPU 会通过寄存器和栈保存调用现场。可以粗略理解成：
 
 ```text
 main 正在运行
@@ -1541,6 +1541,7 @@ main 正在运行
 所以 Stack 可以理解成**函数调用的临时档案袋。**
 
 ---
+
 嵌套调用
 
 比如：
@@ -1658,7 +1659,7 @@ func() 每次调用临时使用的现场
 
 ### 1.3.4 中断发生
 
-假设 main 正在执行protocol_process();执行到一半，USART 中断来了。CPU 不能直接去执行中断然后忘记原来执行到哪里。所以 Cortex-M 会自动把一部分现场压入栈。典型包括：
+假设 main 正在执行`protocol_process();`执行到一半，USART 中断来了。CPU 不能直接去执行中断然后忘记原来执行到哪里。所以 Cortex-M 会自动把一部分现场压入栈。典型包括：
 
 ```
 R0
@@ -1722,8 +1723,6 @@ void func(void)
 ```
 
 很多时候会改成`static uint8_t buffer[4096];`或者全局变量。这样放到`.bss`而不是 Stack。
-
----
 
 ### 1.3.6 完整流程
 
@@ -3008,6 +3007,379 @@ int get_next(void)
 
 ## 2.2 Race condition
 
+
+> **HardFault = CPU 执行到了一个严重异常状态。**
+> 
+> 真正原因通常藏在：错误地址、错误指令、非法内存访问、栈问题、BusFault/UsageFault/MemManageFault 被升级。
+
+你可以按下面顺序排查。
+
+1. **先看 PC 在哪。**  
+    PC 是 CPU 当前执行位置。HardFault 发生时，最先看：
+
+```
+PC
+LR
+MSP
+PSP
+```
+
+如果：
+
+```
+PC = 0x080105A4
+```
+
+你就去：
+
+```
+MAP
+Disassembly
+```
+
+找 `0x080105A4` 落在哪个函数、哪条指令。
+
+这是第一步，因为它告诉你：
+
+> “CPU 在哪炸了。”
+
+---
+
+2. **看 LR，判断从哪里来的。**  
+    `LR` 是 Link Register，通常保存返回地址或异常返回信息。
+
+普通函数调用里：
+
+```
+funcA()
+↓
+funcB()
+```
+
+进入 `funcB()` 时，LR 里通常跟“返回 funcA 的位置”有关。
+
+所以：
+
+```
+PC
+→ 当前炸在哪
+
+LR
+→ 大概从哪来
+```
+
+结合 Call Stack 很有用。
+
+---
+
+3. **看 CFSR。**  
+    这是最关键的 Fault 状态寄存器之一：
+
+```
+SCB->CFSR
+```
+
+它其实包含三类 Fault：
+
+```
+MemManage Fault
+BusFault
+UsageFault
+```
+
+可以把它理解成：
+
+> HardFault 只是“总报警”，CFSR 告诉你下面具体哪类问题。
+
+例如常见：
+
+```
+PRECISERR
+→ 精确总线错误
+
+IBUSERR
+→ 取指令出错
+
+UNALIGNED
+→ 非对齐访问
+
+DIVBYZERO
+→ 除0
+
+INVSTATE
+→ CPU状态非法
+
+INVPC
+→ 非法PC/异常返回
+```
+
+---
+
+4. **看 HFSR。**
+
+```
+SCB->HFSR
+```
+
+很常见的是：
+
+```
+FORCED = 1
+```
+
+这通常表示：
+
+> 原本是 BusFault / MemManageFault / UsageFault，但没有被单独处理，于是升级成 HardFault。
+
+也就是说：
+
+```
+HFSR告诉你：
+“是不是别的fault升级上来的”
+```
+
+真正细节还是继续看 CFSR。
+
+---
+
+5. **如果是非法内存访问，看 BFAR / MMFAR。**
+
+```
+SCB->BFAR
+SCB->MMFAR
+```
+
+分别用于：
+
+```
+BFAR
+→ BusFault Address Register
+
+MMFAR
+→ MemManage Fault Address Register
+```
+
+如果对应 valid 位有效，就可以直接看到：
+
+> CPU 当时访问了哪个非法地址。
+
+比如：
+
+```
+BFAR = 0xFFFFFFFF
+```
+
+那你就应该立刻怀疑：
+
+```
+野指针
+非法函数指针
+未初始化地址
+错误Flash地址
+```
+
+---
+
+6. **看 MSP / PSP，检查栈。**
+
+尤其你现在做 Bootloader，非常重要。
+
+如果跳 APP 之后 HardFault：
+
+```
+先看 MSP
+```
+
+正常应该已经变成 APP Vector Table 第0项里的值，例如：
+
+```
+MSP = 0x200006A8
+```
+
+如果还是 Bootloader 的栈：
+
+```
+说明 __set_MSP() 没生效
+或者跳转顺序有问题
+```
+
+如果 MSP 是：
+
+```
+0xFFFFFFFF
+0x080xxxxx
+0x00000000
+```
+
+那显然有问题。
+
+---
+
+7. **Bootloader 跳 APP 时，按这个专项流程查。**
+
+这是你现在最实用的一套：
+
+```
+① 看 0x08010000
+→ APP MSP 是否正确
+
+② 看 0x08010004
+→ Reset_Handler 是否正确
+
+③ 检查 MSP 是否在 SRAM
+
+④ 检查 Reset_Handler 是否在 APP Flash
+
+⑤ 检查 bit0 是否为1
+→ Thumb
+
+⑥ 看 SCB->VTOR
+→ 是否等于 0x08010000
+
+⑦ 看 MSP
+→ 是否切换成 APP 的 MSP
+
+⑧ 看 PC
+→ 是否进入 APP Reset_Handler
+
+⑨ 如果进入后马上Fault
+→ 看 CFSR/HFSR/BFAR/MMFAR
+
+⑩ 用 MAP + Disassembly
+→ 定位具体异常指令
+```
+
+这个顺序以后可以直接背下来。
+
+---
+
+8. **常见 HardFault 原因你要有条件反射。**
+
+看到 HardFault，优先想到：
+
+```
+野指针
+NULL指针
+数组越界
+栈溢出
+函数指针错误
+错误Reset_Handler
+MSP非法
+VTOR错误
+非法Flash/RAM地址
+未对齐访问
+除0
+错误中断向量
+DMA访问非法地址
+```
+
+结合你当前项目，再加：
+
+```
+APP没写完整
+CRC虽然没验证就跳转
+Bootloader外设/中断残留
+SysTick没关
+NVIC pending没清
+```
+
+---
+
+9. **Keil 里具体看哪些窗口。**
+
+你可以固定开：
+
+```
+Registers
+Watch
+Memory
+Call Stack
+Disassembly
+Peripherals
+```
+
+HardFault 时：
+
+```
+Registers
+→ PC LR MSP PSP
+
+Watch
+→ SCB->CFSR
+   SCB->HFSR
+   SCB->BFAR
+   SCB->MMFAR
+   SCB->VTOR
+
+Memory
+→ APP vector table
+→ 可疑RAM地址
+
+Call Stack
+→ 调用链
+
+Disassembly
+→ PC当前指令
+
+MAP
+→ 地址对应函数
+```
+
+---
+
+10. **最好自己写一个 HardFault_Handler 调试模板。**
+
+你现在可以先用最简单版本：
+
+```
+void HardFault_Handler(void)
+{
+    volatile uint32_t cfsr  = SCB->CFSR;
+    volatile uint32_t hfsr  = SCB->HFSR;
+    volatile uint32_t bfar  = SCB->BFAR;
+    volatile uint32_t mmfar = SCB->MMFAR;
+
+    while(1)
+    {
+    }
+}
+```
+
+然后 HardFault 后停在这里，用 Watch 看：
+
+```
+cfsr
+hfsr
+bfar
+mmfar
+```
+
+这是入门版。
+
+以后可以进阶成：
+
+```
+自动判断 MSP / PSP
+↓
+拿到异常自动压栈的
+R0 R1 R2 R3 R12 LR PC xPSR
+```
+
+那个才是真正完整的 HardFault 分析。
+
+你现在先把这一句记牢：
+
+> **HardFault 分析 = 先找“炸在哪”，再找“为什么炸”。**
+
+也就是：
+
+```
+PC / MAP / Disassembly
+→ 炸在哪
+
+CFSR / HFSR / BFAR / MMFAR / MSP
+→ 为什么炸
+```
 
 # 3 数据缓冲与数据流管理 
 ## 3.1 Buffer 定义
