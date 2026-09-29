@@ -2231,7 +2231,7 @@ SCB里面的一个寄存器
 所以不要把：SCB 和：VTOR当成同一级别。
 ```
 
-### 1.5.4 VTOR（向量表偏移寄存器）
+#### 1.5.4 VTOR（向量表偏移寄存器）
 
 **VTOR** 的全称是 **Vector Table Offset Register（向量表偏移寄存器）**。如果把**中断向量表**比作 CPU 桌上的《紧急突发事件客服通讯录》，那么 **VTOR 寄存器就是控制这本通讯录摆放位置的“物理底座”** 在普通的单片机程序中，芯片内部只有一套代码，中断向量表默认死死固化在物理 FLASH 的大门口（`0x08000000`）。CPU 只要发生任何中断，都会雷打不动地去这里查表。
 
@@ -2273,7 +2273,7 @@ SCB->VTOR = 0x08010000;
 
 ### 1.5.5 ISR
 
-ISR 全称：Interrupt Service Routine中文一般叫：**中断服务程序 / 中断服务例程**
+ISR 全称Interrupt Service Routine。中文一般叫**中断服务程序 / 中断服务例程**
 
 ```c
 void USART1_IRQHandler(void)
