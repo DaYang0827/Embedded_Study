@@ -347,6 +347,10 @@ commit C
 
 以后你可以回到任意历史版本。所以$\boxed{\text{Git 的核心其实不是同步，而是版本管理}}$ GitHub 只是把这些 commit 放到了云端。
 
+`commit` 更好、更生动的翻译应该是：**“存档”**、**“快照”** 或 **“递交存证”**。在 Git 里，**`git commit` 执行的就是这个“新建存档”的动作**。它把当前代码所有文件的状态死死地冻结这一刻，生成一个专属的“读档哈希值”。以后哪怕你把项目删光了，只要通过这个“存档”，你就能瞬间完成“时光倒流（读档）”。
+
+---
+
 ## 2.4 `git push`
 
 执行：
@@ -432,7 +436,158 @@ git push
 
 ## git rm
 
-最核心先记住$\boxed{\texttt{git rm} = 从 Git 跟踪中删除文件，并且默认也删除本地文件}$ 而$\boxed{\text{git rm --cached} = 只让 Git 停止跟踪，本地文件保留}$ 这两个区别非常关键。
+最核心先记住$\boxed{\texttt{git rm} = 从 Git 跟踪中删除文件，并且默认也删除本地文件}$ 而$\boxed{\texttt{git rm --cached} = 只让 Git 停止跟踪，本地文件保留}$ 这两个区别非常关键。
+
+### 普通 `rm` 和 `git rm`
+
+先区分系统命令：
+
+```
+rm file.txt
+```
+
+这是 Linux / Git Bash 的文件删除命令。它**只是把本地文件删掉**。删完以后 Git 会发现
+
+```
+deleted: file.txt
+```
+
+然后你还需要：
+
+```
+git add .
+git commit -m "delete file"
+```
+
+才能把“删除”记录到 Git 历史。
+
+而：
+
+```
+git rm file.txt
+```
+
+相当于同时完成：
+
+```
+删除本地文件
++
+把删除操作加入暂存区
+```
+
+所以它本质上可以理解成：
+
+```
+rm file.txt
++
+git add file.txt
+```
+
+只是 Git 帮你一步做完。
+
+### `git rm file`
+
+比如：
+
+```
+git rm test.md
+```
+
+执行后：
+
+```
+本地 test.md 被删除
+↓
+Git staging area 记录：
+test.md 将被删除
+```
+
+这时：
+
+```
+git status
+```
+
+可能看到：
+
+```
+Changes to be committed:
+    deleted: test.md
+```
+
+然后：
+
+```
+git commit -m "Remove test note"
+```
+
+再：
+
+```
+git push
+```
+
+远程仓库里的 `test.md` 也会被删掉。
+
+所以流程是：
+
+```
+git rm
+↓
+staged deletion
+↓
+git commit
+↓
+git push
+```
+
+### `git rm --cached`
+
+比如：
+
+```
+git rm --cached .obsidian/workspace.json
+```
+
+意思是**Git 不再管理这个文件，但 Windows 本地继续保留**。所以:
+
+```text
+本地文件
+✅ 保留
+
+Git index
+❌ 删除
+
+GitHub 后续
+❌ 不再继续跟踪
+```
+
+特别适合这些文件：
+
+```
+workspace.json
+API key
+本地配置
+IDE 配置
+缓存文件
+编译产物
+```
+
+通常会配合 `.gitignore` 一起使用：
+
+```
+.obsidian/workspace.json
+```
+
+然后：
+
+```
+git rm --cached .obsidian/workspace.json
+git commit -m "Stop tracking workspace"
+git push
+```
+
+这时候以后本地 `workspace.json` 再变化，Git 就不管了。
 
 
 ## 2.7 gitignore
