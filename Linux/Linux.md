@@ -354,7 +354,7 @@ VFS
 
 # Device Driver
 
-可以先记Driver = Linux Kernel 和硬件之间的桥。比如：
+可以记 **Driver = Linux Kernel 和硬件之间的桥**。比如：
 
 ```
 用户程序
@@ -411,9 +411,7 @@ Character Device
 字符设备
 ```
 
-因为最容易理解。
-
-例如：
+因为最容易理解。例如：
 
 ```
 /dev/myled
@@ -421,9 +419,9 @@ Character Device
 /dev/i2c-1
 ```
 
-你会接触：
+会接触：
 
-```
+```c
 dev_t
 major
 minor
@@ -431,13 +429,12 @@ cdev
 file_operations
 ```
 
----
 
 ## 主设备号和次设备号
 
 一句话：
 
-```
+```text
 Major
 → 找驱动
 
@@ -447,46 +444,26 @@ Minor
 
 比如：
 
-```
+```text
 /dev/led0   240:0
 /dev/led1   240:1
 /dev/led2   240:2
 ```
 
-都是：
+都是major = 240说明同一个 Driver。但是minor = 0/1/2表示不同 LED。
 
-```
-major = 240
-```
+# Device Tree
 
-说明同一个 Driver。
+在 STM32 里可能是：
 
-但是：
-
-```
-minor = 0/1/2
-```
-
-表示不同 LED。
-
----
-
-# 八、Device Tree
-
-这个是嵌入式 Linux 必学。
-
-你现在 STM32 里可能是：
-
-```
+```c
 GPIO_Init();
 USART_Init();
 ```
 
-很多硬件参数写死在 C 里。
+很多硬件参数写死在 C 里。Linux 倾向于：
 
-Linux 倾向于：
-
-```
+```text
 Driver
 → 描述“怎么驱动这种硬件”
 
@@ -496,7 +473,7 @@ Device Tree
 
 例如：
 
-```
+```c
 uart1 {
     compatible = "vendor,my-uart";
     reg = <...>;
@@ -506,13 +483,13 @@ uart1 {
 
 Driver：
 
-```
+```c
 compatible = "vendor,my-uart"
 ```
 
 匹配成功：
 
-```
+```c
 Device Tree
 ↓
 Driver match
