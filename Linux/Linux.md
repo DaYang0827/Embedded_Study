@@ -50,7 +50,7 @@ Root File System
 
 ---
 
-# Linux 和 STM32 区别
+# 1 Linux 和 STM32 区别
 
 STM32 的思维是：
 
@@ -103,7 +103,7 @@ write(fd, buf, len);
 > STM32 裸机：应用和硬件距离很近。  
 > Linux：中间多了内核和驱动这一层。
 
-# Linux 用户态
+# 2 Linux 用户态
 
 这是进入 Linux 的第一站。需要先会：
 
@@ -118,7 +118,7 @@ Socket
 
 而不是先去碰内核。
 
-## 文件 IO
+## 2.1 文件 IO
 
 Linux 最核心的几个函数：
 
@@ -151,7 +151,7 @@ pipe
 
 很多都会返回一个 fd。所以 **fd 是 Linux 用户态非常核心的概念**。
 
-## 进程
+## 2.2 进程
 
 需要理解Program和Process区别。**程序是硬盘上的可执行文件**。**进程是程序正在运行的实例**。例如：
 
@@ -177,7 +177,7 @@ PID
 进程地址空间
 ```
 
-## 线程
+## 2.3 线程
 
 这是和 FreeRTOS 非常容易串起来的。
 
@@ -204,7 +204,7 @@ Queue
 
 所以你现在先学 FreeRTOS其实对 Linux 很有帮助。
 
-# Linux 内存模型
+# 3 Linux 内存模型
 
 STM32：
 
@@ -261,7 +261,7 @@ Page Table
 Physical Address
 ```
 
-# Kernel
+# 4 Kernel
 
 Linux Kernel 不要理解成“一坨很大的代码”。先把它分成几个核心模块：
 
@@ -293,7 +293,7 @@ Driver
 Interrupt
 ```
 
-## Scheduler
+## 4.1 Scheduler
 
 这个和 FreeRTOS Scheduler 很像。FreeRTOS：
 
@@ -317,7 +317,7 @@ Linux Scheduler
 核心思想一样**CPU 同一时刻执行一个上下文，调度器决定什么时候切换**。
 
 
-# VFS
+# 5 VFS
 
 这个是 Linux 非常重要的一层。VFS：Virtual File System。用户程序只需要：
 
@@ -352,7 +352,7 @@ VFS
 
 这就是抽象。
 
-# Device Driver
+# 6 Device Driver
 
 可以记 **Driver = Linux Kernel 和硬件之间的桥**。比如：
 
@@ -402,7 +402,7 @@ my_write()
 
 这就是 Linux 驱动最核心的一条链。
 
-# 字符设备
+# 7 字符设备
 
 Linux 驱动入门一般先学：
 
@@ -430,7 +430,7 @@ file_operations
 ```
 
 
-## 主设备号和次设备号
+## 7.1 主设备号和次设备号
 
 一句话：
 
@@ -452,7 +452,7 @@ Minor
 
 都是major = 240说明同一个 Driver。但是minor = 0/1/2表示不同 LED。
 
-# Device Tree
+# 8 Device Tree
 
 在 STM32 里可能是：
 
@@ -499,7 +499,7 @@ probe()
 
 ---
 
-# 九、Platform Driver
+# 9 Platform Driver
 
 SoC 内部很多东西：
 
@@ -547,7 +547,7 @@ static int xxx_probe(...)
 
 ---
 
-# 十、中断
+# 10 中断
 
 你 STM32 已经有很好的基础。
 
@@ -594,7 +594,7 @@ Deferred processing
 
 ---
 
-# 十一、同步和并发
+# 11 同步和并发
 
 Linux Kernel 里会有：
 
@@ -624,7 +624,7 @@ Task Notification
 
 ---
 
-# 十二、Linux 启动流程
+# 12 Linux 启动流程
 
 以后做嵌入式 Linux，必须知道：
 
@@ -662,7 +662,7 @@ APP
 
 ---
 
-# 十三、U-Boot
+# 13 U-Boot
 
 你现在做过 STM32 Bootloader，所以 U-Boot 会很有意思。
 
@@ -694,7 +694,7 @@ U-Boot：
 
 ---
 
-# 十四、Root File System
+# 14 Root File System
 
 Linux 和 MCU 另一个巨大区别是：
 
@@ -737,7 +737,7 @@ BusyBox
 
 ---
 
-# 十五、把整个嵌入式 Linux 体系压缩成一张图
+# 15 把整个嵌入式 Linux 体系压缩成一张图
 
 你以后就按这张图学习：
 
@@ -786,7 +786,7 @@ Application
 
 ---
 
-# 十六、结合你的背景，学习路线应该这样走
+# 16 结合你的背景，学习路线应该这样走
 
 你现在不要直接从 Device Tree 开始。
 
