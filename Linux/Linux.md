@@ -131,7 +131,7 @@ close()
 
 例如：
 
-```
+```c
 int fd = open("test.txt", O_RDWR);
 
 write(fd, "hello", 5);
@@ -139,17 +139,7 @@ write(fd, "hello", 5);
 close(fd);
 ```
 
-这里：
-
-```
-fd
-```
-
-叫：
-
-> File Descriptor，文件描述符。
-
-以后你打开：
+这里`fd`叫File Descriptor，**文件描述符**。以后打开：
 
 ```
 普通文件
@@ -159,47 +149,17 @@ socket
 pipe
 ```
 
-很多都会返回一个 fd。
+很多都会返回一个 fd。所以 **fd 是 Linux 用户态非常核心的概念**。
 
-所以：
+## 进程
 
-> fd 是 Linux 用户态非常核心的概念。
-
----
-
-## 2. 进程
-
-你需要理解：
-
-```
-Program
-和
-Process
-```
-
-区别。
-
-程序：
-
-```
-硬盘上的可执行文件
-```
-
-进程：
-
-```
-程序正在运行的实例
-```
-
-例如：
+需要理解Program和Process区别。**程序是硬盘上的可执行文件**。**进程是程序正在运行的实例**。例如：
 
 ```
 ./app
 ```
 
-就产生一个 Process。
-
-你需要学：
+就产生一个 Process。需要学：
 
 ```
 fork()
@@ -217,36 +177,25 @@ PID
 进程地址空间
 ```
 
----
-
-## 3. 线程
+## 线程
 
 这是和 FreeRTOS 非常容易串起来的。
 
-FreeRTOS：
+- FreeRTOS的Task 
+- Linux的Thread 
 
-```
-Task
-```
+会学：
 
-Linux：
-
-```
-Thread
-```
-
-以后你会学：
-
-```
+```c
 pthread_create()
 pthread_join()
 pthread_mutex_lock()
 pthread_cond_wait()
 ```
 
-可以对应你 FreeRTOS 的：
+可以对应 FreeRTOS 的：
 
-```
+```c
 Task
 Mutex
 Semaphore
@@ -255,11 +204,7 @@ Queue
 
 所以你现在先学 FreeRTOS其实对 Linux 很有帮助。
 
----
-
-# 三、Linux 内存模型
-
-这是你后面一定要理解的。
+# Linux 内存模型
 
 STM32：
 
@@ -294,7 +239,7 @@ Linux 进程里会变成：
 低地址
 ```
 
-你前面已经学过：
+学过的：
 
 ```
 .text
@@ -304,19 +249,7 @@ Stack
 Heap
 ```
 
-所以这个知识完全可以迁移。
-
-但 Linux 多一个重要东西：
-
-> Virtual Memory，虚拟内存。
-
-程序看到：
-
-```
-0x7xxxxxxx
-```
-
-不一定是真实 RAM 地址。
+这个知识完全可以迁移。但 Linux 多一个重要东西**Virtual Memory，虚拟内存**。程序看到·不一定是真实 RAM 地址。
 
 而是：
 
