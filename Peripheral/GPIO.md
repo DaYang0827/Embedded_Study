@@ -260,7 +260,7 @@ Hi-Z → 不主动控制
 
 这就是“三态输出”里的第三态。
 
-## Alternate Function
+# Alternate Function
 
 STM32 里经常看到：
 
@@ -290,7 +290,7 @@ Pin <------ MUX ----+
 
 所以$\boxed{\text{AF 本质是引脚复用}}$这也是为什么 STM32 一个引脚能有很多功能。
 
-## Analog 模式
+# Analog 模式
 
 还有`GPIO_Mode_AN` Analog。主要给：
 
@@ -430,44 +430,18 @@ High speed
 Very high speed
 ```
 
-这个经常让人误解。它不是CPU 执行 `GPIO_SetBits()` 的速度。而主要是\boxed{\text{GPIO 输出边沿 Slew Rate}}也就是：
-
-```
-0 → 1
-```
-
-电压爬升有多快。边沿越快：
+这个经常让人误解。它不是CPU 执行 `GPIO_SetBits()` 的速度。而主要是$\boxed{\text{GPIO 输出边沿 Slew Rate}}$也就是`0 → 1`。电压爬升有多快。边沿越快：
 
 - 高频通信更容易工作
 - EMI 更强
 - 串扰更明显
 - 功耗可能更高
 
-所以不是永远Very High Speed最好。原则是：
-
-\[ \boxed{\text{够用就行}}
-
-普通 LED：
-
-```
-Low Speed
-```
-
-就足够。
-
-高速 SPI 可能需要更高。
+所以不是永远Very High Speed最好。原则是$\boxed{\text{够用就行}}$普通 LED：Low Speed就足够。高速 SPI 可能需要更高。
 
 # 按键抖动
 
-机械按键按下时，并不是：
-
-```
-0 → 1
-```
-
-瞬间完成。
-
-真实可能是：
+机械按键按下时，并不是`0 → 1`瞬间完成。真实可能是：
 
 ```
 0
@@ -480,15 +454,9 @@ Low Speed
 1
 ```
 
-持续几毫秒。
+持续几毫秒。这叫\boxed{\text{Switch Bounce}}所以软件要消抖，比如：
 
-这叫：
-
-\[ \boxed{\text{Switch Bounce}} \]
-
-所以软件要消抖，比如：
-
-```
+```c
 if (key_pressed())
 {
     delay_ms(20);
@@ -506,17 +474,9 @@ if (key_pressed())
 - 状态机
 - RC 硬件滤波
 
-### 去耦电容
+# 去耦电容
 
-你以后看 MCU 原理图会看到 VDD 旁边很多：
-
-```
-100nF
-```
-
-电容。
-
-例如：
+看 MCU 原理图会看到 VDD 旁边很多100nF电容。例如：
 
 ```
 VDD ----+---- MCU
@@ -526,15 +486,7 @@ VDD ----+---- MCU
        GND
 ```
 
-这是：
-
-\[ \boxed{\text{Decoupling Capacitor}} \]
-
-芯片内部数字电路切换时，会瞬间需要电流。
-
-电源线和 PCB 不是理想导线，会有电感和阻抗。
-
-所以电容在芯片旁边提供瞬时电流：
+这是\boxed{\text{Decoupling Capacitor}}芯片内部数字电路切换时，会瞬间需要电流。电源线和 PCB 不是理想导线，会有电感和阻抗。所以电容在芯片旁边提供瞬时电流：
 
 ```
 电容
@@ -542,9 +494,7 @@ VDD ----+---- MCU
 MCU
 ```
 
-可以理解成一个非常小的“本地储能池”。
-
-所以你以后看到：
+可以理解成一个非常小的“本地储能池”。以后看到：
 
 ```
 每个 VDD pin 旁边一个 100nF
@@ -552,52 +502,9 @@ MCU
 
 不是装饰，而是非常重要。
 
-### MOSFET 你现在需要懂到什么程度
+# 总结
 
-不需要马上学很深。
-
-至少知道 MOSFET 有：
-
-```
-Gate
-Drain
-Source
-```
-
-Gate 控制 Drain 和 Source 是否导通。
-
-所以 MCU 可以：
-
-```
-GPIO
-↓
-MOS Gate
-↓
-控制更大的电流
-```
-
-比如：
-
-```
-MCU GPIO
-    |
-    G
-MOSFET
-    |
-Motor
-```
-
-GPIO 自己只能输出几 mA 或几十 mA 量级，而 MOS 可以控制更大的负载。
-
-所以：
-
-\[ \boxed{\text{GPIO 是控制信号，不一定直接负责供电}} \]
-
-这个观念特别重要。
-
----
-
-你现在可以把 GPIO 整体知识压缩成下面这张脑图：
+现在可以把 GPIO 整体知识压缩成下面这张脑图：
 
 ```
 GPIO
