@@ -1,3 +1,4 @@
+
 先把 Linux 想成下面这 5 层：
 
 ```
@@ -45,15 +46,15 @@ Root File System
 用户程序
 ```
 
-你以后学 Linux，实际上就是把这两张图慢慢填满。
+以后学 Linux，实际上就是把这两张图慢慢填满。
 
 ---
 
-## 一、你首先要建立的 Linux 和 STM32 区别
+# Linux 和 STM32 区别
 
-你现在 STM32 的思维是：
+STM32 的思维是：
 
-```
+```text
 main()
 ↓
 while(1)
@@ -72,7 +73,7 @@ GPIOA->MODER |= ...;
 
 Linux 里通常变成：
 
-```
+```text
 用户程序
 ↓
 系统调用
@@ -86,33 +87,27 @@ Driver
 
 用户程序一般不会直接：
 
-```
+```c
 USART1->DR = data;
 ```
 
 而是：
 
-```
+```c
 fd = open("/dev/ttyS1", O_RDWR);
 write(fd, buf, len);
 ```
 
-真正去操作 UART 寄存器的是内核里的 UART Driver。
-
-所以这是你最先要建立的核心：
+真正去操作 UART 寄存器的是内核里的 UART Driver。所以这是最先要建立的核心：
 
 > STM32 裸机：应用和硬件距离很近。  
 > Linux：中间多了内核和驱动这一层。
 
----
+# Linux 用户态
 
-# 二、Linux 用户态
+这是进入 Linux 的第一站。需要先会：
 
-这是你进入 Linux 的第一站。
-
-你需要先会：
-
-```
+```text
 文件
 进程
 线程
@@ -123,13 +118,11 @@ Socket
 
 而不是先去碰内核。
 
----
-
-## 1. 文件 IO
+## 文件 IO
 
 Linux 最核心的几个函数：
 
-```
+```c
 open()
 read()
 write()

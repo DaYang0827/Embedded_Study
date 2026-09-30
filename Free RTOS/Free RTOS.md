@@ -3,7 +3,7 @@
 
 其中 **Zephyr复盘和Linux基础可以穿插进行**
 
-# 1 FreeRTOS
+# 1 概念
 
 `RTOS` （Real Time Operating System，中文就是实时操作系统）
 
@@ -13,7 +13,7 @@
 
 FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为了让代码容易阅读、移植和维护，大部分的代码都是以C语言编写，只有一些函数（多数是架构特定排班副程序）采用汇编语言编写。
 
-## 1.1  FreeRTOS移植
+# 2  FreeRTOS移植
 
 1. 添加RTOS源码到Keil工程
 2. 添加head_4.c到Keil工程
@@ -22,9 +22,9 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 5. 添加FreeRTOSConfig.h
 6. 修改FreeRTOSConfig.h配置文件，直到工程编译无错误
 
-## 1.2 数据类型与编程规范
+# 3 数据类型与编程规范
 
-### 1.2.1 数据类型
+## 3.1 数据类型
 
 每个移植的版本都含有自己的 `portmacro.h` 头文件，里面定义了2个数据类型：
 
@@ -44,7 +44,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 - 8位架构中，它就是`uint8_t`
 - `BaseType_t`通常用作简单的返回值的类型，还有逻辑值，比如 `pdTRUE/pdFALSE`
 
-### 1.2.2 变量名
+## 3.2 变量名
 
 | 变量名前缀 |                           含义                            |
 | :---: | :-----------------------------------------------------: |
@@ -57,7 +57,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 | `uc`  |                `uint8_t`，`unsigned char`                |
 | `pc`  |                        `char`指针                         |
 
-### 1.2.3 函数名
+## 3.3 函数名
 
 函数名的前缀有2部分：返回值类型、在哪个文件定义
 
@@ -66,7 +66,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 | `vTaskPrioritySet`  |      返回值类型：`void`  <br>在`task.c`中定义       |
 |   `xQueueReceive`   |  返回值类型：`BaseType_t`   <br>在`queue.c`中定义   |
 | `pvTimerGetTimerID` | 返回值类型：`pointer to void`  <br>在`tmer.c`中定义 |
-## 1.3 创建任务Task/Thread
+# 4 创建任务Task/Thread
 
 ```c
 BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
@@ -119,9 +119,9 @@ LED_TypeDef *led = (LED_TypeDef *)args;
 
 `xTask` 和 `vTask` 不是不同任务，而是 FreeRTOS 的函数命名习惯；v 通常表示无返回值，x 通常表示有返回值，Task 表示任务管理相关函数
 
-## 1.4 队列
+# 5 队列
 
-### 1.4.1 创建队列Queue
+## 5.1 创建队列Queue
 
 ```c
 QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
@@ -144,7 +144,7 @@ QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
 
 相当于创建了一个大数组
 
-### 1.4.2  队列发送函数
+## 5.2  队列发送函数
 ```c
 BaseType_t xQueueSend(QueueHandle_t xQueue,
 
@@ -162,7 +162,8 @@ BaseType_t xQueueSend(QueueHandle_t xQueue,
 1. `pdTRUE`：写入成功
 2. `errQUEUE_FULL`：队列满，写入失败
 
-### 1.4.3  队列接收函数
+## 5.3  队列接收函数
+
 ```c
 BaseType_t xQueueReceive(QueueHandle_t xQueue,
 
@@ -179,7 +180,7 @@ BaseType_t xQueueReceive(QueueHandle_t xQueue,
 1. `pdTRUE`：写入成功
 2. `errQUEUE_FULL`：队列为空，写入失败
 
-### 1.4.4 队列发送/接收函数中断版本
+## 5.4 队列发送/接收函数中断版本
 
 ```c
 BaseType_t xQueueSendFromISR (QueueHandle_t xQueue,
@@ -196,7 +197,7 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 - 中断中不能立马切换任务
 - 中断是快进快出，执行的代码越少越好
 
-## 1.5 信号量Semaphore
+# 6 信号量Semaphore
 
 信号量 `Semaphore` 本质上是 **RTOS 里用来做同步和资源控制的机制**。信号量不是用来传具体数据的，而是用来告诉任务：“某件事发生了” 或 “某个资源现在可以用了”
 
