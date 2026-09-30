@@ -249,9 +249,7 @@ Stack
 Heap
 ```
 
-这个知识完全可以迁移。但 Linux 多一个重要东西**Virtual Memory，虚拟内存**。程序看到·不一定是真实 RAM 地址。
-
-而是：
+这个知识完全可以迁移。但 Linux 多一个重要东西**Virtual Memory，虚拟内存**。程序看到`0x7xxxxxxx`不一定是真实 RAM 地址。而是：
 
 ```
 Virtual Address
@@ -263,15 +261,9 @@ Page Table
 Physical Address
 ```
 
-这一块等你用户态 C 熟一点再深入。
+# Kernel
 
----
-
-# 四、Kernel 是干什么的
-
-Linux Kernel 你先不要理解成“一坨很大的代码”。
-
-先把它分成几个核心模块：
+Linux Kernel 不要理解成“一坨很大的代码”。先把它分成几个核心模块：
 
 ```
 Linux Kernel
@@ -291,7 +283,7 @@ Linux Kernel
 └── Interrupt / Timer
 ```
 
-你目前最需要的主要是：
+目前最需要的主要是：
 
 ```
 Scheduler
@@ -301,13 +293,9 @@ Driver
 Interrupt
 ```
 
----
+## Scheduler
 
-## 1. Scheduler
-
-这个和 FreeRTOS Scheduler 很像。
-
-FreeRTOS：
+这个和 FreeRTOS Scheduler 很像。FreeRTOS：
 
 ```
 Task A
@@ -326,25 +314,12 @@ Thread
 Linux Scheduler
 ```
 
-核心思想一样：
+核心思想一样**CPU 同一时刻执行一个上下文，调度器决定什么时候切换**。
 
-> CPU 同一时刻执行一个上下文，调度器决定什么时候切换。
 
-所以你先学 FreeRTOS Task/Context Switch 后，Linux Scheduler 会好理解很多。
+# VFS
 
----
-
-# 五、VFS
-
-这个是 Linux 非常重要的一层。
-
-VFS：
-
-```
-Virtual File System
-```
-
-你用户程序只需要：
+这个是 Linux 非常重要的一层。VFS：Virtual File System。用户程序只需要：
 
 ```
 open()
@@ -363,9 +338,7 @@ sysfs
 socket
 ```
 
-用户不用管。
-
-所以：
+用户不用管。所以：
 
 ```
 User
@@ -379,19 +352,9 @@ VFS
 
 这就是抽象。
 
-你以后理解 Linux Driver，一定会一直碰到 VFS。
+# Device Driver
 
----
-
-# 六、Device Driver
-
-这个是你未来偏 Linux 嵌入式最重要的一块。
-
-你可以先记：
-
-> Driver = Linux Kernel 和硬件之间的桥。
-
-比如：
+可以先记Driver = Linux Kernel 和硬件之间的桥。比如：
 
 ```
 用户程序
@@ -405,7 +368,7 @@ Driver
 UART寄存器
 ```
 
-你以后会学到：
+以后会学到：
 
 ```
 struct file_operations
@@ -413,7 +376,7 @@ struct file_operations
 
 例如：
 
-```
+```c
 static const struct file_operations fops = {
     .open = my_open,
     .read = my_read,
@@ -423,7 +386,7 @@ static const struct file_operations fops = {
 
 然后：
 
-```
+```text
 用户 open()
 ↓
 my_open()
@@ -439,9 +402,7 @@ my_write()
 
 这就是 Linux 驱动最核心的一条链。
 
----
-
-# 七、字符设备
+# 字符设备
 
 Linux 驱动入门一般先学：
 
