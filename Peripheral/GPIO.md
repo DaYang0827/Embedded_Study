@@ -193,45 +193,20 @@ R
 GPIO
 ```
 
-所以 GPIO 被电阻拉高。当 NMOS 导通`GPIO → GND`于是变成低电平。所以$\boxed{ Open\ Drain= \text{LOW 或 Hi-Z} }$ 不是：$\text{LOW 或 HIGH} $
+所以 GPIO 被电阻拉高。当 NMOS 导通`GPIO → GND`于是变成低电平。所以$\boxed{ Open\ Drain= \text{LOW 或 Hi-Z} }$ 不是$\text{LOW 或 HIGH}$ 这个区别特别重要。
 
-这个区别特别重要。
+### I²C 使用开漏
 
-### 为什么 I²C 要开漏？
-
-这是经典面试题。
-
-因为 I²C 有多个设备共享：
-
-```
-SDA
-SCL
-```
-
-假设两个设备：
+这是经典面试题。因为 I²C 有多个设备共享SDA、SCL。假设两个设备：
 
 ```
 MCU A
 MCU B
 ```
 
-如果都是推挽：
+如果都是推挽，A 输出高`A → VDD` `B 输出低B → GND`，这时：
 
-A 输出高：
-
-```
-A → VDD
-```
-
-B 输出低：
-
-```
-B → GND
-```
-
-这时：
-
-```
+```text
 VDD
 ↓
 A
@@ -243,11 +218,7 @@ B
 GND
 ```
 
-相当于高低电平硬碰硬，可能产生很大电流。
-
-而开漏则不一样。
-
-设备只能：
+相当于高低电平硬碰硬，可能产生很大电流。而开漏则不一样。设备只能：
 
 ```
 拉低
@@ -257,7 +228,7 @@ GND
 
 所以：
 
-```
+```text
 所有人松开
 → 上拉电阻把总线拉高
 
@@ -265,39 +236,11 @@ GND
 → 总线就是低
 ```
 
-也就是：
-
-\[ \boxed{ 0 \text{ 有统治权} } \]
-
-这叫 wired-AND / wired-OR 类似的总线结构。
-
-所以 I²C 可以安全地让多个设备共享总线。
+也就是$\boxed{ 0 \text{ 有统治权} }$ 这叫 wired-AND / wired-OR 类似的总线结构。所以 I²C 可以安全地让多个设备共享总线。
 
 ### 高阻态 Hi-Z
 
-你以后会非常频繁遇到：
-
-\[ \boxed{\text{High Impedance}} \]
-
-高阻态不是：
-
-```
-HIGH
-```
-
-而是：
-
-> 我基本不驱动这个引脚。
-
-可以想成开关断开：
-
-```
-内部电路   X   GPIO
-```
-
-这时候 GPIO 电压由外部电路决定。
-
-所以：
+会非常频繁遇到$\boxed{\text{High Impedance}}$ 高阻态**不是HIGH，而是基本不驱动这个引脚**。可以想成`开关断开内部电路   X   GPIO` 这时候 GPIO 电压由外部电路决定。所以：
 
 ```
 HIGH
@@ -317,7 +260,7 @@ Hi-Z → 不主动控制
 
 这就是“三态输出”里的第三态。
 
-### Alternate Function
+## Alternate Function
 
 STM32 里经常看到：
 
@@ -325,19 +268,7 @@ STM32 里经常看到：
 GPIO_Mode_AF
 ```
 
-AF = Alternate Function。
-
-意思不是 GPIO 消失了，而是：
-
-> 这个物理引脚不再由普通 GPIO 外设控制，而交给 USART / SPI / TIM / I²C 等片上外设控制。
-
-比如：
-
-```
-PA9
-```
-
-可以是：
+AF = Alternate Function。意思不是 GPIO 消失了，而是**这个物理引脚不再由普通 GPIO 外设控制，而交给 USART / SPI / TIM / I²C 等片上外设控制**。比如PA9可以是：
 
 ```
 普通 GPIO
