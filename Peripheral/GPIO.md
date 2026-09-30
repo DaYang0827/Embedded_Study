@@ -193,23 +193,7 @@ R
 GPIO
 ```
 
-所以 GPIO 被电阻拉高。
-
-当 NMOS 导通：
-
-```
-GPIO → GND
-```
-
-于是变成低电平。
-
-所以：
-
-\[ \boxed{ Open\ Drain= \text{LOW 或 Hi-Z} } \]
-
-不是：
-
-\[ \text{LOW 或 HIGH} \]
+所以 GPIO 被电阻拉高。当 NMOS 导通`GPIO → GND`于是变成低电平。所以$\boxed{ Open\ Drain= \text{LOW 或 Hi-Z} }$ 不是：$\text{LOW 或 HIGH} $
 
 这个区别特别重要。
 
