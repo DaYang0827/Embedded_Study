@@ -303,7 +303,7 @@ APP_START + 0x0C
 Reset_Handler
 ```
 
-真正的 Reset_Handler 机器指令大约位于`0x08010228`附近。之所以函数地址是`0x08010229`而不是`0x08010228`是因为 Cortex-M 使用 Thumb 指令。函数指针最低位bit0 = 1用于表示 Thumb 状态。所以：
+真正的 Reset_Handler 机器指令大约位于`0x08010228`附近。之所以函数地址是`0x08010229`而不是`0x08010228`是因为 Cortex-M 使用 Thumb 指令。函数指针最低位`bit0 = 1`用于表示 Thumb 状态。所以：
 
 ```text
 函数指针值：
