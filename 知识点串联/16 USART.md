@@ -25,7 +25,7 @@ USART -> 中断/DMA -> Buffer -> 数据帧 -> Bootloader
 
 ## 回看原笔记
 
-- [[Peripheral/USART Knowledge|USART Knowledge]]
+- [[USART Knowledge|USART Knowledge]]
 
 ## 入口
 

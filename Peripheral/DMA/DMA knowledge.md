@@ -15,7 +15,7 @@ DMA可以提供外设和存储器或者存储器和存储器之间的高速数�
 
 STM32F103C8T6 DMA资源：DMA1（7个通道）
 
-## 1.1  存储器映像
+# 2  存储器映像
 
 | 类型  |    起始地址     |    存储器     |         用途          |
 | :-: | :---------: | :--------: | :-----------------: |
@@ -26,11 +26,11 @@ STM32F103C8T6 DMA资源：DMA1（7个通道）
 |     | 0x4000 0000 |   外设寄存器    |     存储各个外设的配置参数     |
 |     | 0xE000 0000 |  内核外设寄存器   |    存储内核各个外设的配置参数    |
 
-## 1.2 DMA基本结构
+# 3 DMA基本结构
 
 <img width="623" height="286" alt="image" src="https://github.com/user-attachments/assets/1e267775-806b-4372-a6c4-6d58db6a6670" />
 
-## 1.3 实际例子
+# 4 实际例子
 
 1. 数据转运
 
@@ -40,7 +40,8 @@ STM32F103C8T6 DMA资源：DMA1（7个通道）
 
 <img width="500" height="270" alt="image" src="https://github.com/user-attachments/assets/519ed7f4-ae66-4c4a-8682-0dd4f807051e" />
 
-## 1.4 核心参数
+# 5 核心参数
+
 ```c
 DMA_Config.Source_Address = (uint32_t)&UART1->DR;     // 1. 源地址 
 
@@ -76,7 +77,7 @@ DMA_Config.Direction = DMA_PERIPHERAL_TO_MEMORY;      // 4. 传输方向
 - 必须明确规定每一次搬运的“箱子体积”。通常可选：**Byte（8位）**、**Half-Word（16位）**、**Word（32位）**。
 - 避坑物理规律：源端和目的端的位宽最好保持一致。如果用 32 位位宽去搬 8 位的串口数据，会导致内存数据错位或溢出。
 
-## 1.5 结构体配置
+# 6 结构体配置
 
 ```c
 typedef struct
@@ -99,7 +100,7 @@ typedef struct
 } DMA_InitTypeDef;
 ```
 
-### 1.5.1 `DMA_Channel`
+## 6.1 `DMA_Channel`
 
 ```c
 DMA_InitStructure.DMA_Channel = DMA_Channel_4;
@@ -107,7 +108,7 @@ DMA_InitStructure.DMA_Channel = DMA_Channel_4;
 
 这个是 **DMA 通道选择**。`Stream` 是调用 `DMA_Init()` 时选的，`Channel` 是结构体成员。可以理解成`DMA2_Stream2` 决定用哪个 DMA 搬运通道实例。`DMA_Channel_4`决定：**这个 Stream 接收哪个外设的 DMA 请求。** 这个不能随便写，必须查芯片手册里的 **DMA request mapping table**。
 
-### 1.5.2 `DMA_PeripheralBaseAddr`
+## 6.2 `DMA_PeripheralBaseAddr`
 
 这个非常重要。
 
@@ -131,7 +132,7 @@ DMA 从 DR 搬走
 所以`DMA_PeripheralBaseAddr = &USART1->DR;` 对于 ADC:`DMA_PeripheralBaseAddr = &ADC1->DR;`  对于 SPI：`DMA_PeripheralBaseAddr = &SPI1->DR;`
 
 所以可以直接记`PeripheralBaseAddr` 通常就是某个外设的 **数据寄存器地址**。注意它存的是**地址**，不是数据。比如`USART1->DR`表示寄存器里的值。而`&USART1->DR`表示这个寄存器所在的地址。DMA 需要的是地址。
-### 1.5.3 `DMA_Memory0BaseAddr`
+## 6.3 `DMA_Memory0BaseAddr`
 
 ```c
 DMA_InitStructure.DMA_Memory0BaseAddr =
@@ -168,7 +169,7 @@ DMA_Memory0BaseAddr
 
 这两个成员基本就是 DMA 最核心的：**源地址 / 目的地址** 不过谁是源、谁是目的，还得结合 `DMA_DIR` 看。
 
-### 1.5.4 `DMA_DIR`
+## 6.4 `DMA_DIR`
 
 ```c
 DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
@@ -218,7 +219,7 @@ array_b[]
 
 但通常 MCU 外设 DMA 最常见的还是前两个。
 
-### 1.5.5 `DMA_BufferSize`
+## 6.5 `DMA_BufferSize`
 
 ```c
 DMA_InitStructure.DMA_BufferSize = 8;
@@ -264,7 +265,7 @@ DMA_MemoryDataSize
 3. **合同完工，触发中断**：当 DMA 搬运完第 8 个字节的瞬间，`NDTR` 刚好**减到了 `0`**。
 4. **弹起中断**：硬件检测到 `NDTR == 0`，立刻判定为“传输完成（Transfer Complete）”，并在硬件上把 **`TCIF`（传输完成中断标志位）** 置 1。如果代码里开启了 DMA 中断，CPU 就会立刻收到通知，蹦进 DMA 的中断服务函数里去。
 
-### 1.5.6 `DMA_PeripheralInc`
+## 6.6 `DMA_PeripheralInc`
 
 ```c
 DMA_InitStructure.DMA_PeripheralInc =
@@ -273,7 +274,7 @@ DMA_InitStructure.DMA_PeripheralInc =
 
 这个表示每搬完一次，**外设地址要不要自动加**。外设数据寄存器通常是固定地址，因此 `PeripheralInc` 通常关闭。
 
-### 1.5.7 `DMA_MemoryInc`
+## 6.7 `DMA_MemoryInc`
 
 USART RX 通常：
 
@@ -312,9 +313,7 @@ O覆盖buffer[0]
 
 最后只剩：`buffer[0] = 'O'`这个现象很重要。
 
----
-
-### 1.5.8 `DMA_PeripheralDataSize`
+## 6.8 `DMA_PeripheralDataSize`
 
 ```c
 DMA_InitStructure.DMA_PeripheralDataSize =
@@ -345,8 +344,7 @@ ADC 有时可能配置`DMA_PeripheralDataSize_HalfWord`
 
 因为 ADC 数据通常是 12 bit，但装在 16 bit 数据单元里处理。
 
-
-### 1.5.9 `DMA_MemoryDataSize`
+## 6.9 `DMA_MemoryDataSize`
 
 ```c
 DMA_InitStructure.DMA_MemoryDataSize =
@@ -365,7 +363,7 @@ uint32_t → Word
 
 不绝对，但大多数情况下非常好用。
 
-### 1.5.10 `DMA_Mode`
+## 6.10 `DMA_Mode`
 
 这个就是：
 
@@ -441,7 +439,7 @@ UART连续数据流
 传感器流
 ```
 
-### 1.5.11 `DMA_Priority`
+## 6.11 `DMA_Priority`
 
 ```c
 DMA_InitStructure.DMA_Priority =
@@ -479,7 +477,7 @@ NVIC Priority：
 CPU先响应哪个中断
 ```
 
-### 1.5.12 `DMA_FIFOMode`
+## 6.12 `DMA_FIFOMode`
 
 STM32F4 DMA 比早期 DMA 多了一个 FIFO。
 
@@ -524,7 +522,7 @@ DMA内部FIFO
 
 FIFO 可以配合 burst，提高某些高吞吐场景效率。
 
-### 1.5.13 `DMA_FIFOThreshold`
+## 6.13 `DMA_FIFOThreshold`
 
 只有开启 FIFO 时才真正重要：
 
@@ -539,9 +537,7 @@ DMA_FIFOThreshold_Full
 
 例如`DMA_FIFOThreshold_Full`表示 FIFO 达到完整阈值。但如果`DMA_FIFOMode_Disable`这个参数对你当前 USART DMA 基本不用操心。
 
----
-
-### 1.5.14 `DMA_MemoryBurst`
+## 6.14 `DMA_MemoryBurst`
 
 例如：
 
@@ -561,7 +557,7 @@ DMA_MemoryBurst_INC16
 
 例如`Single`就是一次一个,`INC4`就是连续4次。UART 收一个字节一个字节来的场景，通常`DMA_MemoryBurst_Single`
 
-### 1.5.15 `DMA_PeripheralBurst`
+## 6.15 `DMA_PeripheralBurst`
 
 同样：
 
@@ -620,8 +616,8 @@ Normal模式
 每次单次搬运
 ```
 
-## 1.6 DMA + USART(IDLE)
-### 1.6.1 定义
+# 7 DMA + USART(IDLE)
+## 7.1 定义
 
 **USART IDLE（串口空闲中断） + DMA（直接内存访问）** 是一种被誉为“黄金搭档”的接收方式。它的核心优势在于：**高效、省 CPU、能接收不定长的数据。**
 
@@ -641,9 +637,8 @@ Normal模式
 - **CPU 负责“收尾处理”**：CPU 收到 IDLE 中断通知后，知道这一波数据已经全部接收完了。它只需要做两件事：
     1. 算一算刚才一共收到了多少个字节。
     2. 把数据拿去处理，并清空标志位，准备接收下一波。
-    
 
-### 1.6.2 中断处理
+## 7.2 中断处理
 1. normal模式
 
    直接清除中断标志位，再把信息传出去就可以
@@ -757,7 +752,8 @@ void USART1_IRQHandler(void)
 
 > **Normal + IDLE**：IDLE 常常意味着“这一轮结束，重新准备下一轮”。  
 > **Circular + IDLE**：IDLE 更像“看一眼 DMA 当前写到哪，不打断它继续跑”。
-### 1.6.3 计算接收的字节
+
+## 7.3 计算接收的字节
 
  1. 针对normal模式
  
@@ -834,7 +830,8 @@ buffer[4]
 
 所以可以记成一句`SIZE - NDTR` 算出来的是 **DMA 当前写入边界**，而 `old_pos` 是 **CPU 上次处理边界**
 
-### 1.6.4 将接收到的数据写入RingBuffer中
+## 7.4 将接收到的数据写入RingBuffer中
+
 1. 使用的DMA的normal模式
  
    可以直接计算接收到的数据长度，然后把对应长度的数据写入RingBuffer里面
