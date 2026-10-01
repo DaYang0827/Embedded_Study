@@ -1,5 +1,454 @@
 （❌）
 
+# DAY 2
+
+**Day 2：结构体 + sizeof + 对齐 + 函数指针 + 回调 + 嵌入式应用**。
+
+1. 下面结构体的大小你认为是多少？为什么？
+
+```
+typedef struct
+{
+    uint8_t a;
+    uint32_t b;
+} Test_t;
+```
+
+不要只猜结果，要解释：
+
+```
+a 放哪
+为什么中间可能有 padding
+b 为什么要对齐
+```
+
+```text
+
+```
+
+2. 下面两个结构体大小可能一样吗？
+
+```
+typedef struct
+{
+    uint8_t a;
+    uint32_t b;
+    uint8_t c;
+} A_t;
+```
+
+和：
+
+```
+typedef struct
+{
+    uint32_t b;
+    uint8_t a;
+    uint8_t c;
+} B_t;
+```
+
+你认为哪个更省空间？为什么？
+```text
+
+```
+
+3. `sizeof` 和 `strlen` 有什么区别？
+
+例如：
+
+```
+char str[] = "hello";
+```
+
+请回答：
+
+```
+sizeof(str)
+strlen(str)
+```
+
+分别是多少，为什么？
+```text
+
+```
+
+4. 下面代码中：
+
+```
+uint32_t *p;
+```
+
+`sizeof(p)` 和 `sizeof(*p)` 分别表示什么？
+
+在 32 位 MCU 上，它们通常分别是多少？
+```text
+
+```
+
+5. 解释下面结构体指针：
+
+```
+typedef struct
+{
+    uint32_t id;
+    uint32_t value;
+} Data_t;
+
+Data_t data;
+Data_t *p = &data;
+```
+
+下面两句是否等价：
+
+```
+p->value = 10;
+(*p).value = 10;
+```
+
+为什么？
+```text
+
+```
+
+6. 下面代码有什么风险？
+
+```
+typedef struct
+{
+    uint8_t cmd;
+    uint32_t data;
+} Package_t;
+
+Package_t *p = NULL;
+
+p->cmd = 1;
+```
+
+为什么可能 HardFault？
+```text
+
+```
+
+7. 解释函数指针：
+
+```
+void func(void)
+{
+}
+
+void (*pFunc)(void) = func;
+```
+
+分别说明：
+
+```
+func
+&func
+pFunc
+pFunc()
+```
+
+各是什么。
+```text
+
+```
+
+8. 你 Bootloader 里有：
+
+```
+typedef void (*pFunction)(void);
+
+pFunction app_entry;
+```
+
+请解释：
+
+```
+pFunction 是什么
+app_entry 是什么
+为什么可以：
+
+app_entry = (pFunction)app_reset_handler;
+app_entry();
+```
+
+```text
+
+```
+
+9. 函数指针和普通数据指针最大的区别是什么？
+
+例如：
+
+```
+uint32_t *p;
+void (*func)(void);
+```
+
+它们分别指向什么？
+```text
+
+```
+
+10. 什么是 callback？
+
+为什么函数指针经常用来实现 callback？
+
+举一个嵌入式里的例子。
+```text
+
+```
+
+11. 下面代码会输出什么？
+
+```
+void add1(uint32_t *x)
+{
+    (*x)++;
+}
+
+int main(void)
+{
+    uint32_t a = 5;
+
+    add1(&a);
+
+    printf("%u\n", a);
+}
+```
+
+为什么？
+```text
+
+```
+
+12. 对比下面两个函数：
+
+```
+void func1(uint32_t value)
+{
+    value = 100;
+}
+```
+
+和：
+
+```
+void func2(uint32_t *value)
+{
+    *value = 100;
+}
+```
+
+如果：
+
+```
+uint32_t a = 10;
+```
+
+分别调用：
+
+```
+func1(a);
+func2(&a);
+```
+
+最后 `a` 分别是多少？
+
+为什么？
+```text
+
+```
+
+13. 为什么 C 语言函数参数本质上是“值传递”？
+
+即使写：
+
+```
+void func(uint32_t *p)
+```
+
+为什么仍然可以说它是值传递？
+```text
+
+```
+
+14. 下面宏有什么问题：
+
+```
+#define SQUARE(x) x * x
+```
+
+如果：
+
+```
+uint32_t a = SQUARE(1 + 2);
+```
+
+实际展开后是什么？
+
+正确的宏应该怎么写？
+```text
+
+```
+
+15. 下面代码有什么风险：
+
+```
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+uint32_t x = 1;
+uint32_t y = 2;
+
+uint32_t z = MAX(x++, y++);
+```
+
+为什么宏参数有副作用时要特别小心？
+```text
+
+```
+
+16. `#define` 和 `const` 有什么区别？
+
+例如：
+
+```
+#define BUF_SIZE 128
+
+const uint32_t buf_size = 128;
+```
+
+分别有什么特点？
+```text
+
+```
+
+17. 为什么头文件里通常要写：
+
+```
+#ifndef __CMD_H__
+#define __CMD_H__
+
+...
+
+#endif
+```
+
+如果不写可能发生什么？
+```text
+
+```
+
+18. 下面两个有什么区别：
+
+```
+static void func(void);
+```
+
+和：
+
+```
+void func(void);
+```
+
+如果都写在 `.c` 文件里，`static` 对函数有什么作用？
+```text
+
+```
+
+19. 嵌入式面试题：
+
+> 为什么协议结构体不能随便直接通过串口发送整个 struct 内存？
+
+例如：
+
+```
+typedef struct
+{
+    uint8_t cmd;
+    uint32_t value;
+} Package_t;
+```
+
+然后直接：
+
+```
+USART_Send((uint8_t *)&package, sizeof(package));
+```
+
+为什么可能存在问题？
+
+至少从这几个角度想：
+
+```
+padding
+alignment
+endianness
+编译器差异
+```
+
+```text
+
+```
+
+20. 结合你 Bootloader：
+
+你现在协议是：
+
+```
+AA 55 | LEN | CMD | DATA | SUM
+```
+
+为什么你当前这种“一个 byte 一个 byte 解析”反而比：
+
+```
+memcpy(&package, buffer, sizeof(Package_t));
+```
+
+更安全、更可控？
+```text
+
+```
+
+今日加餐：3 道面试追问
+
+21. 面试官问：
+
+> 结构体为什么会有内存对齐？
+
+你怎么回答？
+
+22. 面试官问：
+
+> 为什么函数指针在嵌入式里很常见？
+
+请结合：
+
+```
+callback
+中断
+驱动接口
+Bootloader jump
+```
+
+回答。
+
+23. 面试官问：
+
+> 如果你想减少结构体占用的 RAM，有哪些方法？
+
+不要只说“换小类型”，还可以考虑：
+
+```
+成员顺序
+bit field
+packed
+```
+
+但也要说 `packed` 有什么代价。
+
+
 # DAY 1
 
 **Day 1：指针 + static + 内存 + 位运算**。先不放答案，你做完我给你批。
