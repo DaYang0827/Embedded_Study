@@ -1,6 +1,7 @@
 # 1 IIC （Inter-Integrated Circuit Bus）
 ---
 ## 1.1 缩写名
+
 SDA： Serial Data Line——串行数据线
 
 SCL： Serial Clock Line——串行时钟线
