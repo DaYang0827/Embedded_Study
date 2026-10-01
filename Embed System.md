@@ -2381,35 +2381,9 @@ Cortex-M 必须运行 Thumb 指令。
 
 ---
 
-# 6. SCB->HFSR
+#### SCB->HFSR
 
-```
-SCB->HFSR
-```
-
-全称：
-
-```
-HardFault Status Register
-```
-
-其中一个特别重要：
-
-```
-FORCED
-```
-
-如果：
-
-```
-HFSR.FORCED = 1
-```
-
-通常表示：
-
-> 原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。
-
-所以：
+SCB->HFSR全称HardFault Status Register其中一个特别重要FORCED如果HFSR.FORCED = 1通常表示原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。所以：
 
 ```
 HardFault
