@@ -272,7 +272,7 @@ uint32_t vector_table[] =
 };
 ```
 
-但是第一项比较特殊。第一项不是函数地址，而是MSP 初始值，后面的项基本都是Handler 函数地址。startup 文件里经常可以看到：
+但是第一项比较特殊。**第一项不是函数地址，而是MSP 初始值**，后面的项基本都是Handler 函数地址。`startup` 文件里经常可以看到：
 
 ```c
 DCD __initial_sp
@@ -281,7 +281,7 @@ DCD NMI_Handler
 DCD HardFault_Handler
 ```
 
-其中DCD，每次放一个32 bit = 4 byte，所以 Vector Table 地址自然变成：
+其中DCD，每次放一个`32 bit = 4 byte`，所以 Vector Table 地址自然变成：
 
 ```c
 APP_START + 0x00
