@@ -371,7 +371,7 @@ app_msp =
 ```
 
 一定能读出一个 32 位数，但是**能读出一个值，不代表这个值一定是合法的 MSP**。例如 APP 没有烧录
-[0x08010000] = 0xFFFFFFFF，于是app_msp = 0xFFFFFFFF;如果直接：__set_MSP(0xFFFFFFFF);显然是错误的。
+`[0x08010000] = 0xFFFFFFFF`，于是`app_msp = 0xFFFFFFFF;`如果直接：`__set_MSP(0xFFFFFFFF);`显然是错误的。
 
 所以 Bootloader 会判断：
 
@@ -383,11 +383,7 @@ if (app_msp >= SRAM_START &&
 }
 ```
 
-注意：
-
-> 不是去 SRAM 范围里面“找 MSP”。
-
-而是：
+注意**不是去 SRAM 范围里面“找 MSP”**。而是：
 
 ```
 已经读到了app_msp
@@ -396,7 +392,8 @@ if (app_msp >= SRAM_START &&
 ```
 
 ---
-对于某个具体 APP MSP 通常是一个确定值，例如0x200006A8，但不同版本 APP 可能因为：
+
+对于某个具体 APP MSP 通常是一个确定值，例如`0x200006A8`，但不同版本 APP 可能因为：
 
 ```text
 Stack大小改变
@@ -1173,7 +1170,7 @@ Flash 地址             地址中的数据
         ↓
 0x08010228附近
 ┌──────────────────────────┐
-│ Reset_Handler机器指令    │
+│ Reset_Handler机器指令     │
 └──────────────────────────┘
         ↓
 SystemInit
