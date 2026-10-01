@@ -188,12 +188,13 @@ app_entry();
 ```
 
 ```text
-pFunction 是
-app_entry 是什么
-为什么可以：
+pFunction 是使用typedef把输入为void  输出为void的函数统一定义为了pFunction的函数指针结构
+app_entry 是定义的一个函数名字   是对应输入输出都是void的函数
 
 app_entry = (pFunction)app_reset_handler;
 app_entry();
+因为app_entry已经被定义为了pFunction这个函数指针的结构     就是输入输出都是void的函数形式
+把app_reset_handler也强制转换成了pFunction的形式     现在的app_entry就相当于app_reset_handler就可以直接调用app_entry()完成app_reset_handler（）的操作
 ```
 
 9. 函数指针和普通数据指针最大的区别是什么？
@@ -207,7 +208,8 @@ void (*func)(void);
 
 它们分别指向什么？
 ```text
-
+uint32_t *p;    就指向一个参数的地址
+void (*func)(void);   指向的是一个函数的地址
 ```
 
 10. 什么是 callback？
@@ -216,7 +218,9 @@ void (*func)(void);
 
 举一个嵌入式里的例子。
 ```text
-
+在程序里面使用callback是为了解耦合
+比如一般在中断程序里面使用callback     这样就可以把中断程序相对独立出来
+如果后续再想更改中断发生时进行的操作     就不用再去
 ```
 
 11. 下面代码会输出什么？
