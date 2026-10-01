@@ -2273,9 +2273,9 @@ STM32F407
 
 #### SCB->VTOR
 
-VTOR `Vector Table Offset Register`。作用是**告诉 Cortex-M当前中断向量表在哪里**。
+VTOR： `Vector Table Offset Register`。作用是**告诉 Cortex-M当前中断向量表在哪里**。
 
-比如 MCU 正常从 Bootloader 启动VTOR = 0x08000000那么发生 USART 中断时，CPU 去0x08000000 + USART对应Vector偏移找 Handler 地址。当准备跳 `APP SCB->VTOR = 0x08010000;`意思就是**从现在开始，异常和中断都使用 APP 的 Vector Table**。所以：
+比如 MCU 正常从 Bootloader 启动`VTOR = 0x08000000`那么发生 USART 中断时，CPU 去`0x08000000 + USART对应Vector偏移找 Handler 地址`。当准备跳 `APP SCB->VTOR = 0x08010000;`意思就是**从现在开始，异常和中断都使用 APP 的 Vector Table**。所以：
 
 ```
 Bootloader：
@@ -2285,11 +2285,11 @@ VTOR = 0x08000000
 VTOR = 0x08010000
 ```
 
-这也是为什么 Bootloader 跳转时必须处理 VTOR。如果只app_entry();但没改 VTOR，那么 APP 运行以后发生中断，CPU 可能还是去 Bootloader 的 Vector Table 查 Handler。这就可能出问题。
+这也是为什么 Bootloader 跳转时必须处理 VTOR。如果只`app_entry();`但没改 VTOR，那么 APP 运行以后发生中断，CPU 可能还是去 Bootloader 的 Vector Table 查 Handler。这就可能出问题。
 
 #### SCB->CFSR
 
-这个是 HardFault 分析里最重要的一个。SCB->CFSR 全称Configurable Fault Status Register它实际上是把三个 Fault 状态寄存器拼在一起：
+这个是 HardFault 分析里最重要的一个。SCB->CFSR ，全称`Configurable Fault Status Register`它实际上是把三个 Fault 状态寄存器拼在一起：
 
 ```text
 31                     16 15         8 7          0
@@ -2309,8 +2309,6 @@ CFSR
 ```
 
 所以 HardFault 时看到uint32_t cfsr = SCB->CFSR;就是在问“到底是哪一种底层 Fault 导致了问题？”
-
----
 
 #### CFSR 常见的错误
 
@@ -2335,6 +2333,7 @@ app_entry();
    CPU 跳到了根本不存在的代码区取指令，就可能出错。
 
 ---
+
 2.  UsageFault
 
 常见：
@@ -2360,7 +2359,7 @@ INVSTATE
 
 CPU 状态非法，例如 Thumb 状态有问题。
 
-这就是为什么你检查：
+这就是为什么检查：
 
 ```
 (app_reset_handler & 1U)
@@ -2374,9 +2373,9 @@ Cortex-M 必须运行 Thumb 指令。
 
 #### SCB->HFSR
 
-SCB->HFSR全称HardFault Status Register其中一个特别重要FORCED如果HFSR.FORCED = 1通常表示原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。所以：
+SCB->HFSR，全称`HardFault Status Register`其中一个特别重要FORCED如果`HFSR.FORCED = 1`通常表示原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。所以：
 
-```
+```text
 HardFault
 ↓
 先看 HFSR
@@ -2388,7 +2387,7 @@ FORCED = 1
 
 就像：
 
-```
+```text
 HFSR：
 告诉你“这是别人升级上来的”
 
@@ -2398,14 +2397,14 @@ CFSR：
 
 #### SCB->BFAR
 
-SCB->BFAR全称BusFault Address Register作用如果发生 BusFault，并且地址有效，它会保存导致错误的那个地址。例如：
+SCB->BFAR，全称`BusFault Address Register`作用如果发生 BusFault，并且地址有效，它会保存导致错误的那个地址。例如：
 
-```
+```text
 uint32_t *p = (uint32_t *)0x60000000;
 uint32_t data = *p;
 ```
 
-结果 BusFault。可能BFAR = 0x60000000那你一看就知道CPU 当时访问这个地址炸了。但要注意不是每次 BusFault，BFAR 都一定有效。要结合 CFSR 里的：
+结果 BusFault。可能`BFAR = 0x60000000`那你一看就知道CPU 当时访问这个地址炸了。但要注意不是每次 BusFault，BFAR 都一定有效。要结合 CFSR 里的：
 
 ```
 BFARVALID
@@ -2427,7 +2426,7 @@ BFARVALID = 1
 SCB->MMFAR
 ```
 
-全称MemManage Fault Address Register作用和 BFAR 类似。区别：
+全称`MemManage Fault Address Register`作用和 BFAR 类似。区别：
 
 ```
 BFAR
@@ -2453,7 +2452,7 @@ Memory Protection Unit
 SCB->AIRCR
 ```
 
-全称Application Interrupt and Reset Control Register可以控制一些：
+全称`Application Interrupt and Reset Control Register`可以控制一些：
 
 ```
 系统复位
@@ -2476,19 +2475,13 @@ SCB->AIRCR
 
 ---
 
-# 10. SCB->SHCSR
+#### SCB->SHCSR
 
 ```
 SCB->SHCSR
 ```
 
-全称：
-
-```
-System Handler Control and State Register
-```
-
-它主要用于控制：
+全称`System Handler Control and State Register`它主要用于控制：
 
 ```
 MemManage Fault
@@ -2496,11 +2489,7 @@ BusFault
 UsageFault
 ```
 
-这些系统异常是否使能，以及状态。
-
-很多项目默认没有单独处理这些 Fault。
-
-于是：
+这些系统异常是否使能，以及状态。很多项目默认没有单独处理这些 Fault。于是：
 
 ```
 BusFault
@@ -2512,31 +2501,13 @@ BusFault
 HardFault
 ```
 
-所以你经常最后只看到：
-
-```
-HardFault_Handler()
-```
-
-但真正原因其实是 CFSR 里的 BusFault。
-
----
-
-# 11. SCB->CCR
+#### SCB->CCR
 
 ```
 SCB->CCR
 ```
 
-全称：
-
-```
-Configuration and Control Register
-```
-
-可以控制 Cortex-M 的一些运行行为。
-
-比如常见：
+全称`Configuration and Control Register` 可以控制 Cortex-M 的一些运行行为。比如常见：
 
 ```
 UNALIGN_TRP
@@ -2558,52 +2529,6 @@ a = b / 0;
 就可以主动触发 UsageFault。
 
 这个非常适合 Debug，因为否则某些错误行为可能不容易直接暴露。
-
----
-
-# 12. SCB 和你 Bootloader 的关系
-
-你现在的 Bootloader 里，SCB 主要有两个用途。
-
-第一个：
-
-```
-SCB->VTOR = APP_Start_ADD;
-```
-
-负责：
-
-> 把 Vector Table 从 Bootloader 切到 APP。
-
-第二个：
-
-如果跳 APP 后 HardFault：
-
-```
-SCB->CFSR
-SCB->HFSR
-SCB->BFAR
-SCB->MMFAR
-```
-
-负责：
-
-> 告诉你为什么炸。
-
-所以你可以直接建立这个关系：
-
-```
-正常跳转：
-SCB->VTOR
-
-发生异常：
-SCB->CFSR
-SCB->HFSR
-SCB->BFAR
-SCB->MMFAR
-```
-
----
 
 # 13. 一次 HardFault 实战怎么用 SCB
 
