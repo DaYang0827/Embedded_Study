@@ -2204,9 +2204,8 @@ STM32
 
 ---
 
-SCB 具体管什么
-
 SCB 相当于： **CPU 内核的系统管理控制台。** 常见成员包括：
+
 ```text
 VTOR
 AIRCR
@@ -2233,7 +2232,7 @@ SCB里面的一个寄存器
 
 ---
 
-#### SCB 和 USART/DMA 有什么区别
+#### SCB 和 USART/DMA 区别
 
 平时看到：
 
@@ -2244,9 +2243,7 @@ GPIOA->MODER
 FLASH->CR
 ```
 
-这些属于 STM32 外设。
-
-而：
+这些属于 STM32 外设。而：
 
 ```c
 SCB->VTOR
@@ -2254,11 +2251,9 @@ SCB->CFSR
 SCB->HFSR
 ```
 
-属于 Cortex-M 内核。
+属于 Cortex-M 内核。可以理解：
 
-可以理解：
-
-```
+```text
 STM32F407
 ├── ARM Cortex-M4 内核
 │   ├── SCB
@@ -2278,13 +2273,9 @@ STM32F407
 
 #### SCB->VTOR
 
-`VTOR` Vector Table Offset Register。作用是**告诉 Cortex-M当前中断向量表在哪里**。
+VTOR `Vector Table Offset Register`。作用是**告诉 Cortex-M当前中断向量表在哪里**。
 
-比如 MCU 正常从 Bootloader 启动VTOR = 0x08000000那么发生 USART 中断时，CPU 去0x08000000 + USART对应Vector偏移找 Handler 地址。
-
-当准备跳 APP SCB->VTOR = 0x08010000;意思就是：从现在开始，异常和中断都使用 APP 的 Vector Table。
-
-所以：
+比如 MCU 正常从 Bootloader 启动VTOR = 0x08000000那么发生 USART 中断时，CPU 去0x08000000 + USART对应Vector偏移找 Handler 地址。当准备跳 `APP SCB->VTOR = 0x08010000;`意思就是**从现在开始，异常和中断都使用 APP 的 Vector Table**。所以：
 
 ```
 Bootloader：
@@ -2405,48 +2396,16 @@ CFSR：
 告诉你“原来的错误具体是什么”
 ```
 
----
+#### SCB->BFAR
 
-# 7. SCB->BFAR
-
-```
-SCB->BFAR
-```
-
-全称：
-
-```
-BusFault Address Register
-```
-
-作用：
-
-> 如果发生 BusFault，并且地址有效，它会保存导致错误的那个地址。
-
-例如：
+SCB->BFAR全称BusFault Address Register作用如果发生 BusFault，并且地址有效，它会保存导致错误的那个地址。例如：
 
 ```
 uint32_t *p = (uint32_t *)0x60000000;
 uint32_t data = *p;
 ```
 
-结果 BusFault。
-
-可能：
-
-```
-BFAR = 0x60000000
-```
-
-那你一看就知道：
-
-> CPU 当时访问这个地址炸了。
-
-但要注意：
-
-> 不是每次 BusFault，BFAR 都一定有效。
-
-要结合 CFSR 里的：
+结果 BusFault。可能BFAR = 0x60000000那你一看就知道CPU 当时访问这个地址炸了。但要注意不是每次 BusFault，BFAR 都一定有效。要结合 CFSR 里的：
 
 ```
 BFARVALID
@@ -2460,29 +2419,15 @@ BFARVALID
 BFARVALID = 1
 ```
 
-才说明：
+才说明：BFAR里的地址可信
 
-```
-BFAR里的地址可信
-```
-
----
-
-# 8. SCB->MMFAR
+#### SCB->MMFAR
 
 ```
 SCB->MMFAR
 ```
 
-全称：
-
-```
-MemManage Fault Address Register
-```
-
-作用和 BFAR 类似。
-
-区别：
+全称MemManage Fault Address Register作用和 BFAR 类似。区别：
 
 ```
 BFAR
@@ -2498,15 +2443,9 @@ MMFAR
 Memory Protection Unit
 ```
 
-比如你访问了禁止访问的区域，就可能触发 MemManage Fault。
+比如访问了禁止访问的区域，就可能触发 MemManage Fault。
 
-目前你裸机 STM32 项目里：
-
-> BFAR 通常比 MMFAR 更常见。
-
----
-
-# 9. SCB->AIRCR
+####  SCB->AIRCR
 
 这个也是经常见到的：
 
@@ -2514,13 +2453,7 @@ Memory Protection Unit
 SCB->AIRCR
 ```
 
-全称：
-
-```
-Application Interrupt and Reset Control Register
-```
-
-可以控制一些：
+全称Application Interrupt and Reset Control Register可以控制一些：
 
 ```
 系统复位
@@ -2540,16 +2473,6 @@ SCB->AIRCR
 ```
 
 有关。
-
-所以以后你看到：
-
-```
-NVIC_SystemReset();
-```
-
-可以理解成：
-
-> 通过 Cortex-M 系统控制寄存器请求 MCU Reset。
 
 ---
 
