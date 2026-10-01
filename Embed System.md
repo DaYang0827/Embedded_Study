@@ -2262,7 +2262,7 @@ SCB
 ```
 ---
 
-#### SCB 和 USART/DMA 区别
+#### 1.5.3.1 SCB 和 USART/DMA 区别
 
 平时看到：
 
@@ -2301,7 +2301,7 @@ STM32F407
 
 所以 SCB 更偏“CPU 核心管理”。
 
-#### SCB->VTOR
+#### 1.5.3.2 SCB->VTOR
 
 VTOR： `Vector Table Offset Register`。作用是**告诉 Cortex-M当前中断向量表在哪里**。
 
@@ -2355,7 +2355,7 @@ SCB->VTOR = 0x08010000;
 - CPU 再次擦擦眼睛：“收到！现在 VTOR 告诉我基地搬了，我直接去 **`0x08010000` 往后的新大排档**里查表，读取 App 自带的 `SysTick_Handler` 函数地址！”
 - 于是，FreeRTOS 的多任务调度和 LVGL 的触摸刷新终于在新的领地上完美、顺畅地跑起来了，彻底和老家的 Bootloader 划清了界限。
 
-#### SCB->CFSR
+#### 1.5.3.3 SCB->CFSR
 
 这个是 HardFault 分析里最重要的一个。SCB->CFSR ，全称`Configurable Fault Status Register`它实际上是把三个 Fault 状态寄存器拼在一起：
 
@@ -2378,7 +2378,7 @@ CFSR
 
 所以 HardFault 时看到uint32_t cfsr = SCB->CFSR;就是在问“到底是哪一种底层 Fault 导致了问题？”
 
-#### CFSR 常见的错误
+#### 1.5.3.4 CFSR 常见的错误
 
 1. BusFault
 
@@ -2439,7 +2439,7 @@ Cortex-M 必须运行 Thumb 指令。
 
 ---
 
-#### SCB->HFSR
+#### 1.5.3.5 SCB->HFSR
 
 SCB->HFSR，全称`HardFault Status Register`其中一个特别重要FORCED如果`HFSR.FORCED = 1`通常表示原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。所以：
 
@@ -2463,7 +2463,7 @@ CFSR：
 告诉你“原来的错误具体是什么”
 ```
 
-#### SCB->BFAR
+#### 1.5.3.6 SCB->BFAR
 
 SCB->BFAR，全称`BusFault Address Register`作用如果发生 BusFault，并且地址有效，它会保存导致错误的那个地址。例如：
 
@@ -2488,7 +2488,7 @@ BFARVALID = 1
 
 才说明：BFAR里的地址可信
 
-#### SCB->MMFAR
+#### 1.5.3.7 SCB->MMFAR
 
 ```
 SCB->MMFAR
@@ -2512,7 +2512,7 @@ Memory Protection Unit
 
 比如访问了禁止访问的区域，就可能触发 MemManage Fault。
 
-####  SCB->AIRCR
+#### 1.5.3.8 SCB->AIRCR
 
 这个也是经常见到的：
 
@@ -2543,7 +2543,7 @@ SCB->AIRCR
 
 ---
 
-#### SCB->SHCSR
+#### 1.5.3.9 SCB->SHCSR
 
 ```
 SCB->SHCSR
@@ -2569,7 +2569,7 @@ BusFault
 HardFault
 ```
 
-#### SCB->CCR
+#### 1.5.3.10 SCB->CCR
 
 ```
 SCB->CCR
@@ -2598,7 +2598,7 @@ a = b / 0;
 
 这个非常适合 Debug，因为否则某些错误行为可能不容易直接暴露。
 
-### 实操中使用 SCB
+### 1.5.4 实操中使用 SCB
 
 假设`app_entry();` 之后马上HardFault_Handler。可以 Watch：
 
@@ -3186,7 +3186,7 @@ Magic Number
 `#define BIT31 (1U << 31)`
 
 
-## HardFault
+## 1.8 HardFault
 
 > **HardFault = CPU 执行到了一个严重异常状态。** 真正原因通常藏在：错误地址、错误指令、非法内存访问、栈问题、BusFault/UsageFault/MemManageFault 被升级。
 
