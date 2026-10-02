@@ -59,7 +59,7 @@ R 大
 
 这两个参数是卡尔曼滤波调参中非常核心的东西。
 
-还有一个变量 P，叫$\boxed{\text{估计误差协方差}}$一维情况下可以先把它理解成“对当前估计有多没把握。”如果$P\text{ 大}$，说明现在估得很不确定。如果$P\text{ 小}$，说明我对自己的估计比较有信心。
+还有一个变量 P，叫$\boxed{\text{估计误差协方差}}$一维情况下可以先把它理解成“对当前估计有多没把握。”如果$P\text{ 大}$，说明现在估得很不确定。如果 $P\text{ 小}$，说明我对自己的估计比较有信心。
 
 最简单的一维卡尔曼滤波可以分成两个阶段。
 
@@ -115,7 +115,7 @@ Kalman1D_t kf =
 float filtered = Kalman_Update(&kf, sensor_value);
 ```
 
-可以把这个看成最简单的\boxed{\text{scalar Kalman filter}}，真正标准卡尔曼滤波一般是矩阵形式x_k = F x_{k-1} + B u_k + w_k ，测量模型z_k = H x_k + v_k。其中：
+可以把这个看成最简单的$\boxed{\text{scalar Kalman filter}}$，真正标准卡尔曼滤波一般是矩阵形式$x_k = F x_{k-1} + B u_k + w_k$ ，测量模型$z_k = H x_k + v_k$。其中：
 
 ```
 x = 状态向量
@@ -127,9 +127,9 @@ w = 过程噪声
 v = 测量噪声
 ```
 
-预测\hat{x}_k^- = F\hat{x}_{k-1}+Bu_k P_k^- = FP_{k-1}F^T + Q 更新K_k= P_k^-H^T \left( HP_k^-H^T+R \right)^{-1}   \hat{x}_k= \hat{x}_k^- + K_k (z_k-H\hat{x}_k^-)  P_k= (I-K_kH)P_k^- 这就是标准离散卡尔曼滤波的核心五个公式。
+预测$\hat{x}_k^- = F\hat{x}_{k-1}+Bu_k$ 、$P_k^- = FP_{k-1}F^T + Q$ 更新$K_k= P_k^-H^T \left( HP_k^-H^T+R \right)^{-1}$   $\hat{x}_k= \hat{x}_k^- + K_k (z_k-H\hat{x}_k^-)$ 、 $P_k= (I-K_kH)P_k^-$ 这就是标准离散卡尔曼滤波的核心五个公式。
 
-你应该按这个顺序学：
+应该按顺序学：
 
 ```
 1. 一维平均/低通滤波
@@ -142,7 +142,7 @@ v = 测量噪声
 8. EKF / UKF
 ```
 
-你现在最适合做的实际项目是：
+最适合做的实际项目是：
 
 ```
 LSM6DSL
@@ -156,19 +156,7 @@ LSM6DSL
 Kalman Filter
 ```
 
-因为你之前正好做过 LSM6DSL 倾角项目。
-
-比如状态定义成：
-
-\[ x= \begin{bmatrix} angle\\ gyro\ bias \end{bmatrix} \]
-
-陀螺仪负责预测角度变化：
-
-\[ angle_k = angle_{k-1} + (\omega-bias)\Delta t \]
-
-加速度计提供角度测量：
-
-\[ angle_{acc} = atan2(a_y,a_z) \]
+因为之前正好做过 LSM6DSL 倾角项目。比如状态定义成$x= \begin{bmatrix} angle\\ gyro\ bias \end{bmatrix}$ 陀螺仪负责预测角度变化$angle_k = angle_{k-1} + (\omega-bias)\Delta t$加速度计提供角度测量$angle_{acc} = atan2(a_y,a_z)$
 
 然后卡尔曼滤波融合：
 
@@ -185,17 +173,11 @@ Kalman
 
 这也是 IMU 里非常经典的应用。
 
-你还需要区分一下卡尔曼滤波和普通低通滤波。
+需要区分一下卡尔曼滤波和普通低通滤波。
 
-低通滤波：
+低通滤波$y_k= \alpha y_{k-1} + (1-\alpha)x_k$本质上就是固定权重。而卡尔曼滤波：
 
-\[ y_k= \alpha y_{k-1} + (1-\alpha)x_k \]
-
-本质上就是固定权重。
-
-而卡尔曼滤波：
-
-\[ \hat{x} = prediction + K\times residual \]
+\[ \hat{x} = prediction + K\times residual
 
 其中 \(K\) 会根据当前不确定性动态变化。
 
