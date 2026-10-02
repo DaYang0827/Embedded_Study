@@ -50,7 +50,8 @@ Callback_t  是类型
 cb  是变量
 &led_on  是地址
 
-
+cb = led_on;   是吧led_on这个函数赋值给cb这个Callback_t函数类型
+cb();
 ```
 
 ---
