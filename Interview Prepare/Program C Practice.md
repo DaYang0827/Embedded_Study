@@ -45,6 +45,11 @@ cb();
 两句话分别发生了什么。
 
 ```text
+led_on 是函数
+Callback_t  是类型
+cb  是变量
+&led_on  是地址
+
 
 ```
 
