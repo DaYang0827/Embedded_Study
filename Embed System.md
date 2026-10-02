@@ -291,7 +291,7 @@ APP_START + 0x0C
 ...
 ```
 
-#### 1.1.4.3 Reset_Handler
+#### 1.1.4.3 Reset_Handler（❗）
 
 假设`[0x08010004] = 0x08010229`，那么`0x08010004`是保存 Reset_Handler 地址的位置。而`0x08010229`才是Reset_Handler 的函数入口地址。因此：
 
@@ -351,9 +351,9 @@ Reset_Handler
 
 动作二：调用 `__main` —— 搬运工上场，构建 C 语言的 RAM 领地（最关键） 
 
-从 `SystemInit()` 返回后，汇编代码会执行：`BL __main`。  **注意：这里的 `__main` 是带两个下划线的，它不是你写的 `int main(void)`，而是 C 语言编译器（C 库）自带的底层初始化总管。** 
+从 `SystemInit()` 返回后，汇编代码会执行：`BL __main`。  **注意：这里的 `__main` 是带两个下划线的，它不是自己写的 `int main(void)`，而是 C 语言编译器（C 库）自带的底层初始化总管。** 
 
-`__main` 会在 RAM（内存）里干两件极其重要的“搬运”工作，如果没有它，你 C 语言里所有的全局变量都将是无法使用的垃圾值： 
+`__main` 会在 RAM（内存）里干两件极其重要的“搬运”工作，如果没有它， C 语言里所有的全局变量都将是无法使用的垃圾值： 
 
 1. **搬运 `.data` 段（数据复制）：**  
     CPU 上电时，你写的全局变量初始值（比如 `uint32_t a = 5;`）是死死保存在 Flash（只读）里的。`__main` 会把这些初始值从 Flash 里一个个复制到 RAM 的 `.data` 区中。这样，在程序里改写 `a` 的时候，改写的就是 RAM 了。 
@@ -361,44 +361,28 @@ Reset_Handler
     在函数外面定义了全局变量但没有给它赋初值（比如 `uint8_t rx_buffer[1024];`），它们被归类在 `.bss` 段。`__main` 会动用循环，把 RAM 里分给 `.bss` 的这块地盘**全部强行刷成 `0x00`**。这就是为什么 C 语言规定“全局变量不赋初值默认是 0”的底层硬件原因。 
 3. **初始化堆栈：** 根据你在启动文件里设定的 `Stack_Size` 和 `Heap_Size`，在 RAM 的最顶端划定好**栈（Stack）**和**堆（Heap）**的边界。 
 
-动作三：一脚油门跳进 `main()` —— 开启你的业务世界 
+动作三：一脚油门跳进 `main()` —— 开启真正的业务世界 
 
 当 RAM 里的 `.data` 复制完了，`.bss` 全清零了，堆栈空间也划好了，C 语言的运行环境已经完美搭建完毕。 
 
-- **执行的操作：** `__main` 的最后一条指令会执行一个跳转，直接跳进 **`main`**（你写的 C 语言主函数入口）。
-- **底层结果：** 从这一刻起，汇编彻底退场，芯片正式进入了你熟悉的 `while(1)` 点灯和业务逻辑世界！ 
+- **执行的操作：** `__main` 的最后一条指令会执行一个跳转，直接跳进 **`main`**（C 语言主函数入口）。
+- **底层结果：** 从这一刻起，汇编彻底退场，芯片正式进入了熟悉的 `while(1)` 点灯和业务逻辑世界！ 
 
 ---
 
-3. 在你编写 Bootloader / IAP 时的极其重要启示！
+3. 编写 Bootloader / IAP 时的极其重要启示！
 
-既然你正在研究 Bootloader 固件升级，**深刻理解 `Reset_Handler` 能帮你避开一个让无数工程师想撞墙的“死循环 Bug”**。 
+**深刻理解 `Reset_Handler` 能避开一个让无数工程师想撞墙的“死循环 Bug”**。 
 
-在 Bootloader 程序中，当你成功接收完新固件，准备“跳转”到 App 时，你的跳转代码本质上是在**模拟硬件复位的过程**： 
+在 Bootloader 程序中，当成功接收完新固件，准备“跳转”到 App 时，跳转代码本质上是在**模拟硬件复位的过程**： 
 
-1. 你的 Bootloader 代码会先去读取 App 区域（比如 `0x08010000`）的第一个字，拿到 App 的**栈顶地址（MSP）**。
+1. Bootloader 代码会先去读取 App 区域（比如 `0x08010000`）的第一个字，拿到 App 的**栈顶地址（MSP）**。
 2. 紧接着，读取 `0x08010004` 位置的第二个字——**这个字里存放的，恰好就是 App 程序自己的 `Reset_Handler` 物理地址！**
-3. 你的指针函数一脚油门跳过去，实际上就是让 CPU 去执行 **App 的 `Reset_Handler`**。
-4. App 的 `Reset_Handler` 醒来后，会重新走一遍：调用 App 的 `SystemInit()`
-    
-    ![](data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==)
-    
-    →right arrow
-    
-    →
-    
-    调用 App 的 `__main`（把 App 的全局变量重新搬运和清零）
-    
-    ![](data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==)
-    
-    →right arrow
-    
-    →
-    
-    最终进入 App 的 `main()` 函数。 
+3. 指针函数一脚油门跳过去，实际上就是让 CPU 去执行 **App 的 `Reset_Handler`**。
+4. App 的 `Reset_Handler` 醒来后，会重新走一遍：调用 App 的 `SystemInit()` → 调用 App 的 `__main`（把 App 的全局变量重新搬运和清零）→  最终进入 App 的 `main()` 函数。 
 
 **⚠️ 致命避坑点：**  
-如果你的 App 程序进了 `main` 之后直接死机、或者不断重启，百分之八十是因为你在 Bootloader 跳转前，**没有关闭 Bootloader 之前开启的中断（如 DMA、定时器、串口中断）**！  
+如果 App 程序进了 `main` 之后直接死机、或者不断重启，百分之八十是因为在 Bootloader 跳转前，**没有关闭 Bootloader 之前开启的中断（如 DMA、定时器、串口中断）**！  
 当 CPU 跳进 App 的 `Reset_Handler` 正在哼哧哼哧搬运数据时，突然产生了一个老旧的串口中断，CPU 就会按照错误的地址跳去执行中断，直接导致硬件崩溃（HardFault）。所以，**跳转前必须全局关中断！** 
 
 ---
@@ -437,11 +421,11 @@ app_msp =
 ```
 
 一定能读出一个 32 位数，但是**能读出一个值，不代表这个值一定是合法的 MSP**。例如 APP 没有烧录
-`[0x08010000] = 0xFFFFFFFF`，于是`app_msp = 0xFFFFFFFF;`如果直接：`__set_MSP(0xFFFFFFFF);`显然是错误的。
+`[0x08010000] = 0xFFFFFFFF`，于是`app_msp = 0xFFFFFFFF;` 。如果直接：`__set_MSP(0xFFFFFFFF);`显然是错误的。
 
 所以 Bootloader 会判断：
 
-```
+```c
 if (app_msp >= SRAM_START &&
     app_msp < SRAM_END)
 {
