@@ -2706,7 +2706,7 @@ Disassembly
 
 就可以定位代码
 
-### Vector Table 和 Vtor 的区别
+### 1.5.5 Vector Table 和 Vtor 的区别
 
 它们都带有 `vector table` 这几个字，但它们一个是**硬件寄存器（指针）**，另一个是**内存里的一大片死数据（表格原文）**。
 
@@ -2745,7 +2745,7 @@ Disassembly
 
 所以，**Vector Table 是具体存放中断函数地址的大箱子，而 VTOR 是指引 CPU 跑去哪个箱子里找东西的导航雷达！**
 
-### 1.5.5 ISR
+### 1.5.6 ISR
 
 ISR 全称Interrupt Service Routine。中文一般叫**中断服务程序 / 中断服务例程**
 
@@ -2802,7 +2802,7 @@ while(1)
 
 或者 RTOS 里面：ISR - Queue / Semaphore - Task - 真正处理
 
-### 1.5.6 项目需要两个不同的中断向量表
+### 1.5.7 项目需要两个不同的中断向量表
 
 **Bootloader 和 App 是两个完全独立编译、在不同时间运行、功能完全无关的独立程序，它们的函数在 Flash 里的物理房间号（地址）完全不同！**
 
