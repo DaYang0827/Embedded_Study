@@ -1,4 +1,619 @@
 （❌）
+# Day 3
+
+
+**Day 3：函数指针 + typedef + callback + 宏 + 头文件 + 项目结合**。重点是把你现在最容易混的这四个东西彻底拆开：
+
+```
+类型
+变量
+函数
+地址
+```
+
+先不给答案，你答完我逐题批。
+
+### 1. 先判断每个名字到底是什么
+
+看代码：
+
+```
+void led_on(void)
+{
+}
+
+typedef void (*Callback_t)(void);
+
+Callback_t cb;
+```
+
+分别回答：
+
+```
+led_on
+Callback_t
+cb
+&led_on
+```
+
+它们分别属于：
+
+```
+函数？
+类型？
+变量？
+地址？
+```
+
+并解释：
+
+```
+cb = led_on;
+cb();
+```
+
+两句话分别发生了什么。
+
+---
+
+### 2. 下面两种写法是否等价？
+
+```
+void (*func1)(void);
+```
+
+和：
+
+```
+typedef void (*Func_t)(void);
+
+Func_t func2;
+```
+
+回答：
+
+```
+func1是什么？
+Func_t是什么？
+func2是什么？
+```
+
+以及：
+
+> `typedef` 到底有没有创建一个新的函数？
+
+---
+
+### 3. 这次把 Bootloader 函数指针彻底讲清楚
+
+```
+typedef void (*AppEntry_t)(void);
+
+uint32_t app_reset_handler =
+    *(uint32_t *)(0x08010000 + 4);
+
+AppEntry_t app_entry =
+    (AppEntry_t)app_reset_handler;
+
+app_entry();
+```
+
+逐行解释：
+
+```
+AppEntry_t
+app_reset_handler
+(AppEntry_t)app_reset_handler
+app_entry
+app_entry()
+```
+
+特别回答：
+
+> `app_entry` 是函数吗？
+
+> `app_reset_handler` 是函数吗？
+
+---
+
+### 4. 为什么下面这段不能直接这样赋值？
+
+```
+void func1(void)
+{
+}
+
+uint32_t func2(uint32_t a)
+{
+    return a;
+}
+
+typedef void (*Func_t)(void);
+
+Func_t p;
+```
+
+下面：
+
+```
+p = func1;
+```
+
+和：
+
+```
+p = func2;
+```
+
+哪一个合理？
+
+为什么？
+
+从这三个方面解释：
+
+```
+返回值
+参数
+函数指针类型
+```
+
+---
+
+### 5. 函数指针作为函数参数
+
+看：
+
+```
+typedef void (*Callback_t)(uint32_t);
+
+void run_callback(Callback_t cb, uint32_t data)
+{
+    cb(data);
+}
+
+void print_data(uint32_t value)
+{
+    printf("%u\n", value);
+}
+```
+
+如果：
+
+```
+run_callback(print_data, 100);
+```
+
+回答：
+
+```
+传给 run_callback 的第一个参数是什么？
+cb里面保存的是什么？
+cb(data)最终调用的是谁？
+最终打印什么？
+```
+
+---
+
+### 6. 这道题专门考 Callback
+
+假设 UART 模块：
+
+```
+typedef void (*UartCallback_t)(uint8_t data);
+
+static UartCallback_t rx_callback;
+
+void uart_register_callback(UartCallback_t cb)
+{
+    rx_callback = cb;
+}
+```
+
+应用层：
+
+```
+void parser_input(uint8_t data)
+{
+    // parser
+}
+```
+
+初始化：
+
+```
+uart_register_callback(parser_input);
+```
+
+后来 UART 收到：
+
+```
+0xAA
+```
+
+UART 驱动调用：
+
+```
+rx_callback(0xAA);
+```
+
+请你完整描述执行过程。
+
+并回答：
+
+> 为什么 UART 模块根本不用知道 `parser_input()` 内部在干什么？
+
+这和“解耦”有什么关系？
+
+---
+
+### 7. 如果 Callback 没注册会发生什么？
+
+还是上面的代码：
+
+```
+static UartCallback_t rx_callback;
+```
+
+然后直接：
+
+```
+rx_callback(0xAA);
+```
+
+但是从来没有：
+
+```
+uart_register_callback(...);
+```
+
+会有什么问题？
+
+你觉得工程里应该怎么保护？
+
+可以尝试自己写：
+
+```
+if (________)
+{
+    rx_callback(0xAA);
+}
+```
+
+---
+
+### 8. 函数指针数组
+
+看：
+
+```
+void cmd_version(void);
+void cmd_erase(void);
+void cmd_jump(void);
+
+typedef void (*CmdHandler_t)(void);
+
+CmdHandler_t handlers[3] = {
+    cmd_version,
+    cmd_erase,
+    cmd_jump
+};
+```
+
+回答：
+
+```
+CmdHandler_t是什么？
+handlers是什么？
+handlers[0]里面保存什么？
+handlers[2]()会发生什么？
+```
+
+再想一下：
+
+> 这种写法能不能用于你的 Bootloader CMD 分发？
+
+例如：
+
+```
+CMD 0 → version
+CMD 1 → erase
+CMD 2 → jump
+```
+
+相比大量：
+
+```
+if(...)
+else if(...)
+else if(...)
+```
+
+有什么好处和风险？
+
+---
+
+### 9. 今天再练一次宏展开
+
+```
+#define DOUBLE(x) x + x
+```
+
+下面：
+
+```
+uint32_t a = DOUBLE(2 * 3);
+```
+
+不要直接算答案。
+
+先写出**预处理器实际展开后的表达式**。
+
+然后再计算 `a`。
+
+最后写出更安全的宏：
+
+```
+#define DOUBLE(x) ...
+```
+
+---
+
+### 10. 宏的副作用
+
+```
+#define DOUBLE(x) ((x) + (x))
+
+uint32_t a = 5;
+
+uint32_t b = DOUBLE(a++);
+```
+
+回答：
+
+```
+宏会展开成什么？
+a++出现了几次？
+为什么这种代码危险？
+```
+
+不要只回答：
+
+> “因为会自增。”
+
+我要你从**宏是文本替换**这个角度解释。
+
+---
+
+### 11. `#define` 和 `const` 再练一次
+
+```
+#define SIZE 128
+
+const uint32_t size = 128;
+
+uint8_t buffer[SIZE];
+```
+
+分别回答：
+
+```
+SIZE是变量吗？
+SIZE有数据类型吗？
+可以写 &SIZE 吗？
+
+size是变量/对象吗？
+size是什么类型？
+可以写 &size 吗？
+size本身通常占多少Byte？
+```
+
+注意：
+
+> `const uint32_t size = 128` 不代表申请 128 个 `uint32_t`。
+
+---
+
+### 12. Header Guard
+
+假设：
+
+```
+// parser.h
+
+typedef struct
+{
+    uint8_t cmd;
+} Package_t;
+```
+
+`main.c`：
+
+```
+#include "parser.h"
+#include "protocol.h"
+```
+
+而：
+
+```
+// protocol.h
+#include "parser.h"
+```
+
+那么预处理时：
+
+```
+parser.h
+```
+
+可能被展开几次？
+
+为什么可能发生：
+
+```
+redefinition
+```
+
+然后解释：
+
+```
+#ifndef PARSER_H
+#define PARSER_H
+
+...
+
+#endif
+```
+
+第一次 include 和第二次 include 分别会发生什么。
+
+---
+
+### 13. `static` 函数 + Header 的组合题
+
+假设：
+
+```
+// flash.c
+
+static void flash_wait(void)
+{
+}
+
+void flash_write(void)
+{
+    flash_wait();
+}
+```
+
+然后：
+
+```
+// flash.h
+
+void flash_write(void);
+```
+
+回答：
+
+为什么：
+
+```
+flash_write()
+```
+
+应该放到 `.h` 暴露出去，
+
+而：
+
+```
+flash_wait()
+```
+
+通常没必要放进 `.h`？
+
+这体现了什么模块设计思想？
+
+---
+
+### 14. 项目题：Callback 和你现在的 Parser
+
+你目前大概是：
+
+```
+USART
+↓
+DMA
+↓
+RingBuffer
+↓
+Parser
+↓
+CMD Handler
+```
+
+如果想加入 callback，你觉得下面哪一层比较适合？
+
+例如：
+
+```
+Parser解析出完整Package
+↓
+???
+↓
+CMD模块
+```
+
+你能不能设计成：
+
+```
+typedef void (*PackageCallback_t)(Package_t *package);
+```
+
+然后：
+
+```
+parser_register_callback(...);
+```
+
+完整包出来以后：
+
+```
+package_callback(&package);
+```
+
+请你解释：
+
+> 这样做相比 Parser 里面直接调用 `cmd_handle(&package)` 有什么区别？
+
+今天这题比较重要，不要求你一定认为 callback 更好，你可以分析两种设计。
+
+---
+
+### 15. 最后一道综合题
+
+看：
+
+```
+typedef int (*Operation_t)(int, int);
+
+int add(int a, int b)
+{
+    return a + b;
+}
+
+int sub(int a, int b)
+{
+    return a - b;
+}
+
+int calculate(
+    int a,
+    int b,
+    Operation_t operation)
+{
+    return operation(a, b);
+}
+```
+
+回答：
+
+```
+Operation_t是什么？
+add是什么？
+operation是什么？
+operation里面保存什么？
+
+calculate(10, 3, add)
+结果是什么？
+
+calculate(10, 3, sub)
+结果是什么？
+```
+
+最后用一句话解释：
+
+> 为什么说“函数指针可以把行为作为参数传递”？
 
 # DAY 2
 

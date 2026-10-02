@@ -1,7 +1,10 @@
+# 低通滤波
+
+
 
 # 1 卡尔曼滤波
 
-先抓住一句话$\boxed{\text{卡尔曼滤波 = 用“预测” + “测量”，按可信度加权，得到更可靠的状态估计}}$
+先抓住一句话 $\boxed{\text{卡尔曼滤波 = 用“预测” + “测量”，按可信度加权，得到更可靠的状态估计}}$
 
 它不是普通意义上的“把数据变平滑”这么简单，而是一个 **递推状态估计算法**。假设有一个 IMU 测角度。加速度计能测出姿态角，但它容易受振动影响；陀螺仪短时间很准，但积分久了会漂移。
 
@@ -156,11 +159,11 @@ LSM6DSL
 Kalman Filter
 ```
 
-因为之前正好做过 LSM6DSL 倾角项目。比如状态定义成$x= \begin{bmatrix} angle\\ gyro\ bias \end{bmatrix}$ 陀螺仪负责预测角度变化$angle_k = angle_{k-1} + (\omega-bias)\Delta t$加速度计提供角度测量$angle_{acc} = atan2(a_y,a_z)$
+因为之前正好做过 LSM6DSL 倾角项目。比如状态定义成$x= \begin{bmatrix} angle\\ gyro\ bias \end{bmatrix}$ 陀螺仪负责预测角度变化$angle_k = angle_{k-1} + (\omega-bias)\Delta t$ 加速度计提供角度测量 $angle_{acc} = atan2(a_y,a_z)$
 
 然后卡尔曼滤波融合：
 
-```
+```text
 gyro
 → 短期预测
 
@@ -189,13 +192,9 @@ Kalman
 
 可以说：简单平均通常使用固定权重，而卡尔曼滤波可以根据系统状态和噪声动态调整权重，而且能够结合系统动态模型，因此不仅仅是在做数据平滑，而是在做状态估计。
 
-对你现在来说，先真正吃透这四个变量就够了：
+需要真正吃透这四个变量 $\boxed{ x,\quad P,\quad Q,\quad R,\quad K }$ 分别是：
 
-\[ \boxed{ x,\quad P,\quad Q,\quad R,\quad K } \]
-
-分别是：
-
-```
+```text
 x → 我估计的状态
 P → 我对估计有多不确定
 Q → 模型有多不靠谱
