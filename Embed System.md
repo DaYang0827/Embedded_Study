@@ -257,7 +257,7 @@ APP自己的栈顶地址
 APP自己的Reset_Handler入口地址
 ```
 
-#### 1.1.4.2 Vector Table 
+#### 1.1.4.2 Vector Table （❗）
 
 可以把 Vector Table 粗略理解成：
 
@@ -2342,7 +2342,7 @@ STM32F407
 
 所以 SCB 更偏“CPU 核心管理”。
 
-#### 1.5.3.2 SCB->VTOR
+#### 1.5.3.2 SCB->VTOR（❗）
 
 VTOR： `Vector Table Offset Register`。作用是**告诉 Cortex-M当前中断向量表在哪里**。
 
@@ -2639,7 +2639,7 @@ a = b / 0;
 
 这个非常适合 Debug，因为否则某些错误行为可能不容易直接暴露。
 
-### 1.5.4 实操中使用 SCB
+### 1.5.4 使用 SCB
 
 假设`app_entry();` 之后马上HardFault_Handler。可以 Watch：
 
@@ -2717,13 +2717,13 @@ void USART1_IRQHandler(void)
 }
 ```
 
-这个 `USART1_IRQHandler()` 本质上就是一个 ISR。也就是说：IRQ = Interrupt Request中断请求  ISR = Interrupt Service Routine 真正处理中断的函数
+这个 `USART1_IRQHandler()` 本质上就是一个 ISR。也就是说IRQ = Interrupt Request中断请求  ISR = Interrupt Service Routine 真正处理中断的函数
 
-可以理解成：硬件发生事件 - 产生 IRQ - NVIC 接收到 IRQ - CPU 查 Vector Table - 找到对应 Handler 地址 - 执行 ISR
+可以理解成：硬件发生事件 -> 产生 IRQ -> NVIC 接收到 IRQ -> CPU 查 Vector Table -> 找到对应 Handler 地址 -> 执行 ISR
 
-例如串口：USART1 收到数据 - RXNE = 1 - 产生 USART1_IRQn - NVIC - Vector Table - USART1_IRQHandler()
+例如串口：USART1 收到数据 ->RXNE = 1 -> 产生 USART1_IRQn -> NVIC -> Vector Table -> `USART1_IRQHandler()`
 
-所以严格来说：USART1_IRQHandler()是函数名；
+所以严格来说：`USART1_IRQHandler()`是函数名；
 
 而从功能角色上讲，它就是：USART1 的 ISR
 
