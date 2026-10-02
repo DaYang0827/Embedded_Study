@@ -5534,7 +5534,7 @@ void TIM2_IRQHandler(void)
 
 ```
 
-现在：`TIM Driver` 直接知道：LED,于是：TIM模块 - 绑死 - LED模块。如果以后我不要闪 LED，而要：发送UART，得直接修改：`TIM2_IRQHandler()`变成：`UART_Send();`TIM 模块和业务逻辑绑得很死。这就叫：**高耦合。**
+现在`TIM Driver` 直接知道 LED,于是：TIM模块 - 绑死 - LED模块。如果以后我不要闪 LED，而要发送UART，得直接修改`TIM2_IRQHandler()` ，变成`UART_Send();`，TIM 模块和业务逻辑绑得很死。这就叫：**高耦合。**
 
 ----
 
@@ -5574,6 +5574,7 @@ TIM 模块根本不知道 callback 最终干什么。可以：`time_elapsed_regi
 
 
 # 8 中间件层
+
 ## 8.1 LVGL
 
 LVGL （Light and Versatile Graphics Library，轻量级通用型图形库）是目前全球在嵌入式和微控制器（MCU/MPU）领域中最流行、最活跃的免费开源 GUI（图形用户界面）库
