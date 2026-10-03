@@ -210,6 +210,60 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 `Handle` = 钥匙 / 编号 / 地址
 `Scheduler` = 管理员，决定谁先执行
 
+# 7 Hook 函数
 
-#
+Hook 可以理解为 **FreeRTOS 预留给用户的“回调入口”** 。当 FreeRTOS 内部发生某些特定事件时，内核会主动调用用户自己实现的 Hook 函数。 基本流程：
 
+```text
+FreeRTOS内部事件
+    ↓
+FreeRTOS内核检测到
+    ↓
+调用用户实现的Hook函数
+```
+
+Hook 和中断有点像，但来源不同：
+
+- 硬件中断：硬件事件 → NVIC → ISR
+- Hook：FreeRTOS内部事件 → FreeRTOS内核 → Hook函数
+
+常见 Hook：
+
+1. `vApplicationStackOverflowHook()`
+   - 某个**任务发生栈溢出时调用**
+   - 参数可以告诉我们：
+     - 哪个任务出问题
+     - 任务名称是什么
+2. `vApplicationMallocFailedHook()`
+   - FreeRTOS动态内存分配失败时调用
+   - 比如 `xTaskCreate()` 内部申请任务栈或 TCB 失败
+3. `vAssertCalled()`
+   - `configASSERT() `检查失败时进入
+   - 用于捕获“不应该发生”的内核状态
+
+典型处理：
+
+```c
+void vApplicationStackOverflowHook(TaskHandle_t xTask,
+                                   char *pcTaskName)
+{
+    (void)xTask;
+    (void)pcTaskName;
+
+    taskDISABLE_INTERRUPTS();
+
+    while(1)
+    {
+    }
+}
+```
+
+这里：
+- `(void)xTask`：表示当前故意不使用这个参数，避免编译器警告
+- `taskDISABLE_INTERRUPTS()`：发生严重异常后关闭中断
+- `while(1)`：让程序停在这里，方便调试
+
+可以把 Hook 理解成：
+- StackOverflowHook = 栈溢出报警器
+- MallocFailedHook   = 内存申请失败报警器
+- AssertHook         = 内核异常断点
