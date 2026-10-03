@@ -479,6 +479,8 @@ Suspended 被人为挂起
 【 挂起态 (Suspended) 】 ─── 别人调用 vTaskResume() ───► 回到【就绪态】
 ```
 
+##
+
 # 6 Scheduler
 
 FreeRTOS 的 Scheduler 本质就是**从所有“现在可以运行”的任务里，选一个优先级最高的，让它占 CPU。** 所以 Scheduler 最关心的不是“这个任务是谁”，而是：
