@@ -574,22 +574,14 @@ Running / Ready
 
 比如：
 
-```
+```c
 Task1 priority = 2
 Task2 priority = 1
 ```
 
-正常情况下 Task1 优先级更高。
+正常情况下 Task1 优先级更高。但如果`vTaskSuspend(task1_handle);` 那么：
 
-但如果：
-
-```
-vTaskSuspend(task1_handle);
-```
-
-那么：
-
-```
+```text
 Task1 = Suspended
 Task2 = Ready
 ```
@@ -598,57 +590,29 @@ Scheduler 只能运行 Task2。
 
 ---
 
-然后是：
+## Resume
 
-```
+```c
 vTaskResume(TaskHandle_t xTask);
 ```
 
-它的作用是：
+它的作用是**把被 Suspend 的任务重新恢复回来。** 比如：
 
-> **把被 Suspend 的任务重新恢复回来。**
-
-比如：
-
-```
+```c
 vTaskResume(task1_handle);
 ```
 
 状态：
 
-```
+```text
 Suspended
     ↓
   Ready
 ```
 
-注意：
+注意`Resume` 以后不是一定立刻 Running。它只是先变成Ready，然后 Scheduler 再判断优先级。如果恢复的 Task1：`priority = 2` ，当前 Task2：`priority = 1` 那 Task1 很可能马上抢占 Task2：
 
-`Resume` 以后不是一定立刻 Running。
-
-它只是先变成：
-
-```
-Ready
-```
-
-然后 Scheduler 再判断优先级。
-
-如果恢复的 Task1：
-
-```
-priority = 2
-```
-
-当前 Task2：
-
-```
-priority = 1
-```
-
-那 Task1 很可能马上抢占 Task2：
-
-```
+```text
 Task1:
 Suspended → Ready → Running
 
@@ -658,12 +622,7 @@ Running → Ready
 
 ---
 
-你现在最需要区分的是：
-
-```
-Blocked
-和
-Suspended
+注意区分 Blocked 和 Suspended
 ```
 
 它们表面上都像：
