@@ -82,7 +82,7 @@ BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
 - `usStackDepth`：栈深，即任务的栈大小（单位是字，1字 = 4字节）
 - `pvParameters`：任务的参数指针（即FreeRTOS 允许你给任务函数传一个“通用指针”）
 - `uxPriority`：任务的优先级，最低优先级是0，数字越大，优先级越高
--`pxCreatedTask`：任务的句柄，用于控制任务
+- `pxCreatedTask`：任务的句柄，用于控制任务
 
 在调用的时候使用
 
@@ -209,4 +209,7 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 `Mutex` （互斥）= 厕所门锁，同一时间只能一个人用
 `Handle` = 钥匙 / 编号 / 地址
 `Scheduler` = 管理员，决定谁先执行
+
+
+# 
 
