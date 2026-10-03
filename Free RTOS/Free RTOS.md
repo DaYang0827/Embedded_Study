@@ -539,13 +539,13 @@ void Task_Mid(void *pvParameters)
 
    如果低优先级任务不仅被饿死了，还手里死死攥着某个锁（互斥量），导致高优先级任务也在等它，这就会引发更恐怖的灾难——**优先级翻转（Priority Inversion）**。FreeRTOS 内核通过互斥量自带的“优先级继承”机制，在低优先级任务被饿死前强行拉它一把，帮它快速干完活释放锁。
 
-## 任务对应的API
+## 5.4 任务对应的API
 
-### TaskDelay
+### 5.4.1 TaskDelay
 
 
 
-### 5.4 TaskSuspended
+### 5.4.2 TaskSuspended
 
 ```c
 vTaskSuspend(TaskHandle_t xTask);
@@ -594,7 +594,7 @@ Task2 = Ready
 
 Scheduler 只能运行 Task2。
 
-#### 使用句柄的原因
+#### 5.4.2.1 使用句柄的原因
 
 不使用函数名，而是使用函数句柄是**因为函数名代表的是放在 Flash 里的“死指令代码（一间样板房）”；而句柄代表的是动态躺在 RAM 里的“活任务实体（根据样板房盖好的真实大楼和它的遥控器）”。**
 
@@ -673,7 +673,7 @@ void send_task1(void *pvParameters)
 
 想向房子里搬家具（挂起、改变运行状态），不能对着设计图纸（函数名）使劲，必须拿着具体的门牌号（句柄），去 RAM 里找到那栋属于它的真实大楼！
 
-### TaskResume
+### 5.4.3 TaskResume
 
 ```c
 vTaskResume(TaskHandle_t xTask);
@@ -749,7 +749,7 @@ Suspended → Ready
 
 可以直接记 **`Blocked` 是“等东西”，`Suspended` 是“被人为暂停”**。
 
-### taskYIELD
+### 5.4.4 taskYIELD
 
 ```c
 taskYIELD();

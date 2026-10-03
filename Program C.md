@@ -2194,6 +2194,7 @@ for (i = 0; i < 8; i++)
 <img width="692" height="326" alt="image" src="https://github.com/user-attachments/assets/badca57d-718b-4d63-905b-18e16ce95b33" />
 
 完整的定义应该为：
+
 ```c
 struct A
 {
@@ -2205,11 +2206,8 @@ struct A
 关于调用的理解：
 
 1. 要造一个新的变量（比如说 C）
-
    格式：`struct A C;`既然 struct A 是类型（像 int 一样），那可以用它去定义新变量 C。这时，C 和 B 是两个独立的变量，互不干扰。
-
 2. 要用刚才顺手造出来的变量 B
-
    格式：B. 来定义里面的数据。因为 B 已经是一个实实在在存在的变量了，所以你直接用 . 号就能访问它的成员。例如：B.x = 10
 
 **Struct本质还是一个数据类型，只是它是多个数据类型的集合**
@@ -2225,9 +2223,10 @@ C语言的定义变量的语法为**数据类型+变量名**
 | 代码  |    int a;     |     struct name a;     |
 | 含义  | 定义一个叫 a 的整型变量 |     定义一个叫 a 的结构体变量     |
 
-**将不同的数据类型进行打包**，在定义上和别的变量定义是相同的比如int a，都是先写变量类型再写变量名字，在结构体中最前面多了一个struct，并且变量由{ }表示出来
+**将不同的数据类型进行打包**，在定义上和别的变量定义是相同的比如`int a`，都是先写变量类型再写变量名字，在结构体中最前面多了一个struct，并且变量由`{ }`表示出来
 
-struct{char x; int y; float z;} 整体是一个变量，可以对这个整体使用typedef，起一个别名进行调用示例
+`struct{char x; int y; float z;} `整体是一个变量，可以对这个整体使用typedef，起一个别名进行调用示例:
+
 ```c
 struct
 {
@@ -4360,19 +4359,7 @@ typedef struct
 } UART_Handle;
 ```
 
-这里：
-
-```c
-typedef
-```
-
-负责给结构体类型起名：
-
-```c
-UART_Handle
-```
-
-然后定义实际句柄对象：
+这里`typedef` 负责给结构体类型起名`UART_Handle`，然后定义实际句柄对象：
 
 ```c
 UART_Handle uart1;
@@ -4381,9 +4368,9 @@ UART_Handle uart2;
 
 关系是：
 
-```
-struct      
-定义数据结构typedef     
+```text
+struct
+定义数据结构typedef
 给结构体类型起别名UART_Handle 
 类型名称uart1       
 实际结构体对象
