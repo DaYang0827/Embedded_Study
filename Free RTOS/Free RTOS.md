@@ -157,30 +157,297 @@ BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
 - `uxPriority`：任务的优先级，最低优先级是0，数字越大，优先级越高
 - `pxCreatedTask`：任务的句柄，用于控制任务
 
-在调用的时候使用
+在调用的时候使用：
 
 ```c
-xTaskCreate(led_blink, "led_blink", 256, (void*)&LED0, 1, NULL);
-
-xTaskCreate(led_blink, "led_blink", 256, (void*)&LED1, 1, NULL);
-
-xTaskCreate(led_blink, "led_blink", 256, (void*)&LED2, 1, NULL);
+xTaskCreate(send_task1,"TASK1", 128, NULL, 1, NULL);
+xTaskCreate(send_task2,"TASK2", 128, NULL, 1, NULL);
 ```
 
-进行调用，注意到第四个参数是`(void*)&LED0`，`&LED0`表示：取 LED0 这个结构体变量的地址。因为 LED0 是一个结构体变量：
+理解：
+
+1. `send_task1`
 
 ```c
-LED_TypeDef LED0 =
+void send_task1(void *pvParameters)
+```
+
+这是**任务函数入口**。本质上和普通函数地址类似：
+
+```text
+xTaskCreate()
+   ↓
+记住 send_task1 的入口地址
+```
+
+等调度器以后选中这个任务时，就从这个函数开始执行。
+
+---
+
+2. `"TASK1"`
+
+这是**任务名字**。主要用于：
+
+- Debug
+- RTOS-aware 调试工具
+- 查看任务列表
+- Stack Overflow Hook 里识别任务
+
+以后如果某个任务栈溢出pcTaskName，可以看出来到底是 `TASK1` 还是 `TASK2`。
+
+---
+
+3. `128`
+
+这个非常重要。
+
+它表示任务栈深度：
+
+```
+128 个 StackType_t
+```
+
+不是一定代表 128 bytes。
+
+你现在 STM32F4 是 32 位 Cortex-M4，通常：
+
+```
+sizeof(StackType_t) = 4 bytes
+```
+
+所以：
+
+```
+128 × 4 = 512 bytes
+```
+
+也就是说：
+
+```
+128
+```
+
+大约给这个 Task 分了：
+
+```
+512 bytes stack
+```
+
+这个栈是任务私有的。
+
+所以：
+
+```
+Task1 有自己的栈
+Task2 也有自己的栈
+```
+
+它们互不共用。
+
+这点非常关键，因为任务切换的时候 FreeRTOS 要保存：
+
+```
+局部变量
+函数调用现场
+寄存器上下文
+返回地址
+```
+
+这些都和 Task 的栈有关。
+
+---
+
+`NULL`
+
+第四个参数：
+
+```
+void *pvParameters
+```
+
+是传给 Task 的参数。
+
+你现在：
+
+```
+NULL
+```
+
+说明：
+
+> 这个 Task 不需要外部参数。
+
+所以你的：
+
+```
+void send_task1(void *pvParameters)
+```
+
+虽然有这个参数，但现在实际上没使用。
+
+你可以写：
+
+```
+void send_task1(void *pvParameters)
 {
-	GPIOB, GPIO_Pin_0, RCC_AHB1Periph_GPIOB
-};
+    (void)pvParameters;
+
+    while(1)
+    {
+        ...
+    }
+}
 ```
 
-那么`&LED0`类型就是：`LED_TypeDef*` 也就是“指向 `LED_TypeDef` 的指针”。`(void*)&LED0`表示：把 `LED_TypeDef*` 转换成 `void*`，传给 FreeRTOS。因为 `xTaskCreate` 第四个参数规定就是 `void*`。`void*` 可以理解为**通用地址类型**，什么类型的地址都可以先放进来。然后到了任务函数里面，再转换回来：
+避免 unused parameter warning。
 
-```c
-LED_TypeDef *led = (LED_TypeDef *)args;
+以后你可以传结构体：
+
 ```
+LED_TypeDef LED0;
+```
+
+然后：
+
+```
+xTaskCreate(
+    led_task,
+    "LED",
+    128,
+    &LED0,
+    1,
+    NULL
+);
+```
+
+任务里：
+
+```
+void led_task(void *pvParameters)
+{
+    LED_TypeDef *led = (LED_TypeDef *)pvParameters;
+}
+```
+
+所以第四个参数本质是：
+
+> 给 Task 带一个地址进去。
+
+---
+
+第五个参数：
+
+```
+1
+```
+
+这是优先级。
+
+```
+数字越大
+→ 优先级越高
+```
+
+最低通常：
+
+```
+tskIDLE_PRIORITY
+```
+
+就是 0。
+
+你现在：
+
+```
+Task1 priority = 1
+Task2 priority = 1
+```
+
+所以两个任务是同优先级。
+
+如果时间片轮转开启，它们都 Ready 时可以轮流执行。
+
+但你当前代码里它们大部分时间都在：
+
+```
+vTaskDelay(...)
+```
+
+所以实际上经常是：
+
+```
+Task1 Blocked
+Task2 Running
+
+或者
+
+Task2 Blocked
+Task1 Running
+```
+
+---
+
+最后一个：
+
+```
+NULL
+```
+
+是：
+
+```
+TaskHandle_t *pxCreatedTask
+```
+
+也就是：
+
+> 要不要把创建出来的任务“句柄”保存下来。
+
+你现在不需要以后控制这个任务，所以传：
+
+```
+NULL
+```
+
+如果你想以后：
+
+```
+vTaskDelete()
+vTaskSuspend()
+vTaskResume()
+vTaskPrioritySet()
+```
+
+就可以保存 handle：
+
+```
+TaskHandle_t task1_handle;
+```
+
+然后：
+
+```
+xTaskCreate(
+    send_task1,
+    "TASK1",
+    128,
+    NULL,
+    1,
+    &task1_handle
+);
+```
+
+之后：
+
+```
+vTaskSuspend(task1_handle);
+```
+
+就能暂停 Task1。
+
+所以 Handle 你可以理解成：
+
+> FreeRTOS 里用来找到这个任务的“身份证/引用”。
 
 |             函数             | 含义      | 返回值     |
 | :------------------------: | :-----: | :-----: |
