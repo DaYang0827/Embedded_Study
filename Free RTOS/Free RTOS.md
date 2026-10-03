@@ -199,52 +199,14 @@ xTaskCreate()
 
 3. `128`
 
-这个非常重要。
-
-它表示任务栈深度：
-
-```
-128 个 StackType_t
-```
-
-不是一定代表 128 bytes。
-
-你现在 STM32F4 是 32 位 Cortex-M4，通常：
-
-```
-sizeof(StackType_t) = 4 bytes
-```
-
-所以：
-
-```
-128 × 4 = 512 bytes
-```
-
-也就是说：
-
-```
-128
-```
-
-大约给这个 Task 分了：
-
-```
-512 bytes stack
-```
-
-这个栈是任务私有的。
-
-所以：
+这个非常重要。它表示任务栈深度128 个 StackType_t不是一定代表 128 bytes。 STM32F4 是 32 位 Cortex-M4，通常`sizeof(StackType_t) = 4 bytes` 所以`128 × 4 = 512 bytes`。也就是说128大约给这个 Task 分了512 bytes stack这个栈是任务私有的。所以：
 
 ```
 Task1 有自己的栈
 Task2 也有自己的栈
 ```
 
-它们互不共用。
-
-这点非常关键，因为任务切换的时候 FreeRTOS 要保存：
+它们互不共用。这点非常关键，因为任务切换的时候 FreeRTOS 要保存：
 
 ```
 局部变量
@@ -257,37 +219,17 @@ Task2 也有自己的栈
 
 ---
 
-`NULL`
+4. `NULL`
 
-第四个参数：
+第四个参数`void *pvParameters`是传给 Task 的参数。使用NULL，说明这个 Task 不需要外部参数。所以函数
 
-```
-void *pvParameters
-```
-
-是传给 Task 的参数。
-
-你现在：
-
-```
-NULL
-```
-
-说明：
-
-> 这个 Task 不需要外部参数。
-
-所以你的：
-
-```
+```c
 void send_task1(void *pvParameters)
 ```
 
-虽然有这个参数，但现在实际上没使用。
+虽然有这个参数，但现在实际上没使用。可以写：
 
-你可以写：
-
-```
+```c
 void send_task1(void *pvParameters)
 {
     (void)pvParameters;
@@ -299,17 +241,9 @@ void send_task1(void *pvParameters)
 }
 ```
 
-避免 unused parameter warning。
+避免 unused parameter warning。以后可以传结构体`LED_TypeDef LED0;`然后：
 
-以后你可以传结构体：
-
-```
-LED_TypeDef LED0;
-```
-
-然后：
-
-```
+```c
 xTaskCreate(
     led_task,
     "LED",
@@ -322,16 +256,14 @@ xTaskCreate(
 
 任务里：
 
-```
+```c
 void led_task(void *pvParameters)
 {
     LED_TypeDef *led = (LED_TypeDef *)pvParameters;
 }
 ```
 
-所以第四个参数本质是：
-
-> 给 Task 带一个地址进去。
+所以第四个参数本质是给 Task 带一个地址进去。
 
 ---
 
