@@ -54,7 +54,7 @@ cb = led_on;   是吧led_on这个函数赋值给cb这个Callback_t函数类型
 cb();     就是执行函数    相当于执行led_on（）
 ```
 
----
+
 
 2. 下面两种写法是否等价？
 
@@ -83,9 +83,13 @@ func2是什么？
 > `typedef` 到底有没有创建一个新的函数？
 
 ```text
-
+是等价的
+func1是定义的输入输出都为void的函数指针
+Func_t是用typedef定义的输入输出都是void的函数指针    相当于创建了变量类型
+func2是具体的变量    符合Func_t的变量类型
+typedef没有创建新的函数    创建函数是Func_t func2;完成的
 ```
----
+
 
 3. 这次把 Bootloader 函数指针彻底讲清楚
 
@@ -118,9 +122,13 @@ app_entry()
 > `app_reset_handler` 是函数吗？
 
 ```text
-
+AppEntry_t   是用typedef创建的变量类型     对应的是输入输出都为void的函数
+app_reset_handler    是把0x08010000 + 4这个地址当做指针    去读取这个地址里面的数据   赋值给 app_reset_handler  他是一个uint32类型的变量
+(AppEntry_t)app_reset_handler    把这个变量强制
+app_entry
+app_entry()
 ```
----
+
 
 4. 为什么下面这段不能直接这样赋值？
 
@@ -166,7 +174,7 @@ p = func2;
 ```text
 
 ```
----
+
 
 5. 函数指针作为函数参数
 
@@ -204,7 +212,7 @@ cb(data)最终调用的是谁？
 ```text
 
 ```
----
+
 
  6. 这道题专门考 Callback
 
@@ -258,7 +266,7 @@ rx_callback(0xAA);
 ```text
 
 ```
----
+
 
  7. 如果 Callback 没注册会发生什么？
 
@@ -296,7 +304,7 @@ if (________)
 ```text
 
 ```
----
+
 
 8. 函数指针数组
 
@@ -349,7 +357,7 @@ else if(...)
 ```text
 
 ```
----
+
 
  9. 今天再练一次宏展开
 
@@ -378,7 +386,7 @@ uint32_t a = DOUBLE(2 * 3);
 ```text
 
 ```
----
+
 
 10. 宏的副作用
 
@@ -406,7 +414,7 @@ a++出现了几次？
 ```text
 
 ```
----
+
 
 11. `#define` 和 `const` 再练一次
 
@@ -438,7 +446,7 @@ size本身通常占多少Byte？
 ```text
 
 ```
----
+
 
 12. Header Guard
 
@@ -496,7 +504,7 @@ redefinition
 ```text
 
 ```
----
+
 
 13. `static` 函数 + Header 的组合题
 
@@ -545,7 +553,7 @@ flash_wait()
 ```text
 
 ```
----
+
 
 14. 项目题：Callback 和你现在的 Parser
 
@@ -601,7 +609,7 @@ package_callback(&package);
 ```text
 
 ```
----
+
 
 15. 最后一道综合题
 
