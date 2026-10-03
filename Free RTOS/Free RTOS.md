@@ -591,49 +591,39 @@ Task1 delay 500
 
 那么大概可以理解成`Task1 wake tick = 1500`，当 tick count 到 1500：
 
-```
+```text
 Task1:
 Blocked → Ready
 ```
 
-注意，这时候它只是先变成 Ready，不一定立刻运行。
+注意，**这时候它只是先变成 Ready，不一定立刻运行**。然后 Scheduler 再判断：
 
-然后 Scheduler 再判断：
-
-```
+```text
 现在有哪些 Ready Task？
 谁优先级最高？
 ```
 
 如果 Task1 优先级比当前 Running Task 高，那么就可能发生抢占。
 
-这就进入下一个概念：**Preemption，抢占式调度**。
+## Preemption
 
-比如当前：
+Preemption，**抢占式调度**。比如当前：
 
-```
+```text
 Task2 priority = 1
 Task2 Running
 ```
 
 然后 Tick 到了：
 
-```
+```text
 Task1 Blocked → Ready
 Task1 priority = 2
 ```
 
-Scheduler 一看：
+Scheduler 一看Task1优先级更高，于是 Task1 会抢占 Task2。状态变成：
 
-```
-Task1优先级更高
-```
-
-于是 Task1 会抢占 Task2。
-
-状态变成：
-
-```
+```text
 Task2:
 Running → Ready
 
@@ -641,19 +631,13 @@ Task1:
 Ready → Running
 ```
 
-这就是抢占。
+这就是**抢占**。所以可以记**更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务**。
 
-所以你可以记：
+## `Ready List` 和 `Blocked List`。
 
-> 更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务。
+FreeRTOS 内部不会只放几个变量说“Task1是Ready”。它会**用链表管理任务**。可以简化理解成：
 
-现在再讲你问到的底层一点的东西：`Ready List` 和 `Blocked List`。
-
-FreeRTOS 内部不会只放几个变量说“Task1是Ready”。它会用链表管理任务。
-
-你可以先简化理解成：
-
-```
+```text
 Ready List
 ├── priority 0 的 Ready Task
 ├── priority 1 的 Ready Task
@@ -666,15 +650,9 @@ Blocked List
 └── ...
 ```
 
-所以一个任务调用：
+所以一个任务调用`vTaskDelay(...)`，内部大致做的就是：
 
-```
-vTaskDelay(...)
-```
-
-内部大致做的就是：
-
-```
+```text
 从 Ready List 移走
 ↓
 放进 Blocked/Delayed List
