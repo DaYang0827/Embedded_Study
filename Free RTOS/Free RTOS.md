@@ -479,7 +479,13 @@ Suspended 被人为挂起
 【 挂起态 (Suspended) 】 ─── 别人调用 vTaskResume() ───► 回到【就绪态】
 ```
 
-##
+## Starvation
+
+
+## Suspended
+
+
+## 主动任务切换
 
 # 6 Scheduler
 
