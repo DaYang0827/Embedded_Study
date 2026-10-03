@@ -539,13 +539,15 @@ void Task_Mid(void *pvParameters)
 
    如果低优先级任务不仅被饿死了，还手里死死攥着某个锁（互斥量），导致高优先级任务也在等它，这就会引发更恐怖的灾难——**优先级翻转（Priority Inversion）**。FreeRTOS 内核通过互斥量自带的“优先级继承”机制，在低优先级任务被饿死前强行拉它一把，帮它快速干完活释放锁。
 
-## 5.4 Suspended
+## 任务API
+
+### 5.4 TaskSuspended
 
 ```c
 vTaskSuspend(TaskHandle_t xTask);
 ```
 
-它的作用是**把某个任务人为地挂起，让它彻底退出调度。** 比如：
+作用是**把某个任务人为地挂起，让它彻底退出调度。** 比如：
 
 ```c
 TaskHandle_t task1_handle;
@@ -590,13 +592,13 @@ Scheduler 只能运行 Task2。
 
 ---
 
-## Resume
+### TaskResume
 
 ```c
 vTaskResume(TaskHandle_t xTask);
 ```
 
-它的作用是**把被 Suspend 的任务重新恢复回来。** 比如：
+作用是**把被 Suspend 的任务重新恢复回来。** 比如：
 
 ```c
 vTaskResume(task1_handle);
@@ -622,18 +624,9 @@ Running → Ready
 
 ---
 
-注意区分 Blocked 和 Suspended
-```
+注意区分 Blocked 和 Suspended，它们表面上都像“这个任务现在不运行”，但本质完全不同。
 
-它们表面上都像：
-
-```
-“这个任务现在不运行”
-```
-
-但本质完全不同。
-
-```
+```text
 Blocked
 = 等条件
 = 条件满足后自动回来
@@ -643,15 +636,9 @@ Suspended
 = 必须显式 Resume 才回来
 ```
 
-比如：
+比如`vTaskDelay(pdMS_TO_TICKS(500));` ，Task1：
 
-```
-vTaskDelay(pdMS_TO_TICKS(500));
-```
-
-Task1：
-
-```
+```text
 Running
 ↓
 Blocked
@@ -663,15 +650,9 @@ Ready
 
 它是自动恢复。
 
-而：
+而`vTaskSuspend(task1_handle);`，Task1：
 
-```
-vTaskSuspend(task1_handle);
-```
-
-Task1：
-
-```
+```text
 Running
 ↓
 Suspended
@@ -679,43 +660,25 @@ Suspended
 一直停着
 ```
 
-只有：
-
-```
-vTaskResume(task1_handle);
-```
-
-之后才：
+只有`vTaskResume(task1_handle);` 之后才：
 
 ```
 Suspended → Ready
 ```
 
-所以你可以直接记：
+可以直接记 **`Blocked` 是“等东西”，`Suspended` 是“被人为暂停”**。
 
-> `Blocked` 是“等东西”，`Suspended` 是“被人为暂停”。
+### taskYIELD
 
----
-
-再讲：
-
-```
+```c
 taskYIELD();
 ```
 
-这个更容易误解。
-
-它的意思不是：
-
-> “把 CPU 交给低优先级任务。”
-
-它真正的意思是：
-
-> **当前任务主动要求 Scheduler 重新调度一次。**
+这个更容易误解。它的意思不是“把 CPU 交给低优先级任务。”它真正的意思是**当前任务主动要求 Scheduler 重新调度一次。**
 
 比如：
 
-```
+```c
 void send_task1(void *pvParameters)
 {
     while(1)
@@ -727,15 +690,9 @@ void send_task1(void *pvParameters)
 }
 ```
 
-执行：
+执行`taskYIELD();` 之后：
 
-```
-taskYIELD();
-```
-
-之后：
-
-```
+```text
 当前 Task1 主动放弃当前这次 CPU 使用机会
 ↓
 Scheduler重新选择
@@ -743,35 +700,19 @@ Scheduler重新选择
 
 但如果：
 
-```
+```text
 Task1 priority = 2
 Task2 priority = 1
 ```
 
 而且两个都是 Ready：
 
-```
+```text
 Task1 = Ready priority 2
 Task2 = Ready priority 1
 ```
 
-Scheduler 一看：
-
-```
-最高优先级还是 Task1
-```
-
-那结果很可能还是：
-
-```
-Task1继续运行
-```
-
-所以：
-
-```
-taskYIELD();
-```
+Scheduler 一看最高优先级还是 Task1，那结果很可能还是Task1继续运行，所以`taskYIELD();```
 
 **不能解决低优先级 Task2 饥饿的问题。**
 
@@ -854,103 +795,6 @@ Running → Ready → Scheduler重新选
 
 ---
 
-你现在可以做一个很清楚的实验。
-
-先：
-
-```
-TaskHandle_t task1_handle;
-```
-
-创建：
-
-```
-xTaskCreate(
-    send_task1,
-    "TASK1",
-    128,
-    NULL,
-    2,
-    &task1_handle
-);
-
-xTaskCreate(
-    send_task2,
-    "TASK2",
-    128,
-    NULL,
-    1,
-    NULL
-);
-```
-
-然后让 Task1：
-
-```
-void send_task1(void *pvParameters)
-{
-    while(1)
-    {
-        usart_send_string(&usart1, "Task1\r\n");
-
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-}
-```
-
-Task2：
-
-```
-void send_task2(void *pvParameters)
-{
-    static uint32_t count = 0;
-
-    while(1)
-    {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-
-        count++;
-
-        if(count == 5)
-        {
-            vTaskSuspend(task1_handle);
-            usart_send_string(&usart1, "Suspend Task1\r\n");
-        }
-    }
-}
-```
-
-这时你会看到：
-
-```
-前5秒
-Task1正常打印
-
-到第5次
-Suspend Task1
-
-之后
-Task1彻底不再运行
-```
-
-然后你再想办法在后面：
-
-```
-vTaskResume(task1_handle);
-```
-
-就能看到 Task1重新回来。
-
-这个实验跑完，你就会真正把：
-
-```
-Ready
-Running
-Blocked
-Suspended
-```
-
-四个状态串起来。
 
 你现在这阶段的核心不是记 API，而是能自己画出状态变化：
 
