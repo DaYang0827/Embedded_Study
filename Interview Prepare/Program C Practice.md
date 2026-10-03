@@ -124,9 +124,12 @@ app_entry()
 ```text
 AppEntry_t   是用typedef创建的变量类型     对应的是输入输出都为void的函数
 app_reset_handler    是把0x08010000 + 4这个地址当做指针    去读取这个地址里面的数据   赋值给 app_reset_handler  他是一个uint32类型的变量
-(AppEntry_t)app_reset_handler    把这个变量强制
-app_entry
-app_entry()
+(AppEntry_t)app_reset_handler    把这个变量强制转化成了AppEntry_t类型的函数
+app_entry    是AppEntry_t类型的变量
+app_entry()   执行的是app_reset_handler这个函数
+
+app_entry是函数
+app_reset_handler不是函数    他是一个uint32类型的变量
 ```
 
 
