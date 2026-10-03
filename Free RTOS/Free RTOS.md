@@ -66,6 +66,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 | `vTaskPrioritySet`  |      返回值类型：`void`  <br>在`task.c`中定义       |
 |   `xQueueReceive`   |  返回值类型：`BaseType_t`   <br>在`queue.c`中定义   |
 | `pvTimerGetTimerID` | 返回值类型：`pointer to void`  <br>在`tmer.c`中定义 |
+
 # 4 TCB
 
 **TCB** 的全称是 **Task Control Block（任务控制块）**。它的本质：**TCB 就是 FreeRTOS 给每一个任务专门发放的“身份证/档案袋”。** 它是一个极其复杂的 C 语言**结构体（Struct）**。为了在多任务来回切换时实现“瞒天过海”的效果，每个任务在内存里都会躺着一个专属于自己的 TCB。
@@ -139,6 +140,18 @@ typedef struct tskTaskControlBlock
 
 # 5 创建任务Task/Thread
 
+|             函数             | 含义      | 返回值     |
+| :------------------------: | :-----: | :-----: |
+|      `xTaskCreate()`       | 创建任务    | 有，成功或失败 |
+|       `vTaskDelay()`       | 当前任务延时  | 无       |
+|  `vTaskStartScheduler()`   | 启动调度器   | 无       |
+| `xTaskGetSchedulerState()` | 获取调度器状态 | 有       |
+|      `vTaskDelete()`       | 删除任务    | 无       |
+
+`xTask` 和 `vTask` 不是不同任务，而是 FreeRTOS 的函数命名习惯；v 通常表示无返回值，x 通常表示有返回值，Task 表示任务管理相关函数
+
+`xTaskCreate`定义：
+
 ```c
 BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
                         Const char* const pcName,
@@ -153,13 +166,23 @@ BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
 - `pxTaskCode`:是**任务函数入口**
 - `pcName`：任务名，字符串
 - `usStackDepth`：栈深，**即任务的栈大小（单位是字，1字 = 4字节）**
-- `pvParameters`：任务的参数指针（即FreeRTOS 允许你给任务函数传一个“通用指针”）
+- `pvParameters`：任务的参数指针（即FreeRTOS 允许给任务函数传一个“通用指针”）
 - `uxPriority`：任务的优先级，最低优先级是0，数字越大，优先级越高
 - `pxCreatedTask`：任务的句柄，用于控制任务
 
 在调用的时候使用：
 
 ```c
+void send_task1(void *pvParameters)
+{
+    while(1)
+    {
+        vTaskDelay(500);
+
+        usart_send_string(&usart1,"Task1");
+    }
+}
+
 xTaskCreate(send_task1,"TASK1", 128, NULL, 1, NULL);
 xTaskCreate(send_task2,"TASK2", 128, NULL, 1, NULL);
 ```
@@ -318,18 +341,29 @@ xTaskCreate(
 
 之后`vTaskSuspend(task1_handle);` 就能暂停 Task1。所以 Handle 可以理解成FreeRTOS 里**用来找到这个任务的“身份证/引用”**。
 
-|             函数             | 含义      | 返回值     |
-| :------------------------: | :-----: | :-----: |
-|      `xTaskCreate()`       | 创建任务    | 有，成功或失败 |
-|       `vTaskDelay()`       | 当前任务延时  | 无       |
-|  `vTaskStartScheduler()`   | 启动调度器   | 无       |
-| `xTaskGetSchedulerState()` | 获取调度器状态 | 有       |
-|      `vTaskDelete()`       | 删除任务    | 无       |
+代码串起来就是：
 
-`xTask` 和 `vTask` 不是不同任务，而是 FreeRTOS 的函数命名习惯；v 通常表示无返回值，x 通常表示有返回值，Task 表示任务管理相关函数
-
-
-
+```text
+main()
+↓
+xTaskCreate(Task1)
+↓
+为Task1创建TCB + Stack
+↓
+xTaskCreate(Task2)
+↓
+为Task2创建TCB + Stack
+↓
+此时任务已经存在，但还没真正开始调度
+↓
+vTaskStartScheduler()
+↓
+Scheduler启动
+↓
+根据优先级 / Ready / Blocked 状态选择任务
+↓
+Task1 / Task2开始运行
+```
 # Scheduler
 
 
