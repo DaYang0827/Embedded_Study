@@ -481,6 +481,9 @@ Suspended 被人为挂起
 
 # 6 Scheduler
 
+Scheduler 就是**在所有“可以运行的任务”里，决定下一刻谁占用 CPU**。
+
+
 
 # 7 队列
 
