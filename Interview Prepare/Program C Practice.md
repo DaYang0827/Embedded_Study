@@ -51,7 +51,7 @@ cb  是变量
 &led_on  是地址
 
 cb = led_on;   是吧led_on这个函数赋值给cb这个Callback_t函数类型
-cb();
+cb();     就是执行函数    相当于执行led_on（）
 ```
 
 ---
