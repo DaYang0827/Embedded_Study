@@ -103,7 +103,7 @@ LED_TypeDef LED0 =
 };
 ```
 
-那么：`&LED0`类型就是：`LED_TypeDef*` 也就是“指向 `LED_TypeDef` 的指针”。`(void*)&LED0`表示：把 `LED_TypeDef*` 转换成 `void*`，传给 FreeRTOS。因为 `xTaskCreate` 第四个参数规定就是 `void*`。`void*` 可以理解为：通用地址类型，什么类型的地址都可以先放进来。然后到了任务函数里面，你再转换回来：
+那么：`&LED0`类型就是：`LED_TypeDef*` 也就是“指向 `LED_TypeDef` 的指针”。`(void*)&LED0`表示：把 `LED_TypeDef*` 转换成 `void*`，传给 FreeRTOS。因为 `xTaskCreate` 第四个参数规定就是 `void*`。`void*` 可以理解为**通用地址类型**，什么类型的地址都可以先放进来。然后到了任务函数里面，再转换回来：
 
 ```c
 LED_TypeDef *led = (LED_TypeDef *)args;
