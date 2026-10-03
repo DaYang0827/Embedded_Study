@@ -560,37 +560,17 @@ xTaskCreate(
 );
 ```
 
-这里：
-
-```
-&task1_handle
-```
-
-就是让 FreeRTOS 把 Task1 的句柄保存下来。
-
-以后你就可以：
-
-```
-vTaskSuspend(task1_handle);
-```
-
-把 Task1 挂起。
+这里`&task1_handle`，就是让 FreeRTOS 把 Task1 的句柄保存下来。以后就可以`vTaskSuspend(task1_handle);` 把 Task1 挂起。
 
 状态变化是：
 
-```
+```text
 Running / Ready
         ↓
      Suspended
 ```
 
-一旦进入 `Suspended`：
-
-```
-这个任务不再参与 Scheduler 的竞争
-```
-
-哪怕它优先级是 100，也没用。
+一旦进入 `Suspended` 这个任务不再参与 Scheduler 的竞争，哪怕它优先级是 100，也没用。
 
 比如：
 
