@@ -664,17 +664,15 @@ Blocked List
 
 等时间到了：
 
-```
+```text
 从 Blocked List 移走
 ↓
 放回对应优先级的 Ready List
 ```
 
-然后 Scheduler 再从 Ready List 里选最高优先级任务。
+然后 Scheduler 再从 Ready List 里选最高优先级任务。可以画成这样：
 
-你现在可以画成这样：
-
-```
+```text
           xTaskCreate()
                ↓
              Ready
@@ -695,19 +693,11 @@ Blocked      Ready     Suspended
 
 这个图很重要。
 
-然后讲 `PendSV`。
+## PendSV
 
-这个你不需要现在背汇编，只要先理解它干什么。
+Scheduler 逻辑上**决定现在该换任务了**。但“真的把 CPU 从 Task1 切到 Task2”需要做很多事情：
 
-Scheduler 逻辑上决定：
-
-```
-现在该换任务了
-```
-
-但“真的把 CPU 从 Task1 切到 Task2”需要做很多事情：
-
-```
+```text
 保存 Task1 的 CPU 上下文
 ↓
 找到 Task2 的栈
@@ -717,17 +707,9 @@ Scheduler 逻辑上决定：
 CPU继续从 Task2 上次停的位置执行
 ```
 
-这个真正的“上下文切换”在 Cortex-M 上通常主要靠：
+这个真正的“上下文切换”在 Cortex-M 上通常主要靠`PendSV`来完成。可以先记：
 
-```
-PendSV
-```
-
-来完成。
-
-你可以先记：
-
-```
+```text
 Scheduler
 = 决定“换成谁”
 
@@ -737,7 +719,7 @@ PendSV
 
 比如：
 
-```
+```text
 Task1 Running
 ↓
 Task1调用 vTaskDelay()
@@ -755,16 +737,14 @@ Task2继续执行
 
 所谓“现场”大概就是：
 
-```
+```text
 寄存器
 栈指针
 返回地址
 程序执行位置
 ```
 
-这也是为什么每个 Task 必须有自己的栈。
-
-因为任务切换时：
+这也是为什么**每个 Task 必须有自己的栈**。因为任务切换时：
 
 ```
 Task1的现场
