@@ -150,9 +150,9 @@ BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
 
 把 `xTaskCreate()` 理解成“告诉 FreeRTOS：**要创建一个以后可以被调度运行的任务，请你给它准备 TCB、栈、任务状态等管理信息**。” 它不是“现在立刻运行这个函数”，而是**先把任务创建出来**。真正开始调度，是后面的`vTaskStartScheduler();`
 
-- `pxTaskCode`:指向任务函数的指针，注意，任务函数不能返回（即死循环）
+- `pxTaskCode`:是**任务函数入口**
 - `pcName`：任务名，字符串
-- `usStackDepth`：栈深，即任务的栈大小（单位是字，1字 = 4字节）
+- `usStackDepth`：栈深，**即任务的栈大小（单位是字，1字 = 4字节）**
 - `pvParameters`：任务的参数指针（即FreeRTOS 允许你给任务函数传一个“通用指针”）
 - `uxPriority`：任务的优先级，最低优先级是0，数字越大，优先级越高
 - `pxCreatedTask`：任务的句柄，用于控制任务
@@ -176,7 +176,7 @@ LED_TypeDef LED0 =
 };
 ```
 
-那么：`&LED0`类型就是：`LED_TypeDef*` 也就是“指向 `LED_TypeDef` 的指针”。`(void*)&LED0`表示：把 `LED_TypeDef*` 转换成 `void*`，传给 FreeRTOS。因为 `xTaskCreate` 第四个参数规定就是 `void*`。`void*` 可以理解为**通用地址类型**，什么类型的地址都可以先放进来。然后到了任务函数里面，再转换回来：
+那么`&LED0`类型就是：`LED_TypeDef*` 也就是“指向 `LED_TypeDef` 的指针”。`(void*)&LED0`表示：把 `LED_TypeDef*` 转换成 `void*`，传给 FreeRTOS。因为 `xTaskCreate` 第四个参数规定就是 `void*`。`void*` 可以理解为**通用地址类型**，什么类型的地址都可以先放进来。然后到了任务函数里面，再转换回来：
 
 ```c
 LED_TypeDef *led = (LED_TypeDef *)args;
@@ -191,6 +191,8 @@ LED_TypeDef *led = (LED_TypeDef *)args;
 |      `vTaskDelete()`       | 删除任务    | 无       |
 
 `xTask` 和 `vTask` 不是不同任务，而是 FreeRTOS 的函数命名习惯；v 通常表示无返回值，x 通常表示有返回值，Task 表示任务管理相关函数
+
+
 
 # Scheduler
 
