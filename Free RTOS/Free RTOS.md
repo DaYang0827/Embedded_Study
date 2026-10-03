@@ -367,6 +367,14 @@ Task1 / Task2开始运行
 
 ## 任务状态
 
+主要有四种任务状态：
+
+```text
+Running   正在占用 CPU
+Ready     已经准备好，等 CPU
+Blocked   在等时间/事件
+Suspended 被人为挂起
+```
 
 # Scheduler
 
