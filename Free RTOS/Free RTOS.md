@@ -148,7 +148,7 @@ BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
                         TaskHandle_t* const pxCreatedTask)
 ```
 
-
+把 `xTaskCreate()` 理解成“告诉 FreeRTOS：**要创建一个以后可以被调度运行的任务，请你给它准备 TCB、栈、任务状态等管理信息**。” 它不是“现在立刻运行这个函数”，而是**先把任务创建出来**。真正开始调度，是后面的`vTaskStartScheduler();`
 
 - `pxTaskCode`:指向任务函数的指针，注意，任务函数不能返回（即死循环）
 - `pcName`：任务名，字符串
