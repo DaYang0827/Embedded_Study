@@ -506,31 +506,12 @@ Suspended
 
 最关键的是 `Ready` 和 `Blocked`。
 
-`Ready` 是：
+- `Ready` 是**现在就能跑，但是CPU可能暂时给了更高优先级任务**
+- `Blocked` 是**现在先不跑，要等一个条件**
 
-```
-我现在就能跑
-但是CPU可能暂时给了更高优先级任务
-```
+比如`vTaskDelay(pdMS_TO_TICKS(500));` 意思不是“CPU原地等500ms”。而是：
 
-`Blocked` 是：
-
-```
-我现在先不跑
-我要等一个条件
-```
-
-比如：
-
-```
-vTaskDelay(pdMS_TO_TICKS(500));
-```
-
-意思不是“CPU原地等500ms”。
-
-而是：
-
-```
+```text
 当前Task:
 Running
 ↓
@@ -541,70 +522,41 @@ Running
 调度器去运行其他 Ready Task
 ```
 
-这就是 RTOS 和普通裸机 `delay()` 最大的区别之一。
-
-普通阻塞延时大概是：
-
-```
-CPU自己在那空等
-```
-
-而 FreeRTOS 的 `vTaskDelay()` 是：
-
-```
-当前任务让出CPU
-CPU去干别的
-```
-
-你现在的两个任务非常适合分析。
+这就是 RTOS 和普通裸机 `delay()` 最大的区别之一。普通阻塞延时大概是CPU自己在那空等，而 FreeRTOS 的 `vTaskDelay()` 是当前任务让出CPU，CPU去干别的
 
 假设：
 
-```
+```c
 Task1 priority = 2
 Task2 priority = 1
 ```
 
 一开始，假设 Task1 被调度：
 
-```
+```c
 Task1 = Running
 Task2 = Ready
 ```
 
-Task1 执行：
+Task1 执行`vTaskDelay(pdMS_TO_TICKS(500));`，于是：
 
-```
-vTaskDelay(pdMS_TO_TICKS(500));
-```
-
-于是：
-
-```
+```text
 Task1:
 Running → Blocked
 ```
 
 调度器再看剩下的任务：
 
-```
+```text
 Task1 = Blocked
 Task2 = Ready
 ```
 
 所以 Task2 运行。
 
-即使：
+即使`Task1优先级更高`也没用，因为 **Blocked 的任务根本不参与竞争**。可以把 Scheduler 想象成：
 
-```
-Task1优先级更高
-```
-
-也没用，因为 Blocked 的任务根本不参与竞争。
-
-你可以把 Scheduler 想象成：
-
-```
+```text
 所有任务
 ↓
 先筛选 Ready
@@ -614,58 +566,30 @@ Task1优先级更高
 让它 Running
 ```
 
-现在讲 Tick。
+## Tick
 
-FreeRTOS 里有一个周期性时钟中断，一般叫 Tick interrupt。
+FreeRTOS 里有一个**周期性时钟中断**，一般叫 Tick interrupt。假设`configTICK_RATE_HZ = 1000`，那么：
 
-假设你：
-
-```
-configTICK_RATE_HZ = 1000
-```
-
-那么：
-
-```
+```text
 1秒1000次Tick
 1 Tick = 1 ms
 ```
 
-所以：
+所以`vTaskDelay(pdMS_TO_TICKS(500));`本质上就是这个任务需要等500个Tick。FreeRTOS 会记住：
 
-```
-vTaskDelay(pdMS_TO_TICKS(500));
-```
-
-本质上就是：
-
-```
-这个任务需要等500个Tick
-```
-
-FreeRTOS 会记住：
-
-```
+```text
 Task1现在进入Blocked
 它应该在哪个Tick醒来
 ```
 
-然后每次 Tick 中断发生，系统会更新 tick count。
+然后每次 Tick 中断发生，系统会更新 tick count。比如：
 
-比如：
-
-```
+```text
 当前Tick = 1000
 Task1 delay 500
 ```
 
-那么大概可以理解成：
-
-```
-Task1 wake tick = 1500
-```
-
-当 tick count 到 1500：
+那么大概可以理解成`Task1 wake tick = 1500`，当 tick count 到 1500：
 
 ```
 Task1:
