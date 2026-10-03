@@ -267,47 +267,20 @@ void led_task(void *pvParameters)
 
 ---
 
-第五个参数：
+5. 第五个参数
 
-```
-1
-```
+   `1`这是优先级。**数字越大→ 优先级越高**，最低通常`tskIDLE_PRIORITY`就是 0。现在：
 
-这是优先级。
-
-```
-数字越大
-→ 优先级越高
-```
-
-最低通常：
-
-```
-tskIDLE_PRIORITY
-```
-
-就是 0。
-
-你现在：
-
-```
+```text
 Task1 priority = 1
 Task2 priority = 1
 ```
 
-所以两个任务是同优先级。
-
-如果时间片轮转开启，它们都 Ready 时可以轮流执行。
-
-但你当前代码里它们大部分时间都在：
-
-```
-vTaskDelay(...)
-```
+所以两个任务是同优先级。如果时间片轮转开启，它们都 Ready 时可以轮流执行。但当前代码里它们大部分时间都在`vTaskDelay(...)`
 
 所以实际上经常是：
 
-```
+```text
 Task1 Blocked
 Task2 Running
 
@@ -319,46 +292,20 @@ Task1 Running
 
 ---
 
-最后一个：
+6. 最后一个参数
 
-```
-NULL
-```
+   `NULL` 是`TaskHandle_t *pxCreatedTask`也就是**要不要把创建出来的任务“句柄”保存下来**。现在不需要以后控制这个任务，所以传`NULL`。如果想以后：
 
-是：
-
-```
-TaskHandle_t *pxCreatedTask
-```
-
-也就是：
-
-> 要不要把创建出来的任务“句柄”保存下来。
-
-你现在不需要以后控制这个任务，所以传：
-
-```
-NULL
-```
-
-如果你想以后：
-
-```
+```c
 vTaskDelete()
 vTaskSuspend()
 vTaskResume()
 vTaskPrioritySet()
 ```
 
-就可以保存 handle：
+   就可以保存 handle  `TaskHandle_t task1_handle;`然后：
 
-```
-TaskHandle_t task1_handle;
-```
-
-然后：
-
-```
+```c
 xTaskCreate(
     send_task1,
     "TASK1",
@@ -369,17 +316,7 @@ xTaskCreate(
 );
 ```
 
-之后：
-
-```
-vTaskSuspend(task1_handle);
-```
-
-就能暂停 Task1。
-
-所以 Handle 你可以理解成：
-
-> FreeRTOS 里用来找到这个任务的“身份证/引用”。
+之后`vTaskSuspend(task1_handle);` 就能暂停 Task1。所以 Handle 可以理解成FreeRTOS 里**用来找到这个任务的“身份证/引用”**。
 
 |             函数             | 含义      | 返回值     |
 | :------------------------: | :-----: | :-----: |
