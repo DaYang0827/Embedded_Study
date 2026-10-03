@@ -2068,6 +2068,7 @@ NVIC 全称是 Nested Vectored Interrupt Controller，即嵌套向量中断控�
 3. 支持中断嵌套
 4. 根据中断向量表跳转到对应 ISR
 5. 管理 pending 状态
+
 ---
 
 1. NVIC 常用操作
@@ -2225,27 +2226,22 @@ SCB 全称：System Control Block，中文**系统控制块**。它不是 STM32 
 可以这样理解 STM32：
 
 ```text
-STM32
+STM32F407
+├── ARM Cortex-M4 内核
+│   ├── SCB
+│   ├── NVIC
+│   ├── SysTick
+│   └── CPU寄存器 R0~R15 / MSP / PSP
 │
-├── Cortex-M4 内核
-│     ├── R0~R15
-│     ├── NVIC
-│     ├── SysTick
-│     └── SCB
-│
-└── ST 外设
-      ├── GPIO
-      ├── USART
-      ├── TIM
-      ├── DMA
-      └── ADC
+└── STM32外设
+    ├── USART
+    ├── DMA
+    ├── GPIO
+    ├── FLASH
+    └── TIM
 ```
 
-所以`USART1->DR` 是 STM32 外设寄存器。但是`SCB->VTOR` 属于ARM Cortex-M4 内核控制寄存器。
-
----
-
-SCB 相当于： **CPU 内核的系统管理控制台。** 常见成员包括：
+所以`USART1->DR` 是 STM32 外设寄存器。但是`SCB->VTOR` 属于ARM Cortex-M4 内核控制寄存器。SCB 相当于： **CPU 内核的系统管理控制台。** 常见成员包括：
 
 ```text
 VTOR
@@ -2301,6 +2297,7 @@ SCB
 └── CCR
     └── Cortex-M运行控制
 ```
+
 ---
 
 #### 1.5.3.1 SCB 和 USART/DMA 区别
@@ -2320,24 +2317,6 @@ FLASH->CR
 SCB->VTOR
 SCB->CFSR
 SCB->HFSR
-```
-
-属于 Cortex-M 内核。可以理解：
-
-```text
-STM32F407
-├── ARM Cortex-M4 内核
-│   ├── SCB
-│   ├── NVIC
-│   ├── SysTick
-│   └── CPU寄存器 R0~R15 / MSP / PSP
-│
-└── STM32外设
-    ├── USART
-    ├── DMA
-    ├── GPIO
-    ├── FLASH
-    └── TIM
 ```
 
 所以 SCB 更偏“CPU 核心管理”。
