@@ -66,7 +66,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 | `vTaskPrioritySet`  |      返回值类型：`void`  <br>在`task.c`中定义       |
 |   `xQueueReceive`   |  返回值类型：`BaseType_t`   <br>在`queue.c`中定义   |
 | `pvTimerGetTimerID` | 返回值类型：`pointer to void`  <br>在`tmer.c`中定义 |
-# TCB
+# 4 TCB
 
 **TCB** 的全称是 **Task Control Block（任务控制块）**。它的本质：**TCB 就是 FreeRTOS 给每一个任务专门发放的“身份证/档案袋”。** 它是一个极其复杂的 C 语言**结构体（Struct）**。为了在多任务来回切换时实现“瞒天过海”的效果，每个任务在内存里都会躺着一个专属于自己的 TCB。
 
@@ -127,17 +127,17 @@ typedef struct tskTaskControlBlock
    在 `main.c` 里调用 `xTaskCreate` 的那一瞬间：
 
 - FreeRTOS 内部的内存管理总管（如 `heap_4.c`）会立刻跑到 **RAM 的堆区（Heap）** 中，强行圈下两块地盘：
-    - 第一块地盘：用来存放任务干活开辟局部变量用的**栈空间（Stack）**（你填的 128 字）。
+    - 第一块地盘：用来存放任务干活开辟局部变量用的**栈空间（Stack）**（填的 128 字）。
     - 第二块地盘：**就是一个正好能装下 `tskTCB` 结构体大小的内存块（通常几十个字节）**。
 - 所以，TCB 是在程序运行起来后，在 **RAM 的堆区里动态申请、静态维护**的死忠档案。
 
-总结
+总结：
 
 - **Task Function (任务函数)**：是放在 Flash 里的**死指令代码**。
 - **Stack (任务栈)**：是放在 RAM 里用来**存局部变量和恢复寄存器**的临时干粮仓库。
 - **TCB (任务控制块)**：是操作系统内核握在手里的**遥控器和绝密档案**。它通过记录每个任务的栈顶指针（`pxTopOfStack`）和优先级，实现了在多任务之间“移形换影”的闭环调度。
 
-# 4 创建任务Task/Thread
+# 5 创建任务Task/Thread
 
 ```c
 BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
@@ -147,6 +147,8 @@ BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
                         UBaseType_t uxPriority,
                         TaskHandle_t* const pxCreatedTask)
 ```
+
+
 
 - `pxTaskCode`:指向任务函数的指针，注意，任务函数不能返回（即死循环）
 - `pcName`：任务名，字符串
@@ -190,9 +192,12 @@ LED_TypeDef *led = (LED_TypeDef *)args;
 
 `xTask` 和 `vTask` 不是不同任务，而是 FreeRTOS 的函数命名习惯；v 通常表示无返回值，x 通常表示有返回值，Task 表示任务管理相关函数
 
-# 5 队列
+# Scheduler
 
-## 5.1 创建队列Queue
+
+# 6 队列
+
+## 6.1 创建队列Queue
 
 ```c
 QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
@@ -215,7 +220,7 @@ QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
 
 相当于创建了一个大数组
 
-## 5.2  队列发送函数
+## 6.2  队列发送函数
 ```c
 BaseType_t xQueueSend(QueueHandle_t xQueue,
 
@@ -233,7 +238,7 @@ BaseType_t xQueueSend(QueueHandle_t xQueue,
 1. `pdTRUE`：写入成功
 2. `errQUEUE_FULL`：队列满，写入失败
 
-## 5.3  队列接收函数
+## 6.3  队列接收函数
 
 ```c
 BaseType_t xQueueReceive(QueueHandle_t xQueue,
@@ -251,7 +256,7 @@ BaseType_t xQueueReceive(QueueHandle_t xQueue,
 1. `pdTRUE`：写入成功
 2. `errQUEUE_FULL`：队列为空，写入失败
 
-## 5.4 队列发送/接收函数中断版本
+## 6.4 队列发送/接收函数中断版本
 
 ```c
 BaseType_t xQueueSendFromISR (QueueHandle_t xQueue,
@@ -268,7 +273,7 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 - 中断中不能立马切换任务
 - 中断是快进快出，执行的代码越少越好
 
-# 6 信号量Semaphore
+# 7 信号量Semaphore
 
 信号量 `Semaphore` 本质上是 **RTOS 里用来做同步和资源控制的机制**。信号量不是用来传具体数据的，而是用来告诉任务：“某件事发生了” 或 “某个资源现在可以用了”
 
@@ -281,7 +286,7 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 `Handle` = 钥匙 / 编号 / 地址
 `Scheduler` = 管理员，决定谁先执行
 
-# 7 Hook 函数
+# 8 Hook 函数
 
 Hook 可以理解为 **FreeRTOS 预留给用户的“回调入口”** 。当 FreeRTOS 内部发生某些特定事件时，内核会主动调用用户自己实现的 Hook 函数。 基本流程：
 
