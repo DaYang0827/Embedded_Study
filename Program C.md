@@ -2453,6 +2453,7 @@ typedef struct
   ```
 
 3. 接下来，当想在 App 层让这个 DMA 开启传输时，驱动函数内部就可以通过这个指针，**直接物理操控硬件的寄存器**：
+ 
  ```c
  // 驱动内部代码：顺着门牌号找到硬件，把它的控制寄存器（CR）的启动位（EN）给置 1！
  my_dma_handler.DMA_Streamx->CR |= DMA_SxCR_EN; 
@@ -2467,7 +2468,8 @@ typedef struct
     - **真相**：这才是真正的结构体嵌套（实体套实体）。
     - **作用**：这通常是一张 **“配置参数大礼包（表单）”**，里面装满了诸如引脚速度、上拉下拉等具体的配置数值，用来一次性传给初始化函数。
 
-具体的使用方式
+具体的使用方式：
+
 ```c
 typedef struct
 {
@@ -2496,22 +2498,14 @@ uart.buffer->tx_buffer[0] = 'A';
 
 拆开看：`uart` 是变量：`uart.buffer` 而：`uart.buffer` 是：`Buffer *`
 
-所以：
-
-```c
-uart.buffer->tx_buffer
-```
-
-最终：
-
-```c
-uart.buffer->tx_buffer[0]
-```
+所以`uart.buffer->tx_buffer`，最终`uart.buffer->tx_buffer[0]`
 
 ---
+
 一共有四种的嵌套方式
 
 1️⃣ 外层变量 + 内层变量
+
 ```c
 struct Student
 {
@@ -2542,6 +2536,7 @@ stu.birthday.year
 ```
 
 ---
+
 2️⃣ 外层指针 + 内层变量
 
 ```c
@@ -2574,6 +2569,7 @@ p->birthday.year
 ```
 
 ---
+
 3️⃣ 外层变量 + 内层指针
 
 ```c
