@@ -69,7 +69,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 
 # 4 TCB
 
-**TCB** 的全称是 **Task Control Block（任务控制块）**。它的本质：**TCB 就是 FreeRTOS 给每一个任务专门发放的“身份证/档案袋”。** 它是一个极其复杂的 C 语言**结构体（Struct）**。为了在多任务来回切换时实现“瞒天过海”的效果，每个任务在内存里都会躺着一个专属于自己的 TCB。
+**TCB** 的全称是 **Task Control Block（任务控制块）**。它的本质**就是 FreeRTOS 给每一个任务专门发放的“身份证/档案袋”。** 它是一个极其复杂的 C 语言**结构体（Struct）**。为了在多任务来回切换时实现“瞒天过海”的效果，每个任务在内存里都会躺着一个专属于自己的 TCB。
 
 1. TCB 内部
 
@@ -566,7 +566,7 @@ Task2 = Ready
 让它 Running
 ```
 
-## Tick
+## 6.1 Tick
 
 FreeRTOS 里有一个**周期性时钟中断**，一般叫 Tick interrupt。假设`configTICK_RATE_HZ = 1000`，那么：
 
@@ -605,7 +605,7 @@ Blocked → Ready
 
 如果 Task1 优先级比当前 Running Task 高，那么就可能发生抢占。
 
-## Preemption
+## 6.2 Preemption
 
 Preemption，**抢占式调度**。比如当前：
 
@@ -633,7 +633,7 @@ Ready → Running
 
 这就是**抢占**。所以可以记**更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务**。
 
-## `Ready List` 和 `Blocked List`。
+## 6.3 `Ready List` 和 `Blocked List`。
 
 FreeRTOS 内部不会只放几个变量说“Task1是Ready”。它会**用链表管理任务**。可以简化理解成：
 
@@ -693,7 +693,7 @@ Blocked      Ready     Suspended
 
 这个图很重要。
 
-## PendSV
+## 6.4 PendSV
 
 Scheduler 逻辑上**决定现在该换任务了**。但“真的把 CPU 从 Task1 切到 Task2”需要做很多事情：
 
@@ -746,7 +746,7 @@ Task2继续执行
 
 这也是为什么**每个 Task 必须有自己的栈**。因为任务切换时：
 
-```
+```text
 Task1的现场
 存在Task1自己的栈
 
@@ -754,30 +754,20 @@ Task2的现场
 存在Task2自己的栈
 ```
 
-所以你之前 `xTaskCreate()` 里面那个：
+所以 `xTaskCreate()` 里面那个`128`不是随便给的。它决定了这个任务有多少栈空间可以保存：
 
-```
-128
-```
-
-不是随便给的。
-
-它决定了这个任务有多少栈空间可以保存：
-
-```
+```text
 局部变量
 函数调用
 寄存器现场
 中断上下文相关内容
 ```
 
-最后再把 `SysTick / Tick / Scheduler / PendSV` 串一起。
-
-你可以记成：
+把 `SysTick / Tick / Scheduler / PendSV` 串一起。可以记成：
 
 ```
 SysTick
-↓
+
 周期性产生Tick中断
 ↓
 FreeRTOS更新Tick Count
@@ -795,40 +785,13 @@ PendSV执行上下文切换
 新Task Running
 ```
 
-这条链你以后面试也可以直接讲。
+- Blocked = 暂时退出CPU竞争
+- Ready = 有资格运行但还没拿到CPU
+- Running = 当前正在CPU执行
+- Scheduler = 从Ready任务里挑最高优先级
+- Tick = 提供系统时间基准
+- PendSV = 真正执行上下文切换
 
-你现在最应该做的不是立刻学 Queue，而是做两个小实验，把这套调度模型彻底验证。
-
-第一个实验：
-
-```
-Task1 priority 2
-Task2 priority 1
-
-Task1有vTaskDelay()
-```
-
-观察 Task2 仍然会运行。
-
-第二个实验：
-
-```
-Task1 priority 2
-Task2 priority 1
-
-Task1不再调用vTaskDelay()
-```
-
-这时候如果 Task1 一直处于 Running/Ready，Task2 很可能一直没有机会运行。
-
-这会让你理解：
-
-```
-高优先级 + 永不阻塞
-≈ 低优先级任务可能被饿死
-```
-
-也就是 Starvation。
 
 # 7 队列
 
