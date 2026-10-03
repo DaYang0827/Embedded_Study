@@ -481,9 +481,472 @@ Suspended 被人为挂起
 
 # 6 Scheduler
 
-Scheduler 就是**在所有“可以运行的任务”里，决定下一刻谁占用 CPU**。
+FreeRTOS 的 Scheduler 本质就是**从所有“现在可以运行”的任务里，选一个优先级最高的，让它占 CPU。** 所以 Scheduler 最关心的不是“这个任务是谁”，而是：
 
+```text
+这个任务现在是什么状态？
+它优先级多少？
+```
 
+把四个状态彻底区分开。
+
+```text
+Running
+正在CPU上执行
+
+Ready
+有资格运行，但现在CPU给了别人
+
+Blocked
+暂时没资格竞争CPU，正在等时间或事件
+
+Suspended
+被人为挂起，除非显式恢复，否则不参与调度
+```
+
+最关键的是 `Ready` 和 `Blocked`。
+
+`Ready` 是：
+
+```
+我现在就能跑
+但是CPU可能暂时给了更高优先级任务
+```
+
+`Blocked` 是：
+
+```
+我现在先不跑
+我要等一个条件
+```
+
+比如：
+
+```
+vTaskDelay(pdMS_TO_TICKS(500));
+```
+
+意思不是“CPU原地等500ms”。
+
+而是：
+
+```
+当前Task:
+Running
+↓
+调用 vTaskDelay()
+↓
+进入 Blocked
+↓
+调度器去运行其他 Ready Task
+```
+
+这就是 RTOS 和普通裸机 `delay()` 最大的区别之一。
+
+普通阻塞延时大概是：
+
+```
+CPU自己在那空等
+```
+
+而 FreeRTOS 的 `vTaskDelay()` 是：
+
+```
+当前任务让出CPU
+CPU去干别的
+```
+
+你现在的两个任务非常适合分析。
+
+假设：
+
+```
+Task1 priority = 2
+Task2 priority = 1
+```
+
+一开始，假设 Task1 被调度：
+
+```
+Task1 = Running
+Task2 = Ready
+```
+
+Task1 执行：
+
+```
+vTaskDelay(pdMS_TO_TICKS(500));
+```
+
+于是：
+
+```
+Task1:
+Running → Blocked
+```
+
+调度器再看剩下的任务：
+
+```
+Task1 = Blocked
+Task2 = Ready
+```
+
+所以 Task2 运行。
+
+即使：
+
+```
+Task1优先级更高
+```
+
+也没用，因为 Blocked 的任务根本不参与竞争。
+
+你可以把 Scheduler 想象成：
+
+```
+所有任务
+↓
+先筛选 Ready
+↓
+在 Ready 里找最高优先级
+↓
+让它 Running
+```
+
+现在讲 Tick。
+
+FreeRTOS 里有一个周期性时钟中断，一般叫 Tick interrupt。
+
+假设你：
+
+```
+configTICK_RATE_HZ = 1000
+```
+
+那么：
+
+```
+1秒1000次Tick
+1 Tick = 1 ms
+```
+
+所以：
+
+```
+vTaskDelay(pdMS_TO_TICKS(500));
+```
+
+本质上就是：
+
+```
+这个任务需要等500个Tick
+```
+
+FreeRTOS 会记住：
+
+```
+Task1现在进入Blocked
+它应该在哪个Tick醒来
+```
+
+然后每次 Tick 中断发生，系统会更新 tick count。
+
+比如：
+
+```
+当前Tick = 1000
+Task1 delay 500
+```
+
+那么大概可以理解成：
+
+```
+Task1 wake tick = 1500
+```
+
+当 tick count 到 1500：
+
+```
+Task1:
+Blocked → Ready
+```
+
+注意，这时候它只是先变成 Ready，不一定立刻运行。
+
+然后 Scheduler 再判断：
+
+```
+现在有哪些 Ready Task？
+谁优先级最高？
+```
+
+如果 Task1 优先级比当前 Running Task 高，那么就可能发生抢占。
+
+这就进入下一个概念：**Preemption，抢占式调度**。
+
+比如当前：
+
+```
+Task2 priority = 1
+Task2 Running
+```
+
+然后 Tick 到了：
+
+```
+Task1 Blocked → Ready
+Task1 priority = 2
+```
+
+Scheduler 一看：
+
+```
+Task1优先级更高
+```
+
+于是 Task1 会抢占 Task2。
+
+状态变成：
+
+```
+Task2:
+Running → Ready
+
+Task1:
+Ready → Running
+```
+
+这就是抢占。
+
+所以你可以记：
+
+> 更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务。
+
+现在再讲你问到的底层一点的东西：`Ready List` 和 `Blocked List`。
+
+FreeRTOS 内部不会只放几个变量说“Task1是Ready”。它会用链表管理任务。
+
+你可以先简化理解成：
+
+```
+Ready List
+├── priority 0 的 Ready Task
+├── priority 1 的 Ready Task
+├── priority 2 的 Ready Task
+└── ...
+
+Blocked List
+├── 等到 Tick = 1500 的 Task
+├── 等到 Tick = 1800 的 Task
+└── ...
+```
+
+所以一个任务调用：
+
+```
+vTaskDelay(...)
+```
+
+内部大致做的就是：
+
+```
+从 Ready List 移走
+↓
+放进 Blocked/Delayed List
+↓
+记录唤醒时间
+↓
+触发重新调度
+```
+
+等时间到了：
+
+```
+从 Blocked List 移走
+↓
+放回对应优先级的 Ready List
+```
+
+然后 Scheduler 再从 Ready List 里选最高优先级任务。
+
+你现在可以画成这样：
+
+```
+          xTaskCreate()
+               ↓
+             Ready
+               ↓
+          Scheduler选中
+               ↓
+            Running
+          /    |     \
+         /     |      \
+vTaskDelay   被抢占   vTaskSuspend
+   ↓          ↓          ↓
+Blocked      Ready     Suspended
+   ↓
+时间/事件满足
+   ↓
+ Ready
+```
+
+这个图很重要。
+
+然后讲 `PendSV`。
+
+这个你不需要现在背汇编，只要先理解它干什么。
+
+Scheduler 逻辑上决定：
+
+```
+现在该换任务了
+```
+
+但“真的把 CPU 从 Task1 切到 Task2”需要做很多事情：
+
+```
+保存 Task1 的 CPU 上下文
+↓
+找到 Task2 的栈
+↓
+恢复 Task2 的 CPU 上下文
+↓
+CPU继续从 Task2 上次停的位置执行
+```
+
+这个真正的“上下文切换”在 Cortex-M 上通常主要靠：
+
+```
+PendSV
+```
+
+来完成。
+
+你可以先记：
+
+```
+Scheduler
+= 决定“换成谁”
+
+PendSV
+= 真正执行“任务切换”
+```
+
+比如：
+
+```
+Task1 Running
+↓
+Task1调用 vTaskDelay()
+↓
+Scheduler发现Task2该运行
+↓
+触发PendSV
+↓
+保存Task1现场
+↓
+恢复Task2现场
+↓
+Task2继续执行
+```
+
+所谓“现场”大概就是：
+
+```
+寄存器
+栈指针
+返回地址
+程序执行位置
+```
+
+这也是为什么每个 Task 必须有自己的栈。
+
+因为任务切换时：
+
+```
+Task1的现场
+存在Task1自己的栈
+
+Task2的现场
+存在Task2自己的栈
+```
+
+所以你之前 `xTaskCreate()` 里面那个：
+
+```
+128
+```
+
+不是随便给的。
+
+它决定了这个任务有多少栈空间可以保存：
+
+```
+局部变量
+函数调用
+寄存器现场
+中断上下文相关内容
+```
+
+最后再把 `SysTick / Tick / Scheduler / PendSV` 串一起。
+
+你可以记成：
+
+```
+SysTick
+↓
+周期性产生Tick中断
+↓
+FreeRTOS更新Tick Count
+↓
+检查有没有Blocked任务到时间
+↓
+Blocked → Ready
+↓
+Scheduler判断是否需要换任务
+↓
+如果需要
+↓
+PendSV执行上下文切换
+↓
+新Task Running
+```
+
+这条链你以后面试也可以直接讲。
+
+你现在最应该做的不是立刻学 Queue，而是做两个小实验，把这套调度模型彻底验证。
+
+第一个实验：
+
+```
+Task1 priority 2
+Task2 priority 1
+
+Task1有vTaskDelay()
+```
+
+观察 Task2 仍然会运行。
+
+第二个实验：
+
+```
+Task1 priority 2
+Task2 priority 1
+
+Task1不再调用vTaskDelay()
+```
+
+这时候如果 Task1 一直处于 Running/Ready，Task2 很可能一直没有机会运行。
+
+这会让你理解：
+
+```
+高优先级 + 永不阻塞
+≈ 低优先级任务可能被饿死
+```
+
+也就是 Starvation。
 
 # 7 队列
 
