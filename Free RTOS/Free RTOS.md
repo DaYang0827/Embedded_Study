@@ -178,7 +178,6 @@ void send_task1(void *pvParameters)
     while(1)
     {
         vTaskDelay(500);
-
         usart_send_string(&usart1,"Task1");
     }
 }
