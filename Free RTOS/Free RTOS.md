@@ -578,7 +578,7 @@ Scheduler 选择其他 Ready Task
 
 所以它和裸机里的“死等”完全不是一个思路。
 
-#### 5.4.1.1 与普通 delay 区别
+#### 5.4.1.1 与普通 delay 的区别
 
 裸机里写`delay_ms(1000);`，或者`for (volatile int i = 0; i < 1000000; i++);`，这种通常是：
 
@@ -623,7 +623,7 @@ vTaskDelay(pdMS_TO_TICKS(1000));
 比如`configTICK_RATE_HZ = 100`，那么`1 tick = 10 ms`，`pdMS_TO_TICKS(1000)` 会转换成大约`100 ticks`
 
 
-#### 5.4.1.3 Task 在 delay 时的状态
+#### 5.4.1.3 Task  delay 时的状态
 
 FreeRTOS Task 常见状态：
 
@@ -1395,7 +1395,7 @@ PendSV执行上下文切换
 
 # 7 Queue
 
-## 概念
+## 7.1 概念
 
 Queue 是**任务之间传递数据的缓冲区，而且它还能让任务在“没有数据”或“没有空间”时进入 Blocked**。
 
@@ -1452,7 +1452,7 @@ xQueueSend()
 xQueueReceive()
 ```
 
-创建：
+1. 创建：
 
 ```c
 QueueHandle_t queue;
@@ -1468,7 +1468,9 @@ queue = xQueueCreate(5, sizeof(uint32_t));
 每个元素4字节
 ```
 
-注意这里`sizeof(uint32_t)`，说明 Queue 每格放的是一个 `uint32_t`。发送：
+注意这里`sizeof(uint32_t)`，说明 Queue 每格放的是一个 `uint32_t`。
+
+2. 发送：
 
 ```c
 uint32_t value = 10;
@@ -1482,11 +1484,9 @@ xQueueSend(
 
 这里非常重要 `xQueueSend()` **传的是数据地址**，但 Queue 会把数据内容复制进去。也就是说不是把`&value` 这个地址存进去，而是把`value的4个字节` 复制到 Queue 里。所以即使后面`value = 100;` Queue 里面之前存的 `10` 不会变。
 
----
+3. 接收：
 
-接收：
-
-```
+```c
 uint32_t received;
 
 xQueueReceive(
@@ -1496,15 +1496,9 @@ xQueueReceive(
 );
 ```
 
-FreeRTOS 会把 Queue 里的数据复制出来放到：
+FreeRTOS 会把 Queue 里的数据复制出来放到`received`，所以过程是：
 
-```
-received
-```
-
-所以过程是：
-
-```
+```text
 Queue里面：
 [10]
 
@@ -1519,17 +1513,11 @@ received = 10
 
 ---
 
-现在最重要的是第三个参数：
+注意第三个参数：
 
-```
-portMAX_DELAY
-```
+`portMAX_DELAY` 这是 Queue 和 `Blocked` 联系起来的关键。例如：
 
-这是 Queue 和你刚学的 `Blocked` 联系起来的关键。
-
-例如：
-
-```
+```c
 xQueueReceive(
     queue,
     &received,
@@ -1539,7 +1527,7 @@ xQueueReceive(
 
 如果 Queue 是空的：
 
-```
+```text
 Task Running
 ↓
 xQueueReceive()
@@ -1551,38 +1539,24 @@ Task → Blocked
 
 它不会一直占 CPU 检查：
 
-```
+```text
 有数据吗？
 有数据吗？
 有数据吗？
 ```
 
-而是直接退出 CPU 竞争。
+而是直接退出 CPU 竞争。等另一个 Task `xQueueSend(...)` 发送数据：
 
-等另一个 Task：
-
-```
-xQueueSend(...)
-```
-
-发送数据：
-
-```
+```text
 Queue里有数据
 ↓
 等待Queue的Task
 Blocked → Ready
 ```
 
-这就是为什么我说你现在学 Queue 特别合适，因为你已经理解：
-
-```
-Blocked = 暂时退出CPU竞争
-```
-
 Queue 会直接利用这个机制。
 
-## 7.1 QueueCreat
+## 7.2 QueueCreat
 
 ```c
 QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
@@ -1605,7 +1579,7 @@ QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
 
 相当于创建了一个大数组
 
-## 7.2  队列发送函数
+## 7.3  QueueSend
 
 ```c
 BaseType_t xQueueSend(QueueHandle_t xQueue,
@@ -1624,7 +1598,7 @@ BaseType_t xQueueSend(QueueHandle_t xQueue,
 1. `pdTRUE`：写入成功
 2. `errQUEUE_FULL`：队列满，写入失败
 
-## 7.3  队列接收函数
+## 7.4  QueueReceive
 
 ```c
 BaseType_t xQueueReceive(QueueHandle_t xQueue,
@@ -1642,7 +1616,7 @@ BaseType_t xQueueReceive(QueueHandle_t xQueue,
 1. `pdTRUE`：写入成功
 2. `errQUEUE_FULL`：队列为空，写入失败
 
-## 7.4 队列发送/接收函数中断版本
+## 7.5 ISR
 
 ```c
 BaseType_t xQueueSendFromISR (QueueHandle_t xQueue,
