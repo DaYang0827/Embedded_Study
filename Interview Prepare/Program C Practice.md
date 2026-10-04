@@ -691,7 +691,18 @@ calculate(10, 3, sub)
 > 为什么说“函数指针可以把行为作为参数传递”？
 
 ```text
+Operation_t是一个变量类型     对应的是输出为int    有两个int输入的函数
+add是函数名     对应两个变量相加
+operation是符合Operation_t类型的变量
+operation里面保存的是符合Operation_t类型的变量
 
+calculate(10, 3, add)
+13
+
+calculate(10, 3, sub)
+7
+
+因为行为退化成了
 ```
 
 # DAY 2
