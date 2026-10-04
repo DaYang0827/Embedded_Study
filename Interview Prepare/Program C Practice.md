@@ -212,7 +212,10 @@ cb(data)最终调用的是谁？
 ```
 
 ```text
-
+传给 run_callback 的第一个参数是符合Callback_t函数指针的函数变量
+cb里面保存的就是符合Callback_t函数指针的函数变量
+cb(data)最终调用的是print_data
+最终打印的是100
 ```
 
 
