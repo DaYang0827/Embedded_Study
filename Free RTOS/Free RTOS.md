@@ -93,7 +93,7 @@ typedef struct tskTaskControlBlock
 
 核心成员二：`uxPriority`（优先级）
 
-- 记录创建任务时填的数字（比如填的 `1`）。FreeRTOS 的核心调度器每时每刻都在扫描所有 TCB 里的这个数字，谁的数字大，CPU 硬件的 PC 指针下一微秒就会无条件去执行谁的任务函数。
+- 记录创建任务时填的数字（比如填的 `1`）。FreeRTOS 的核心调度器查找谁的优先级大，CPU 硬件的 PC 指针下一微秒就会去执行谁的任务函数。
 
 ---
 
@@ -126,7 +126,7 @@ typedef struct tskTaskControlBlock
 
    在 `main.c` 里调用 `xTaskCreate` 的那一瞬间：
 
-- FreeRTOS 内部的内存管理总管（如 `heap_4.c`）会立刻跑到 **RAM 的堆区（Heap）** 中，强行圈下两块地盘：
+- 使用 `xTaskCreate()` 动态创建 Task 时，FreeRTOS 通常通过配置的 heap 实现为 TCB 和 Task Stack 分配 RAM。
     - 第一块地盘：用来存放任务干活开辟局部变量用的**栈空间（Stack）**（填的 128 字）。
     - 第二块地盘：**就是一个正好能装下 `tskTCB` 结构体大小的内存块（通常几十个字节）**。
 - 所以，TCB 是在程序运行起来后，在 **RAM 的堆区里动态申请、静态维护**的死忠档案。
@@ -137,8 +137,8 @@ typedef struct tskTaskControlBlock
 - **Stack (任务栈)**：是放在 RAM 里用来**存局部变量和恢复寄存器**的临时干粮仓库。
 - **TCB (任务控制块)**：是操作系统内核握在手里的**遥控器和绝密档案**。它通过记录每个任务的栈顶指针（`pxTopOfStack`）和优先级，实现了在多任务之间“移形换影”的闭环调度。
 
-# 5 任务Task/Thread
-## 5.1 创建任务
+# 5 Task/Thread
+## 5.1 TaskCreat
 
 |             函数             | 含义      | 返回值     |
 | :------------------------: | :-----: | :-----: |
@@ -161,7 +161,7 @@ BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
                         TaskHandle_t* const pxCreatedTask)
 ```
 
-把 `xTaskCreate()` 理解成“告诉 FreeRTOS：**要创建一个以后可以被调度运行的任务，请你给它准备 TCB、栈、任务状态等管理信息**。” 它不是“现在立刻运行这个函数”，而是**先把任务创建出来**。真正开始调度，是后面的`vTaskStartScheduler();`
+把 `xTaskCreate()` 理解成“告诉 FreeRTOS：**要创建一个以后可以被调度运行的任务，请你给它准备 TCB、栈、任务状态等管理信息**。” 它不是现在立刻运行这个函数，而是**先把任务创建出来**。真正开始调度，是后面的`vTaskStartScheduler();`
 
 - `pxTaskCode`:是**任务函数入口**
 - `pcName`：任务名，字符串
