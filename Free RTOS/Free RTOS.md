@@ -38,10 +38,9 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 - 对于32位架构，建议把`TickType_t`配置为`uint32_t`
 
 **`BaseType_t`：
-- 这是该架构**最高效的数据类型**
-- 32位架构中，它就是`uint32_t`
-- 16位架构中，它就是`uint16_t`
-- 8位架构中，它就是`uint8_t`
+- 通常是这个架构下高效的**有符号整数类型**
+- BaseType_t   ≈ int32_t
+- UBaseType_t  ≈ uint32_t
 - `BaseType_t`通常用作简单的返回值的类型，还有逻辑值，比如 `pdTRUE/pdFALSE`
 
 ## 3.2 变量名
