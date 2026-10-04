@@ -539,7 +539,7 @@ void Task_Mid(void *pvParameters)
 
    如果低优先级任务不仅被饿死了，还手里死死攥着某个锁（互斥量），导致高优先级任务也在等它，这就会引发更恐怖的灾难——**优先级翻转（Priority Inversion）**。FreeRTOS 内核通过互斥量自带的“优先级继承”机制，在低优先级任务被饿死前强行拉它一把，帮它快速干完活释放锁。
 
-## 5.4 任务对应的API
+## 5.4 任务常用的API
 
 ### 5.4.1 TaskDelay
 
@@ -728,11 +728,9 @@ void LedTask(void *arg)
 
 但有一个重要问题`vTaskDelay()` 不适合要求非常严格周期的任务。这就会引出`vTaskDelayUntil()`
 
----
-
 #### `vTaskDelay()` 的周期会漂移
 
-```
+```c
 while (1)
 {
     do_work();
@@ -742,25 +740,61 @@ while (1)
 
 假设：
 
-```
+```text
 do_work()用了100ms
 delay用了1000ms
 ```
 
-那么实际周期是：
+那么实际周期是`100ms + 1000ms = 1100ms` ，下一次再来又`1100ms` 所以时间会慢慢偏。
+
+####  `vTaskDelayUntil()` 
+
+如果要求每隔 1000ms 精确执行一次.就更适合：
 
 ```
-100ms + 1000ms
-= 1100ms
+vTaskDelayUntil()
 ```
 
-下一次再来：
+典型：
 
 ```
-又1100ms
+TickType_t lastWakeTime;
+
+lastWakeTime = xTaskGetTickCount();
+
+while (1)
+{
+    do_work();
+
+    vTaskDelayUntil(
+        &lastWakeTime,
+        pdMS_TO_TICKS(1000)
+    );
+}
 ```
 
-所以时间会慢慢偏。
+它不是：
+
+```
+从现在开始再等1000ms
+```
+
+而是：
+
+```
+以上一次计划唤醒时间为基准
+```
+
+所以：
+
+```
+第0次：0ms
+第1次：1000ms
+第2次：2000ms
+第3次：3000ms
+```
+
+更适合固定周期任务。
 
 
 ### 5.4.2 TaskSuspended
