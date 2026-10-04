@@ -607,99 +607,28 @@ CPU去运行其他Task
 
 ### `vTaskDelay()` 参数
 
-函数原型`void vTaskDelay(const TickType_t xTicksToDelay);` 参数是：
+函数原型`void vTaskDelay(const TickType_t xTicksToDelay);` **参数是Tick 数，不是毫秒**。比如`vTaskDelay(1000);` 并不一定是 1000 ms。取决于`configTICK_RATE_HZ`
 
-> Tick 数
-
-不是毫秒。
-
-比如：
-
-```
-vTaskDelay(1000);
-```
-
-并不一定是 1000 ms。
-
-取决于：
-
-```
-configTICK_RATE_HZ
-```
-
-假设：
-
-```
-#define configTICK_RATE_HZ 1000
-```
-
-那么：
-
-```
-1 tick = 1 ms
-```
-
-这时候：
-
-```
-vTaskDelay(1000);
-```
-
-才大约是：
-
-```
-1000 ms
-```
+假设`#define configTICK_RATE_HZ 1000`，那么`1 tick = 1 ms`，这时候`vTaskDelay(1000);` 才大约是`1000 ms`
 
 ---
+ 
+更推荐使用 `pdMS_TO_TICKS()`
 
-## 3. 为什么推荐 `pdMS_TO_TICKS()`
-
-所以实际代码更推荐：
-
-```
+```c
 vTaskDelay(pdMS_TO_TICKS(1000));
 ```
 
-意思就是：
+意思就是我要延时 1000 ms，请帮我转换成对应的 Tick 数。这样即使以后`configTICK_RATE_HZ`改了，代码也不容易出错。
 
-> 我要延时 1000 ms，请帮我转换成对应的 Tick 数。
+比如`configTICK_RATE_HZ = 100`，那么`1 tick = 10 ms`，`pdMS_TO_TICKS(1000)` 会转换成大约`100 ticks`
 
-这样即使以后：
 
-```
-configTICK_RATE_HZ
-```
-
-改了，代码也不容易出错。
-
-比如：
-
-```
-configTICK_RATE_HZ = 100
-```
-
-那么：
-
-```
-1 tick = 10 ms
-```
-
-`pdMS_TO_TICKS(1000)` 会转换成大约：
-
-```
-100 ticks
-```
-
----
-
-## 4. Task 在 delay 时是什么状态
-
-这个你一定要会。
+### Task 在 delay 时的状态
 
 FreeRTOS Task 常见状态：
 
-```
+```text
 Running
 Ready
 Blocked
@@ -708,7 +637,7 @@ Suspended
 
 `vTaskDelay()` 会让：
 
-```
+```text
 Running
 ↓
 Blocked
@@ -716,34 +645,21 @@ Blocked
 
 时间到了以后：
 
-```
+```text
 Blocked
 ↓
 Ready
 ```
 
-注意：
+注意**时间到了不一定立刻 Running**。因为可能有更高优先级任务正在运行。所以准确说法是：
 
-> 时间到了不一定立刻 Running。
-
-因为可能有更高优先级任务正在运行。
-
-所以准确说法是：
-
-```
+```text
 delay结束
 → Task进入Ready
 → 等Scheduler调度
 ```
 
-不是：
-
-```
-delay结束
-→ 马上运行
-```
-
----
+不是`delay结束→ 马上运行`
 
 ## 5. `vTaskDelay()` 和 Scheduler 的关系
 
