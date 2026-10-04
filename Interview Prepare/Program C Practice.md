@@ -119,16 +119,61 @@ app_entry()
 
 > `app_reset_handler` 是函数吗？
 
-```text
-AppEntry_t   是用typedef创建的变量类型     对应的是输入输出都为void的函数
-app_reset_handler    是把0x08010000 + 4这个地址当做指针    去读取这个地址里面的数据   赋值给 app_reset_handler  他是一个uint32类型的变量
-(AppEntry_t)app_reset_handler    把这个变量强制转化成了AppEntry_t类型的函数
-app_entry    是AppEntry_t类型的变量
-app_entry()   执行的是app_reset_handler这个函数
-
-app_entry是函数
-app_reset_handler不是函数    他是一个uint32类型的变量
 ```
+AppEntry_t
+→ 函数指针类型
+
+app_reset_handler
+→ uint32_t变量
+→ 保存Reset_Handler地址值
+
+app_entry
+→ 函数指针变量
+→ 保存一个函数地址
+
+app_entry()
+→ 通过函数指针调用目标地址上的函数
+```
+
+还有：
+
+```
+(AppEntry_t)app_reset_handler
+```
+
+不是：
+
+> 把变量转化成函数
+
+而是：
+
+> 把这个整数地址值解释成一个 `AppEntry_t` 类型的函数指针。
+
+这个区别非常重要。
+
+例如：
+
+```
+app_reset_handler = 0x08010229
+```
+
+它只是一个：
+
+```
+uint32_t整数
+```
+
+强转后：
+
+```
+(AppEntry_t)0x08010229
+```
+
+变成：
+
+> “把 0x08010229 当成一个函数入口地址”。
+
+函数本身没有被“创造出来”。
 
 
 4. 为什么下面这段不能直接这样赋值？

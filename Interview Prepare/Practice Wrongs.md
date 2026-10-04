@@ -1253,3 +1253,92 @@ enum
 
 就可能报`重复定义redefinition` 所以`#ifndef __CMD_H__` 意思**如果这个宏还没定义，就进入**。然后`#define __CMD_H__` 表示已经包含过了。以后第二次再包含`__CMD_H__已经存在` 于是直接跳过。
 
+# 28 函数指针（❗）
+
+这次把 Bootloader 函数指针彻底讲清楚
+
+```
+typedef void (*AppEntry_t)(void);
+
+uint32_t app_reset_handler =
+    *(uint32_t *)(0x08010000 + 4);
+
+AppEntry_t app_entry =
+    (AppEntry_t)app_reset_handler;
+
+app_entry();
+```
+
+逐行解释：
+
+```
+AppEntry_t
+app_reset_handler
+(AppEntry_t)app_reset_handler
+app_entry
+app_entry()
+```
+
+特别回答：
+
+> `app_entry` 是函数吗？
+
+> `app_reset_handler` 是函数吗？
+
+```
+AppEntry_t
+→ 函数指针类型
+
+app_reset_handler
+→ uint32_t变量
+→ 保存Reset_Handler地址值
+
+app_entry
+→ 函数指针变量
+→ 保存一个函数地址
+
+app_entry()
+→ 通过函数指针调用目标地址上的函数
+```
+
+还有：
+
+```
+(AppEntry_t)app_reset_handler
+```
+
+不是：
+
+> 把变量转化成函数
+
+而是：
+
+> 把这个整数地址值解释成一个 `AppEntry_t` 类型的函数指针。
+
+这个区别非常重要。
+
+例如：
+
+```
+app_reset_handler = 0x08010229
+```
+
+它只是一个：
+
+```
+uint32_t整数
+```
+
+强转后：
+
+```
+(AppEntry_t)0x08010229
+```
+
+变成：
+
+> “把 0x08010229 当成一个函数入口地址”。
+
+函数本身没有被“创造出来”。
+
+
