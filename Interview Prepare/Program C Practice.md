@@ -84,8 +84,8 @@ func2是什么？
 是等价的
 func1是定义的输入输出都为void的函数指针
 Func_t是用typedef定义的输入输出都是void的函数指针    相当于创建了变量类型
-func2是具体的变量    符合Func_t的变量类型
-typedef没有创建新的函数    创建函数是Func_t func2;完成的
+func2是一个变量    符合Func_t的变量类型
+typedef没有创建新的函数    只是把输入输出参数都是void的函数定义为了Func_t类型
 ```
 
 
@@ -173,7 +173,8 @@ p = func2;
 ```
 
 ```text
-
+第一个更合理
+因为Func_t再定义的时候    定义的是输入输出都是void类型      而func2对应的输入输出都是uint32   这是不符合函数指针类型定义的
 ```
 
 
