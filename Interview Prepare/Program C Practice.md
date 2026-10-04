@@ -431,7 +431,7 @@ a++出现了几次？
 我要你从**宏是文本替换**这个角度解释。
 ```text
 变成了 （5++） + （5++）最后执行的时候可能就会变成 5 + 6
-宏只是进行文本替换的     如果宏里面出现了
+宏只是进行文本替换的     如果宏里面出现了副运算     就会影响整体的计算公式
 ```
 
 
@@ -463,7 +463,14 @@ size本身通常占多少Byte？
 > `const uint32_t size = 128` 不代表申请 128 个 `uint32_t`。
 
 ```text
+SIZE不是变量
+SIZE没有数据类型
+不可以写 &SIZE 
 
+size是变量
+size是uin32类型的
+可以写 &size 
+size本身通常占用4个byte    因为他是uin32的类型     需要4个字节的大小才能放下
 ```
 
 
@@ -521,7 +528,10 @@ redefinition
 
 第一次 include 和第二次 include 分别会发生什么。
 ```text
-
+可能被展开两次     在main里面和protocol里面都被展开
+#ifndef PARSER_H
+#define PARSER_H
+用这用去定义parser.h
 ```
 
 
