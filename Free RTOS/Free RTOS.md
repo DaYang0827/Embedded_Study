@@ -1411,13 +1411,176 @@ Task2 消费数据
 
 最简单的例子：
 
-```
+```text
 Task1 每500ms产生一个数字
 ↓
 Queue
 ↓
 Task2拿到这个数字并打印
 ```
+
+Queue不仅存数据，还维护“**有几个数据没被取走**”。比如：
+
+```text
+Queue 长度 = 5
+
+初始：
+[ ][ ][ ][ ][ ]
+
+Task1发送 10：
+[10][ ][ ][ ][ ]
+
+再发送20：
+[10][20][ ][ ][ ]
+
+Task2接收：
+取出10
+
+变成：
+[20][ ][ ][ ][ ]
+```
+
+FreeRTOS Queue 默认是 **FIFO**（First In First Out） 先进先出，所以先进去的先出来。
+
+---
+
+Queue 最关键的三个 API ：
+
+```c
+xQueueCreate()
+xQueueSend()
+xQueueReceive()
+```
+
+创建：
+
+```c
+QueueHandle_t queue;
+
+queue = xQueueCreate(5, sizeof(uint32_t));
+```
+
+意思是：
+
+```text
+创建一个队列
+最多5个元素
+每个元素4字节
+```
+
+注意这里`sizeof(uint32_t)`，说明 Queue 每格放的是一个 `uint32_t`。发送：
+
+```c
+uint32_t value = 10;
+
+xQueueSend(
+    queue,
+    &value,
+    portMAX_DELAY
+);
+```
+
+这里非常重要 `xQueueSend()` **传的是数据地址**，但 Queue 会把数据内容复制进去。也就是说不是把`&value` 这个地址存进去，而是把`value的4个字节` 复制到 Queue 里。所以即使后面`value = 100;` Queue 里面之前存的 `10` 不会变。
+
+---
+
+接收：
+
+```
+uint32_t received;
+
+xQueueReceive(
+    queue,
+    &received,
+    portMAX_DELAY
+);
+```
+
+FreeRTOS 会把 Queue 里的数据复制出来放到：
+
+```
+received
+```
+
+所以过程是：
+
+```
+Queue里面：
+[10]
+
+xQueueReceive()
+
+↓复制
+
+received = 10
+```
+
+然后 Queue 里的这个元素被移除。
+
+---
+
+现在最重要的是第三个参数：
+
+```
+portMAX_DELAY
+```
+
+这是 Queue 和你刚学的 `Blocked` 联系起来的关键。
+
+例如：
+
+```
+xQueueReceive(
+    queue,
+    &received,
+    portMAX_DELAY
+);
+```
+
+如果 Queue 是空的：
+
+```
+Task Running
+↓
+xQueueReceive()
+↓
+没数据
+↓
+Task → Blocked
+```
+
+它不会一直占 CPU 检查：
+
+```
+有数据吗？
+有数据吗？
+有数据吗？
+```
+
+而是直接退出 CPU 竞争。
+
+等另一个 Task：
+
+```
+xQueueSend(...)
+```
+
+发送数据：
+
+```
+Queue里有数据
+↓
+等待Queue的Task
+Blocked → Ready
+```
+
+这就是为什么我说你现在学 Queue 特别合适，因为你已经理解：
+
+```
+Blocked = 暂时退出CPU竞争
+```
+
+Queue 会直接利用这个机制。
 
 ## 7.1 QueueCreat
 
