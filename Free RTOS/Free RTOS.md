@@ -1393,9 +1393,33 @@ PendSV执行上下文切换
 - PendSV = 真正执行上下文切换
 
 
-# 7 队列
+# 7 Queue
 
-## 7.1 创建队列Queue
+## 概念
+
+Queue 是**任务之间传递数据的缓冲区，而且它还能让任务在“没有数据”或“没有空间”时进入 Blocked**。
+
+先把它想成：
+
+```text
+Task1 生产数据
+    ↓
+ [ Queue ]
+    ↓
+Task2 消费数据
+```
+
+最简单的例子：
+
+```
+Task1 每500ms产生一个数字
+↓
+Queue
+↓
+Task2拿到这个数字并打印
+```
+
+## 7.1 QueueCreat
 
 ```c
 QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
@@ -1406,7 +1430,7 @@ QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
 - `uxQueueLength`：队列能够存储的最大消息数目，即队列长度
 - `uxItemSize`：队列中消息的大小，一字节为单位
 
-返回值：如果创建成功则返回一个队列句柄（就是队列结构体的地址），用于访问创建的队列如果创建不成功则返回NULL，可能原因是创建队列需要的RAM无法分配成功。
+返回值：**如果创建成功则返回一个队列句柄**（就是队列结构体的地址），用于访问创建的队列如果创建不成功则返回NULL，可能原因是创建队列需要的RAM无法分配成功。
 
 | 内容          | 任务 Task          | 队列 Queue      |
 | :-----------:| :----------------: | :-------------: |
@@ -1419,6 +1443,7 @@ QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
 相当于创建了一个大数组
 
 ## 7.2  队列发送函数
+
 ```c
 BaseType_t xQueueSend(QueueHandle_t xQueue,
 
@@ -1471,7 +1496,7 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 - 中断中不能立马切换任务
 - 中断是快进快出，执行的代码越少越好
 
-# 8 信号量Semaphore
+# 8 Semaphore
 
 信号量 `Semaphore` 本质上是 **RTOS 里用来做同步和资源控制的机制**。信号量不是用来传具体数据的，而是用来告诉任务：“某件事发生了” 或 “某个资源现在可以用了”
 
