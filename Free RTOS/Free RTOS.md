@@ -579,7 +579,7 @@ Scheduler 选择其他 Ready Task
 
 所以它和裸机里的“死等”完全不是一个思路。
 
-### 与普通 delay 区别
+#### 与普通 delay 区别
 
 裸机里写`delay_ms(1000);`，或者`for (volatile int i = 0; i < 1000000; i++);`，这种通常是：
 
@@ -605,7 +605,7 @@ CPU去运行其他Task
 
 ---
 
-### `vTaskDelay()` 参数
+#### `vTaskDelay()` 参数
 
 函数原型`void vTaskDelay(const TickType_t xTicksToDelay);` **参数是Tick 数，不是毫秒**。比如`vTaskDelay(1000);` 并不一定是 1000 ms。取决于`configTICK_RATE_HZ`
 
@@ -624,7 +624,7 @@ vTaskDelay(pdMS_TO_TICKS(1000));
 比如`configTICK_RATE_HZ = 100`，那么`1 tick = 10 ms`，`pdMS_TO_TICKS(1000)` 会转换成大约`100 ticks`
 
 
-### Task 在 delay 时的状态
+#### Task 在 delay 时的状态
 
 FreeRTOS Task 常见状态：
 
@@ -661,80 +661,36 @@ delay结束
 
 不是`delay结束→ 马上运行`
 
-## 5. `vTaskDelay()` 和 Scheduler 的关系
+####  与 Scheduler 的关系
 
 假设：
 
-```
+```text
 TaskA priority = 2
 TaskB priority = 1
 ```
 
-TaskA 正在运行。
+TaskA 正在运行。如果 TaskA`vTaskDelay(pdMS_TO_TICKS(1000));`，那么`TaskA → Blocked`于是它不能继续运行。Scheduler 就会找`Ready状态中优先级最高的Task`
 
-如果 TaskA：
-
-```
-vTaskDelay(pdMS_TO_TICKS(1000));
-```
-
-那么：
-
-```
-TaskA → Blocked
-```
-
-于是它不能继续运行。
-
-Scheduler 就会找：
-
-```
-Ready状态中优先级最高的Task
-```
-
-于是：
-
-```
-TaskB开始运行
-```
-
-一秒后：
-
-```
-TaskA Blocked → Ready
-```
-
-因为 TaskA 优先级更高，所以在合适的调度点，它可能重新抢占 TaskB。
+于是`TaskB开始运行`，一秒后`TaskA Blocked → Ready` 因为 TaskA 优先级更高，所以在合适的调度点，它可能重新抢占 TaskB。
 
 ---
 
-## 6. `vTaskDelay()` 为什么比忙等待好
+ `vTaskDelay()` 比忙等待要好
 
 对比一下。
 
 忙等待：
 
-```
+```c
 while (time_not_up)
 {
 }
 ```
 
-CPU：
+CPU：`100%一直在这个Task里`，而`vTaskDelay(...)` CPU：
 
-```
-100%一直在这个Task里
-```
-
-而：
-
-```
-vTaskDelay(...)
-```
-
-CPU：
-
-```
+```text
 当前Task睡眠
 ↓
 其他Task运行
@@ -746,13 +702,11 @@ Idle Task运行
 
 以后如果启用低功耗，Idle 阶段还可以进一步省电。
 
----
-
-## 7. `vTaskDelay()` 适合什么场景
+####  `vTaskDelay()` 适应场景
 
 例如：
 
-```
+```c
 void LedTask(void *arg)
 {
     for (;;)
@@ -765,28 +719,18 @@ void LedTask(void *arg)
 
 非常适合：
 
-```
+```text
 周期性LED
 周期传感器读取
 周期状态刷新
 低频日志输出
 ```
 
-但有一个重要问题：
-
-> `vTaskDelay()` 不适合要求非常严格周期的任务。
-
-这就会引出：
-
-```
-vTaskDelayUntil()
-```
+但有一个重要问题`vTaskDelay()` 不适合要求非常严格周期的任务。这就会引出`vTaskDelayUntil()`
 
 ---
 
-## 8. `vTaskDelay()` 的周期会漂移
-
-比如：
+#### `vTaskDelay()` 的周期会漂移
 
 ```
 while (1)
@@ -979,7 +923,7 @@ Running → Ready
 
 ---
 
-注意区分 Blocked 和 Suspended，它们表面上都像“这个任务现在不运行”，但本质完全不同。
+注意**区分 Blocked 和 Suspended**，它们表面上都像“这个任务现在不运行”，但本质完全不同。
 
 ```text
 Blocked
@@ -1023,7 +967,7 @@ Suspended → Ready
 
 可以直接记 **`Blocked` 是“等东西”，`Suspended` 是“被人为暂停”**。
 
-### 5.4.4 taskYIELD
+### 5.4.4 TaskYIELD
 
 ```c
 taskYIELD();
