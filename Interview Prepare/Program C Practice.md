@@ -269,6 +269,8 @@ rx_callback(0xAA);
 
 这和“解耦”有什么关系？
 ```text
+初始化uart_register_callback(parser_input);    就是把parser_input这个函数赋值给了rx_callback
+驱动再调用rx_callback的时候实际上执行的是parser_input这个函数
 
 ```
 
