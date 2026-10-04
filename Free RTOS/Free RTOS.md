@@ -579,7 +579,7 @@ Scheduler 选择其他 Ready Task
 
 所以它和裸机里的“死等”完全不是一个思路。
 
-#### 与普通 delay 区别
+#### 5.4.1.1 与普通 delay 区别
 
 裸机里写`delay_ms(1000);`，或者`for (volatile int i = 0; i < 1000000; i++);`，这种通常是：
 
@@ -605,7 +605,7 @@ CPU去运行其他Task
 
 ---
 
-#### `vTaskDelay()` 参数
+#### 5.4.1.2 `vTaskDelay()` 参数
 
 函数原型`void vTaskDelay(const TickType_t xTicksToDelay);` **参数是Tick 数，不是毫秒**。比如`vTaskDelay(1000);` 并不一定是 1000 ms。取决于`configTICK_RATE_HZ`
 
@@ -613,7 +613,7 @@ CPU去运行其他Task
 
 ---
  
-更推荐使用 `pdMS_TO_TICKS()`
+参数更推荐使用 `pdMS_TO_TICKS()`
 
 ```c
 vTaskDelay(pdMS_TO_TICKS(1000));
@@ -624,7 +624,7 @@ vTaskDelay(pdMS_TO_TICKS(1000));
 比如`configTICK_RATE_HZ = 100`，那么`1 tick = 10 ms`，`pdMS_TO_TICKS(1000)` 会转换成大约`100 ticks`
 
 
-#### Task 在 delay 时的状态
+#### 5.4.1.3 Task 在 delay 时的状态
 
 FreeRTOS Task 常见状态：
 
@@ -661,7 +661,7 @@ delay结束
 
 不是`delay结束→ 马上运行`
 
-####  与 Scheduler 的关系
+#### 5.4.1.4 与 Scheduler 的关系
 
 假设：
 
@@ -702,7 +702,7 @@ Idle Task运行
 
 以后如果启用低功耗，Idle 阶段还可以进一步省电。
 
-####  `vTaskDelay()` 适应场景
+#### 5.4.1.5 `vTaskDelay()` 适应场景
 
 例如：
 
@@ -728,7 +728,7 @@ void LedTask(void *arg)
 
 但有一个重要问题`vTaskDelay()` 不适合要求非常严格周期的任务。这就会引出`vTaskDelayUntil()`
 
-#### `vTaskDelay()` 的周期会漂移
+#### 5.4.1.6 `vTaskDelay()` 的周期会漂移
 
 ```c
 while (1)
@@ -747,17 +747,11 @@ delay用了1000ms
 
 那么实际周期是`100ms + 1000ms = 1100ms` ，下一次再来又`1100ms` 所以时间会慢慢偏。
 
-####  `vTaskDelayUntil()` 
+#### 5.4.1.7 `vTaskDelayUntil()` 
 
-如果要求每隔 1000ms 精确执行一次.就更适合：
+如果要求每隔 1000ms 精确执行一次。就更适合`vTaskDelayUntil()`,典型：
 
-```
-vTaskDelayUntil()
-```
-
-典型：
-
-```
+```c
 TickType_t lastWakeTime;
 
 lastWakeTime = xTaskGetTickCount();
@@ -773,21 +767,9 @@ while (1)
 }
 ```
 
-它不是：
+它不是`从现在开始再等1000ms`，而是`以上一次计划唤醒时间为基准`，所以：
 
-```
-从现在开始再等1000ms
-```
-
-而是：
-
-```
-以上一次计划唤醒时间为基准
-```
-
-所以：
-
-```
+```text
 第0次：0ms
 第1次：1000ms
 第2次：2000ms
