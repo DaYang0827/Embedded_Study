@@ -271,7 +271,7 @@ rx_callback(0xAA);
 ```text
 初始化uart_register_callback(parser_input);    就是把parser_input这个函数赋值给了rx_callback
 驱动再调用rx_callback的时候实际上执行的是parser_input这个函数
-
+这样就完成了解耦合     因为再uart模块里面     只是需要UartCallback_t cb   但是cb到底是啥    是在初始化的时候才确定的    所以初始化的时候可以随便放一个函数进去    只要符合UartCallback_t的类型就行
 ```
 
 
@@ -309,7 +309,11 @@ if (________)
 ```
 
 ```text
-
+这个rx_callback就只是一个变量      符合UartCallback_t类型    只是可以接收一个uint8_t data的输入参数   没有输出参数      没有对他进行实际的注册     他相当于里面就是空的    是不会进行任何操作的
+if (rx_callback != NULL)
+{
+    rx_callback(0xAA);
+}
 ```
 
 
@@ -362,7 +366,10 @@ else if(...)
 
 有什么好处和风险？
 ```text
-
+CmdHandler_t是一个函数指针      他目前是被
+handlers是什么？
+handlers[0]里面保存什么？
+handlers[2]()会发生什么？
 ```
 
 
