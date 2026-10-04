@@ -531,7 +531,7 @@ redefinition
 可能被展开两次     在main里面和protocol里面都被展开
 #ifndef PARSER_H
 #define PARSER_H
-用这用去定义parser.h
+用这用去定义parser.h    在程序中会展开两次     会遇到redefinition的情况
 ```
 
 
@@ -580,7 +580,8 @@ flash_wait()
 
 这体现了什么模块设计思想？
 ```text
-
+因为flash_write()里面就调用到了flash_wait()     所以在.h文件里面就不需要再放进去了
+可以减少一次编译流程
 ```
 
 
@@ -636,7 +637,11 @@ package_callback(&package);
 
 今天这题比较重要，不要求你一定认为 callback 更好，你可以分析两种设计。
 ```text
-
+涉及成这样之后   
+我认为可以在后期的时候     对cmd有不同的定义   
+比如之前的版本cmd 的01代表询问版本号
+之后想对01有新的功能
+就可以使用callback把新的cmd功能模块放入package_callback中
 ```
 
 
