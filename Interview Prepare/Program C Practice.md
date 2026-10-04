@@ -366,10 +366,12 @@ else if(...)
 
 有什么好处和风险？
 ```text
-CmdHandler_t是一个函数指针      他目前是被
-handlers是什么？
-handlers[0]里面保存什么？
-handlers[2]()会发生什么？
+CmdHandler_t是一个函数指针      他目前是被typedef成了一个变量类型    对应的是输入输出都为void的函数变量类型
+handlers是一个变量    当前定义的是一个数组类型的变量
+handlers[0]里面保存到饿是cmd_version这个函数
+handlers[2]()  会进行app程序跳转
+
+可以用于Bootloader     这样运行起来会更加节省内存     但是逻辑性和阅读性也更难了
 ```
 
 
@@ -398,7 +400,9 @@ uint32_t a = DOUBLE(2 * 3);
 ```
 
 ```text
+uint32_t a = DOUBLE(2 * 3);   就是 2 * 3 + 2 * 3
 
+#define DOUBLE(x) （（x） * （x））
 ```
 
 
@@ -426,7 +430,8 @@ a++出现了几次？
 
 我要你从**宏是文本替换**这个角度解释。
 ```text
-
+变成了 （5++） + （5++）最后执行的时候可能就会变成 5 + 6
+宏只是进行文本替换的     如果宏里面出现了
 ```
 
 
