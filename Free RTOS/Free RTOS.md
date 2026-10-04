@@ -543,6 +543,364 @@ void Task_Mid(void *pvParameters)
 
 ### 5.4.1 TaskDelay
 
+ `vTaskDelay()` 不是“CPU 停在那里等”，而是“**当前 Task 主动进入 Blocked 状态，把 CPU 让给其他 Task**”。比如：
+
+```c
+void Task1(void *arg)
+{
+    while (1)
+    {
+        LED_Toggle();
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+```
+
+执行过程大概是：
+
+```text
+Task1 Running
+↓
+LED翻转
+↓
+调用 vTaskDelay(1000ms)
+↓
+Task1 进入 Blocked
+↓
+Scheduler 选择其他 Ready Task
+↓
+1秒后 Task1 重新进入 Ready
+↓
+等待调度
+↓
+再次 Running
+```
+
+所以它和裸机里的“死等”完全不是一个思路。
+
+### 与普通 delay 区别
+
+裸机里写`delay_ms(1000);`，或者`for (volatile int i = 0; i < 1000000; i++);`，这种通常是：
+
+```text
+CPU一直执行延时代码
+↓
+CPU被占着
+↓
+其他事情干不了
+```
+
+而`vTaskDelay(...)`是：
+
+```text
+当前Task暂时不需要CPU
+↓
+进入Blocked
+↓
+CPU去运行其他Task
+```
+
+所以 FreeRTOS 强调的是**不要没事占着 CPU**。
+
+---
+
+### `vTaskDelay()` 参数
+
+函数原型`void vTaskDelay(const TickType_t xTicksToDelay);` 参数是：
+
+> Tick 数
+
+不是毫秒。
+
+比如：
+
+```
+vTaskDelay(1000);
+```
+
+并不一定是 1000 ms。
+
+取决于：
+
+```
+configTICK_RATE_HZ
+```
+
+假设：
+
+```
+#define configTICK_RATE_HZ 1000
+```
+
+那么：
+
+```
+1 tick = 1 ms
+```
+
+这时候：
+
+```
+vTaskDelay(1000);
+```
+
+才大约是：
+
+```
+1000 ms
+```
+
+---
+
+## 3. 为什么推荐 `pdMS_TO_TICKS()`
+
+所以实际代码更推荐：
+
+```
+vTaskDelay(pdMS_TO_TICKS(1000));
+```
+
+意思就是：
+
+> 我要延时 1000 ms，请帮我转换成对应的 Tick 数。
+
+这样即使以后：
+
+```
+configTICK_RATE_HZ
+```
+
+改了，代码也不容易出错。
+
+比如：
+
+```
+configTICK_RATE_HZ = 100
+```
+
+那么：
+
+```
+1 tick = 10 ms
+```
+
+`pdMS_TO_TICKS(1000)` 会转换成大约：
+
+```
+100 ticks
+```
+
+---
+
+## 4. Task 在 delay 时是什么状态
+
+这个你一定要会。
+
+FreeRTOS Task 常见状态：
+
+```
+Running
+Ready
+Blocked
+Suspended
+```
+
+`vTaskDelay()` 会让：
+
+```
+Running
+↓
+Blocked
+```
+
+时间到了以后：
+
+```
+Blocked
+↓
+Ready
+```
+
+注意：
+
+> 时间到了不一定立刻 Running。
+
+因为可能有更高优先级任务正在运行。
+
+所以准确说法是：
+
+```
+delay结束
+→ Task进入Ready
+→ 等Scheduler调度
+```
+
+不是：
+
+```
+delay结束
+→ 马上运行
+```
+
+---
+
+## 5. `vTaskDelay()` 和 Scheduler 的关系
+
+假设：
+
+```
+TaskA priority = 2
+TaskB priority = 1
+```
+
+TaskA 正在运行。
+
+如果 TaskA：
+
+```
+vTaskDelay(pdMS_TO_TICKS(1000));
+```
+
+那么：
+
+```
+TaskA → Blocked
+```
+
+于是它不能继续运行。
+
+Scheduler 就会找：
+
+```
+Ready状态中优先级最高的Task
+```
+
+于是：
+
+```
+TaskB开始运行
+```
+
+一秒后：
+
+```
+TaskA Blocked → Ready
+```
+
+因为 TaskA 优先级更高，所以在合适的调度点，它可能重新抢占 TaskB。
+
+---
+
+## 6. `vTaskDelay()` 为什么比忙等待好
+
+对比一下。
+
+忙等待：
+
+```
+while (time_not_up)
+{
+}
+```
+
+CPU：
+
+```
+100%一直在这个Task里
+```
+
+而：
+
+```
+vTaskDelay(...)
+```
+
+CPU：
+
+```
+当前Task睡眠
+↓
+其他Task运行
+↓
+如果没有Task
+↓
+Idle Task运行
+```
+
+以后如果启用低功耗，Idle 阶段还可以进一步省电。
+
+---
+
+## 7. `vTaskDelay()` 适合什么场景
+
+例如：
+
+```
+void LedTask(void *arg)
+{
+    for (;;)
+    {
+        LED_Toggle();
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+```
+
+非常适合：
+
+```
+周期性LED
+周期传感器读取
+周期状态刷新
+低频日志输出
+```
+
+但有一个重要问题：
+
+> `vTaskDelay()` 不适合要求非常严格周期的任务。
+
+这就会引出：
+
+```
+vTaskDelayUntil()
+```
+
+---
+
+## 8. `vTaskDelay()` 的周期会漂移
+
+比如：
+
+```
+while (1)
+{
+    do_work();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+}
+```
+
+假设：
+
+```
+do_work()用了100ms
+delay用了1000ms
+```
+
+那么实际周期是：
+
+```
+100ms + 1000ms
+= 1100ms
+```
+
+下一次再来：
+
+```
+又1100ms
+```
+
+所以时间会慢慢偏。
 
 
 ### 5.4.2 TaskSuspended
