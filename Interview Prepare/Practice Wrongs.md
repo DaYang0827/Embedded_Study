@@ -1303,13 +1303,7 @@ app_entry()
 → 通过函数指针调用目标地址上的函数
 ```
 
-还有`(AppEntry_t)app_reset_handler`，不是把变量转化成函数
-
-而是：
-
-> 把这个整数地址值解释成一个 `AppEntry_t` 类型的函数指针。
-
-这个区别非常重要。
+还有`(AppEntry_t)app_reset_handler`，不是把变量转化成函数，而是**把这个整数地址值解释成一个 `AppEntry_t` 类型的函数指针**。这个区别非常重要。
 
 例如：
 
