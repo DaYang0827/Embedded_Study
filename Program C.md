@@ -4063,12 +4063,9 @@ typedef void (*Callback_t)(int);
 
 那么 `Callback_t` 在语法角色上类似 `int *` 这种“已经包含星号的指针类型别名”，**但 `Callback_t` 本身是 `void (*)(int)`，不是 `int *`**。
 
-直接类比最清楚`typedef int* IntPtr_t;
-```
+直接类比最清楚`typedef int* IntPtr_t;`，那么 `IntPtr_t p;` 其实就是：`int *p;`。
 
-那么 `IntPtr_t p;` 其实就是：`int *p;`
-
-同样 `typedef void (*Callback_t)(int);`，那么：`Callback_t callback;`  其实就是：`void (*callback)(int);`
+同样 `typedef void (*Callback_t)(int);`，那么：`Callback_t callback;`  其实就是：`void (*callback)(int);`。
 
 所以对应关系是：
 
@@ -4091,7 +4088,7 @@ void (*)(int)
 就是 callback 的类型
 ```
 
-而我们：
+而：
 
 ```c
 typedef void (*Callback_t)(int);
