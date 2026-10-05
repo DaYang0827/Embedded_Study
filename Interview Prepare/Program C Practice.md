@@ -1,4 +1,618 @@
 （❌）
+# DAY 4
+
+**Day 4：整数类型 + 数组/指针 + 生命周期 + 宏 + volatile + 嵌入式综合**。这些正好是你现在 C 基础里还需要补的部分。**先不给答案，你做完我再逐题批。**
+
+ 1. `uint8_t` 运算
+
+看：
+
+```
+uint8_t a = 250;
+uint8_t b = 10;
+
+uint8_t c = a + b;
+```
+
+回答：
+
+```
+a + b 等于多少？
+最后 c 等于多少？
+为什么？
+```
+
+重点考虑：
+
+```
+uint8_t 最大值是多少？
+发生了什么转换/截断？
+```
+
+---
+
+ 2. signed 和 unsigned
+
+```
+int32_t a = -1;
+uint32_t b = 1;
+
+if (a < b)
+{
+    printf("A");
+}
+else
+{
+    printf("B");
+}
+```
+
+你认为打印：
+
+```
+A
+还是
+B
+```
+
+为什么？
+
+不要只看：
+
+```
+-1 < 1
+```
+
+要考虑：
+
+> signed 和 unsigned 混合运算时可能发生什么？
+
+---
+
+ 3. 强制类型转换
+
+```
+uint32_t a = 0x12345678;
+
+uint8_t b = (uint8_t)a;
+```
+
+最后：
+
+```
+b = ?
+```
+
+为什么？
+
+然后：
+
+```
+uint16_t c = (uint16_t)a;
+```
+
+`c` 又是多少？
+
+---
+
+ 4. 数组和指针
+
+```
+uint32_t arr[4] = {10, 20, 30, 40};
+
+uint32_t *p = arr;
+```
+
+回答：
+
+```
+p
+*p
+p + 1
+*(p + 1)
+p + 3
+*(p + 3)
+```
+
+分别是什么。
+
+重点解释：
+
+> 为什么 `p + 1` 不是地址只加 1 Byte？
+
+---
+
+5. `arr` 和 `&arr`
+
+还是：
+
+```
+uint32_t arr[4];
+```
+
+比较：
+
+```
+arr
+&arr
+```
+
+它们的数值地址通常看起来一样。
+
+但是：
+
+```
+arr + 1
+```
+
+和：
+
+```
+&arr + 1
+```
+
+分别会移动多少 Byte？
+
+为什么？
+
+这题有一点难，可以慢慢分析类型。
+
+---
+
+ 6. `sizeof` 数组和指针
+
+```
+uint32_t arr[10];
+
+uint32_t *p = arr;
+```
+
+在 STM32F4 这种 32 位环境下：
+
+```
+sizeof(arr)
+sizeof(p)
+sizeof(*p)
+```
+
+分别通常是多少？
+
+为什么？
+
+---
+
+7. 数组作为函数参数
+
+```
+void func(uint32_t arr[])
+{
+    printf("%u\n", sizeof(arr));
+}
+
+int main(void)
+{
+    uint32_t data[10];
+
+    func(data);
+}
+```
+
+你认为函数里面：
+
+```
+sizeof(arr)
+```
+
+得到：
+
+```
+40
+还是
+4
+```
+
+为什么？
+
+---
+
+ 8. 返回局部变量地址
+
+下面代码有什么严重问题？
+
+```
+uint32_t *get_value(void)
+{
+    uint32_t value = 100;
+
+    return &value;
+}
+```
+
+然后：
+
+```
+uint32_t *p = get_value();
+
+printf("%u\n", *p);
+```
+
+请解释：
+
+```
+value存在哪里？
+什么时候失效？
+p最后属于什么类型的问题？
+```
+
+关键词：
+
+```
+生命周期
+Stack
+dangling pointer
+```
+
+---
+
+ 9. `static` 能不能解决第 8 题？
+
+如果改成：
+
+```
+uint32_t *get_value(void)
+{
+    static uint32_t value = 100;
+
+    return &value;
+}
+```
+
+现在：
+
+```
+return &value;
+```
+
+还存在刚才的问题吗？
+
+为什么？
+
+另外：
+
+```
+value通常位于哪里？
+生命周期多久？
+作用域在哪里？
+```
+
+---
+
+ 10. `volatile` 综合题
+
+假设：
+
+```
+uint8_t flag = 0;
+```
+
+ISR：
+
+```
+void USART1_IRQHandler(void)
+{
+    flag = 1;
+}
+```
+
+main：
+
+```
+while (flag == 0)
+{
+}
+```
+
+为什么：
+
+```
+flag
+```
+
+通常应该定义成：
+
+```
+volatile uint8_t flag;
+```
+
+然后再回答：
+
+> 加了 `volatile` 以后，是不是就彻底线程安全了？
+
+为什么？
+
+---
+
+ 11. `volatile` 指针
+
+解释下面两种：
+
+```
+volatile uint32_t *p1;
+
+uint32_t * volatile p2;
+```
+
+分别是谁是 volatile：
+
+```
+p1指向的数据？
+p1自身？
+
+p2指向的数据？
+p2自身？
+```
+
+这题可以类比你之前学过的：
+
+```
+const uint32_t *p;
+uint32_t * const p;
+```
+
+---
+
+ 12. 位操作
+
+假设：
+
+```
+uint32_t reg = 0x00000000;
+```
+
+要求：
+
+```
+把 bit3 和 bit7 置1
+其他位保持不变
+```
+
+请写代码。
+
+然后要求：
+
+```
+清除 bit3
+bit7保持不变
+```
+
+再写代码。
+
+最后要求：
+
+```
+判断 bit7 当前是不是1
+```
+
+写一个 `if`。
+
+---
+
+ 13. Read-Modify-Write
+
+假设主程序：
+
+```
+reg |= (1U << 3);
+```
+
+ISR 同时：
+
+```
+reg |= (1U << 5);
+```
+
+为什么理论上可能发生：
+
+> 某一次修改丢失？
+
+请把：
+
+```
+reg |= mask;
+```
+
+拆成：
+
+```
+读取
+↓
+修改
+↓
+写回
+```
+
+然后自己举一个主程序和 ISR 交错执行的例子。
+
+---
+
+ 14. 函数指针复习
+
+```
+typedef void (*Handler_t)(uint8_t);
+
+void parser_input(uint8_t data)
+{
+}
+
+Handler_t handler = parser_input;
+```
+
+回答：
+
+```
+Handler_t
+handler
+parser_input
+handler(0xAA)
+```
+
+分别是什么。
+
+然后回答：
+
+如果写：
+
+```
+Handler_t *p = &handler;
+```
+
+那么：
+
+```
+p
+*p
+```
+
+分别是什么？
+
+注意这一次出现了真正的：
+
+> 指向函数指针变量的指针。
+
+---
+
+ 15. Bootloader 综合题
+
+你现在有：
+
+```
+uint32_t app_stack =
+    *(uint32_t *)0x08010000;
+
+uint32_t app_reset =
+    *(uint32_t *)0x08010004;
+
+typedef void (*AppEntry_t)(void);
+
+AppEntry_t entry =
+    (AppEntry_t)app_reset;
+```
+
+请回答完整流程：
+
+```
+0x08010000 保存什么？
+0x08010004 保存什么？
+
+app_stack 是地址还是变量？
+里面保存的内容是什么？
+
+app_reset 是函数吗？
+它是什么类型？
+它里面保存什么？
+
+entry 是函数吗？
+它是什么？
+
+entry() 最终意味着什么？
+```
+
+最后再回答：
+
+> 为什么真正跳转之前不能只检查 `app_reset != 0`？
+
+至少说出 **两个更合理的合法性检查**。
+
+---
+
+ 今天加两道 FreeRTOS + C 联动题
+
+16. `xTaskCreate()` 里：
+
+```
+void task(void *pvParameters)
+```
+
+为什么参数设计成：
+
+```
+void *
+```
+
+而不是固定：
+
+```
+uint32_t *
+```
+
+？
+
+如果传：
+
+```
+typedef struct
+{
+    uint32_t id;
+    uint32_t period;
+} TaskConfig_t;
+
+TaskConfig_t config;
+
+xTaskCreate(
+    task,
+    "TASK",
+    128,
+    &config,
+    1,
+    NULL
+);
+```
+
+Task 里面应该怎么把：
+
+```
+pvParameters
+```
+
+恢复成 `TaskConfig_t *`？
+
+---
+
+17. FreeRTOS 生命周期题
+
+假设：
+
+```
+void create_task(void)
+{
+    TaskConfig_t config;
+
+    config.id = 1;
+
+    xTaskCreate(
+        task,
+        "TASK",
+        128,
+        &config,
+        1,
+        NULL
+    );
+}
+```
+
+`create_task()` 返回以后，Task 还继续使用：
+
+```
+pvParameters
+```
+
+有没有风险？
+
+为什么？
+
+这一题和今天第 8 题其实是同一个 C 语言问题。
+
+
 # Day 3
 
 **Day 3：函数指针 + typedef + callback + 宏 + 头文件 + 项目结合**
