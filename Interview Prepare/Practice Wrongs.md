@@ -1285,6 +1285,8 @@ app_entry()
 
 > `app_reset_handler` 是函数吗？
 
+回答：
+
 ```
 AppEntry_t
 → 函数指针类型
@@ -1301,15 +1303,7 @@ app_entry()
 → 通过函数指针调用目标地址上的函数
 ```
 
-还有：
-
-```
-(AppEntry_t)app_reset_handler
-```
-
-不是：
-
-> 把变量转化成函数
+还有`(AppEntry_t)app_reset_handler`，不是把变量转化成函数
 
 而是：
 
@@ -1340,5 +1334,89 @@ uint32_t整数
 > “把 0x08010229 当成一个函数入口地址”。
 
 函数本身没有被“创造出来”。
+
+# 29 Static组合题（❗）
+ 
+ `static` 函数 + Header 的组合题
+
+假设：
+
+```
+// flash.c
+
+static void flash_wait(void)
+{
+}
+
+void flash_write(void)
+{
+    flash_wait();
+}
+```
+
+然后：
+
+```
+// flash.h
+
+void flash_write(void);
+```
+
+回答：
+
+为什么：
+
+```
+flash_write()
+```
+
+应该放到 `.h` 暴露出去，
+
+而：
+
+```
+flash_wait()
+```
+
+通常没必要放进 `.h`？
+
+这体现了什么模块设计思想？
+
+真正原因是：
+
+```
+flash_wait()
+→ 只是flash.c内部实现细节
+→ static
+→ 不希望其他模块使用
+
+flash_write()
+→ 对外提供的接口
+→ 其他.c文件需要调用
+→ 应该在flash.h中声明
+```
+
+体现的是：
+
+> 模块封装、接口和实现分离。
+
+不是为了：
+
+> 减少一次编译流程
+
+这个说法不对。
+
+你可以把它理解成：
+
+```
+flash.h
+→ 公开接口
+
+flash.c
+→ 内部实现
+```
+
+这对你以后 Linux driver、模块化都会非常重要。
+
 
 
