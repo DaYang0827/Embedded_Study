@@ -326,6 +326,7 @@ int main(void)
 - NULL 判断
 
 这题能独立写出来，说明 callback 基本入门了。
+
 ```c
 #include <stdio.h>
 

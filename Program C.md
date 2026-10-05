@@ -4084,8 +4084,7 @@ void (*callback)(int)
        └── callback：变量名
 
 整个：
-void (*)(int)
-就是 callback 的类型
+void (*)(int)   就是 callback 的类型
 ```
 
 而：
