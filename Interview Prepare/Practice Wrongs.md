@@ -1,4 +1,7 @@
-# 1 `(*p)++`（❌）
+
+# 指针与数组
+
+## 1 `(*p)++`（❌）
 
 ```
 int a[] = {5, 10, 15};
@@ -35,7 +38,7 @@ printf("%d\n", a[0]);   6
 ```
 
 
-# 2 数组下标本质（❌）
+## 2 数组下标本质（❌）
 
 ```
 int a[] = {11, 22, 33, 44};
@@ -77,7 +80,7 @@ printf("%d\n", *(p + 2));    33
 printf("%d\n", a[2]);    33
 ```
 
-# 3 函数里修改指针本身（❗）
+## 3 函数里修改指针本身（❗）
 
 ```
 void change(int *p)
@@ -119,7 +122,239 @@ p = &b;
 
 ```
 
-# 4 带数据的 UART callback（❌）
+## 22 指针没有初始化（❗）
+
+下面代码有什么问题？
+
+```
+uint32_t *p;
+*p = 100;
+```
+
+请解释：
+
+- `p` 此时里面是什么？
+- 为什么可能 HardFault？
+
+真正发生的操作是把 100 写入 `p` 当前指向的地址。问题是p根本还没初始化，它里面是一个不确定地址。所以：
+
+```
+*p = 100;
+```
+
+相当于往一个随机地址写 100，可能导致：
+
+```
+HardFault
+RAM数据被破坏
+寄存器被误写
+```
+
+更准确的面试回答：
+
+> `p` 是一个未初始化指针，保存的是不确定地址。直接解引用 `*p` 属于未定义行为，可能访问非法内存并导致 HardFault。
+
+
+## 10 数组名与取地址（❌）
+
+```
+int arr[5] = {1, 2, 3, 4, 5};
+```
+
+分别说明下面表达式的：
+
+- 类型
+- 表示的含义
+- 数值上是否相同
+
+```
+arr
+&arr[0]
+&arr
+arr + 1
+&arr + 1
+```
+
+重点说明：为什么 `arr + 1` 和 `&arr + 1` 移动的字节数不同？
+```text
+arr   是数组名    在函数中可以退化成数组第一个元素的地址
+&arr[0]   是数组第一个元素的地址
+&arr   是数组地址     和&arr[0]是一样的   （❌）
+arr + 1    对应的是2    即数组第二个元素
+&arr + 1   如果arr的起始地址是0x1000    那这个语句结束之后地址应该是0x1001   而arr + 1对应的饿是0x1004     因为arr+1对应的是数组的移动     而&arr + 1对应的是地址数加一
+
+```
+ 
+ `&arr` 这个非常重要。类型不是 `int *`，而是：`int (*)[5]`读作： 指向“5 个 int 数组”的指针。
+ 
+
+# 链表与二级指针
+
+## 8 写头插（❌）
+
+补全：
+
+```
+Node *insert_head(Node *head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return head;
+    }
+
+    new_node->data = data;
+
+    ______________________;
+
+    ______________________;
+
+}
+```
+
+目标：
+
+原来：
+
+```
+10 → 20 → NULL
+```
+
+插入5后：
+
+```
+5 → 10 → 20 → NULL
+```
+
+```text
+错误写法
+Node *insert_head(Node *head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return head;
+    }
+
+    new_node->data = data;
+
+    new -> next = head -> next;
+
+    head = new_node;
+}
+```
+
+```c
+正确写法：
+Node *insert_head(Node *head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return head;
+    }
+
+    new_node->data = data;
+    new_node->next = head;
+    head = new_node;
+
+    return head;
+}
+```
+
+## 9 二级指针头插（❌）
+
+```
+void insert_head(Node **head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return;
+    }
+
+    new_node->data = data;
+
+    new_node->next = ________;
+
+    ________ = new_node;
+}
+```
+
+主函数：
+
+```
+Node *head = NULL;
+
+insert_head(&head, 10);
+```
+
+补全两个空。
+
+然后解释：
+
+为什么调用的时候是：
+
+```
+&head
+```
+
+而不是：
+
+```
+head
+```
+
+？
+
+```text
+（❌）
+new_node->data = data;
+
+    new_node->next = head -> next;
+
+    **head = new_node;
+
+调用的时候用的是&head   因为在函数中想要改变谁就要传入谁的地址    这里想要改变的是head所保存的地址   所以应该传入head本身的地址
+```
+
+```text
+函数参数是：Node **head  因此：
+
+- `head`是主函数中`head`变量的地址
+- `*head`才是主函数中的头指针
+- `**head`才是头节点本身
+
+正确填法：
+new_node->next = *head;
+*head = new_node;
+
+完整代码：
+void insert_head(Node **head, int data)
+{
+    Node *new_node = malloc(sizeof(Node));
+
+    if (new_node == NULL)
+    {
+        return;
+    }
+
+    new_node->data = data;
+    new_node->next = *head;
+    *head = new_node;
+}
+```
+
+# 函数指针与 Callback
+# C语言内存与工程组织
+# STM32底层与通信
+# Bootloader 与 Debug
+
+## 4 带数据的 UART callback（❌）
 
 现在改成：
 
@@ -200,7 +435,7 @@ int main(void)
 }
 ```
 
-# 5 typedef callback（❗）
+## 5 typedef callback（❗）
 
 解释下面代码：
 
@@ -275,7 +510,7 @@ void RegisterC(UART_Callback_t cb);
 ```
 
 
-# 6 手写一个 callback 系统(❌)
+## 6 手写一个 callback 系统(❌)
 
 不看前面的代码，自己写一个程序，实现：
 
@@ -328,7 +563,7 @@ int main(void)
 这题能独立写出来，说明 callback 基本入门了。
 
 ```c
-#include <stdio.h>
+##include <stdio.h>
 
 typedef void (*Callback_t)(void);
 
@@ -362,7 +597,7 @@ int main(void)
 }
 ```
 
-# 7 区分Callback_t的相关命名（❗）
+## 7 区分Callback_t的相关命名（❗）
 
 ```c
 typedef void (*Callback_t)(int);
@@ -476,198 +711,7 @@ callback  → 函数指针变量
 Callback_t → 函数指针类型
 ```
 
-# 8 写头插（❌）
-
-补全：
-
-```
-Node *insert_head(Node *head, int data)
-{
-    Node *new_node = malloc(sizeof(Node));
-
-    if (new_node == NULL)
-    {
-        return head;
-    }
-
-    new_node->data = data;
-
-    ______________________;
-
-    ______________________;
-
-}
-```
-
-目标：
-
-原来：
-
-```
-10 → 20 → NULL
-```
-
-插入5后：
-
-```
-5 → 10 → 20 → NULL
-```
-
-```text
-错误写法
-Node *insert_head(Node *head, int data)
-{
-    Node *new_node = malloc(sizeof(Node));
-
-    if (new_node == NULL)
-    {
-        return head;
-    }
-
-    new_node->data = data;
-
-    new -> next = head -> next;
-
-    head = new_node;
-}
-```
-
-```c
-正确写法：
-Node *insert_head(Node *head, int data)
-{
-    Node *new_node = malloc(sizeof(Node));
-
-    if (new_node == NULL)
-    {
-        return head;
-    }
-
-    new_node->data = data;
-    new_node->next = head;
-    head = new_node;
-
-    return head;
-}
-```
-
-# 9 二级指针头插（❌）
-
-```
-void insert_head(Node **head, int data)
-{
-    Node *new_node = malloc(sizeof(Node));
-
-    if (new_node == NULL)
-    {
-        return;
-    }
-
-    new_node->data = data;
-
-    new_node->next = ________;
-
-    ________ = new_node;
-}
-```
-
-主函数：
-
-```
-Node *head = NULL;
-
-insert_head(&head, 10);
-```
-
-补全两个空。
-
-然后解释：
-
-为什么调用的时候是：
-
-```
-&head
-```
-
-而不是：
-
-```
-head
-```
-
-？
-
-```text
-（❌）
-new_node->data = data;
-
-    new_node->next = head -> next;
-
-    **head = new_node;
-
-调用的时候用的是&head   因为在函数中想要改变谁就要传入谁的地址    这里想要改变的是head所保存的地址   所以应该传入head本身的地址
-```
-
-```text
-函数参数是：Node **head  因此：
-
-- `head`是主函数中`head`变量的地址
-- `*head`才是主函数中的头指针
-- `**head`才是头节点本身
-
-正确填法：
-new_node->next = *head;
-*head = new_node;
-
-完整代码：
-void insert_head(Node **head, int data)
-{
-    Node *new_node = malloc(sizeof(Node));
-
-    if (new_node == NULL)
-    {
-        return;
-    }
-
-    new_node->data = data;
-    new_node->next = *head;
-    *head = new_node;
-}
-```
-
-# 10 数组名与取地址（❌）
-
-```
-int arr[5] = {1, 2, 3, 4, 5};
-```
-
-分别说明下面表达式的：
-
-- 类型
-- 表示的含义
-- 数值上是否相同
-
-```
-arr
-&arr[0]
-&arr
-arr + 1
-&arr + 1
-```
-
-重点说明：为什么 `arr + 1` 和 `&arr + 1` 移动的字节数不同？
-```text
-arr   是数组名    在函数中可以退化成数组第一个元素的地址
-&arr[0]   是数组第一个元素的地址
-&arr   是数组地址     和&arr[0]是一样的   （❌）
-arr + 1    对应的是2    即数组第二个元素
-&arr + 1   如果arr的起始地址是0x1000    那这个语句结束之后地址应该是0x1001   而arr + 1对应的饿是0x1004     因为arr+1对应的是数组的移动     而&arr + 1对应的是地址数加一
-
-```
- 
- `&arr` 这个非常重要。类型不是 `int *`，而是：`int (*)[5]`读作： 指向“5 个 int 数组”的指针。
- 
-# 11 函数内 static（❌）
+## 11 函数内 static（❌）
 
 ```
 void parser(void)
@@ -691,7 +735,7 @@ void parser(void)
 因为初始值为0   所以放在.bss里面
 ```
 
-# 12 MAP 文件
+## 12 MAP 文件
 
 MAP 文件是在
 
@@ -744,7 +788,7 @@ main → 最终被链接到哪里
 因为这些地址正是**链接器决定的**。
 
 
-# 13 Bootloader流程排列（❌）
+## 13 Bootloader流程排列（❌）
 
 ```
 A. 设置 APP MSP
@@ -771,7 +815,7 @@ A. 设置 APP MSP
 E. 跳转 Reset_Handler
 ```
 
-# 14 `.data` 和 `.bss` 有什么区别？（❌）
+## 14 `.data` 和 `.bss` 有什么区别？（❌）
 
 请按嵌入式角度回答，不只说“一个初始化，一个没初始化”。
 ```text
@@ -786,7 +830,7 @@ Flash 不需要保存一堆 0
 启动时 C runtime 清零
 ```
 
-# 15 Heap和 Stack 最大区别是什么？（❗）
+## 15 Heap和 Stack 最大区别是什么？（❗）
 
 ```text
 Stack：
@@ -803,7 +847,7 @@ malloc/free
 可能碎片化
 ```
 
-# 16 MSP和PSP（❗）
+## 16 MSP和PSP（❗）
 
 在 Cortex-M 里分别通常在什么情况下使用？
 
@@ -821,7 +865,7 @@ PSP：
 RTOS 常给不同任务使用 PSP
 ```
 
-# 17 为什么 DMA 不能完全代替 RingBuffer？（❌）
+## 17 为什么 DMA 不能完全代替 RingBuffer？（❌）
 
 ```text
 真正区别是：
@@ -849,7 +893,7 @@ RingBuffer 是**软件缓冲数据结构**。
 
 它们不在一个层次，所以不能互相替代。
 
-# 18 状态机和memcpy（❗）
+## 18 状态机和memcpy（❗）
 
 你当前 Parser 有：
 
@@ -877,7 +921,7 @@ WAIT_SUM
 状态机的优势是：一个 byte 一个 byte 地重建帧边界，因此更适合流式串口。
 ```
 
-# 19 Hardfault（❗）
+## 19 Hardfault（❗）
 
 如果 APP 跳转后马上 HardFault，你会按什么顺序排查？
 
@@ -924,7 +968,7 @@ WAIT_SUM
    把PC对应到具体函数/指令
 ```
 
-# 20 Keil Debug
+## 20 Keil Debug
 
 ```
 Memory
@@ -960,7 +1004,7 @@ Peripherals
 → 看USART/DMA/RCC/GPIO/FLASH等外设寄存器
 ```
 
-# 21 寄存器没有变化原因判断
+## 21 寄存器没有变化原因判断
 
 如果某个寄存器一直没变化，你会怎么判断是：
 
@@ -1004,40 +1048,7 @@ USART1->CR1 |= USART_CR1_RXNEIE;
 
 所以调试应该是 **程序执行 → 寄存器配置 → 硬件条件** 一层一层排。
 
-# 22 指针没有初始化（❗）
-
-下面代码有什么问题？
-
-```
-uint32_t *p;
-*p = 100;
-```
-
-请解释：
-
-- `p` 此时里面是什么？
-- 为什么可能 HardFault？
-
-真正发生的操作是把 100 写入 `p` 当前指向的地址。问题是p根本还没初始化，它里面是一个不确定地址。所以：
-
-```
-*p = 100;
-```
-
-相当于往一个随机地址写 100，可能导致：
-
-```
-HardFault
-RAM数据被破坏
-寄存器被误写
-```
-
-更准确的面试回答：
-
-> `p` 是一个未初始化指针，保存的是不确定地址。直接解引用 `*p` 属于未定义行为，可能访问非法内存并导致 HardFault。
-
-
-# 23 结构体的大小 1（❗）
+## 23 结构体的大小 1（❗）
 
 下面结构体的大小你认为是多少？为什么？
 
@@ -1059,7 +1070,7 @@ b 为什么要对齐
 
 因为为了让 `b` 放在满足 `uint32_t` 对齐要求的地址上。通常 `uint32_t` 希望从 4 字节对齐地址开始。
 
-# 24 结构体的大小 2（❗）
+## 24 结构体的大小 2（❗）
 
 下面两个结构体大小可能一样吗？
 
@@ -1111,12 +1122,12 @@ padding 2
 所以**通常把“大对齐要求成员”放前面，可以减少 padding**。
 
 
-# 25 宏定义（❌）
+## 25 宏定义（❌）
 
 下面宏有什么问题：
 
 ```
-#define SQUARE(x) x * x
+##define SQUARE(x) x * x
 ```
 
 如果：
@@ -1144,12 +1155,12 @@ uint32_t a = SQUARE(1 + 2);
 
 而不是 9。
 
-# 26 宏参数有副作用（❌）
+## 26 宏参数有副作用（❌）
 
 下面代码有什么风险：
 
 ```
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
+##define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 uint32_t x = 1;
 uint32_t y = 2;
@@ -1214,17 +1225,17 @@ y还会再加一次
 
 这种副作用，就很危险。
 
-# 27 头文件（❌）
+## 27 头文件（❌）
 
 为什么头文件里通常要写：
 
 ```
-#ifndef __CMD_H__
-#define __CMD_H__
+##ifndef __CMD_H__
+##define __CMD_H__
 
 ...
 
-#endif
+##endif
 ```
 
 如果不写可能发生什么？
@@ -1234,14 +1245,14 @@ y还会再加一次
 ```text
 main.c
 ↓
-#include "a.h"
+##include "a.h"
 
 a.h
 ↓
-#include "cmd.h"
+##include "cmd.h"
 
 main.c自己又
-#include "cmd.h"
+##include "cmd.h"
 ```
 
 那 `cmd.h` 可能被展开两次。如果里面有：
@@ -1252,9 +1263,9 @@ struct
 enum
 ```
 
-就可能报`重复定义redefinition` 所以`#ifndef __CMD_H__` 意思**如果这个宏还没定义，就进入**。然后`#define __CMD_H__` 表示已经包含过了。以后第二次再包含`__CMD_H__已经存在` 于是直接跳过。
+就可能报`重复定义redefinition` 所以`##ifndef __CMD_H__` 意思**如果这个宏还没定义，就进入**。然后`##define __CMD_H__` 表示已经包含过了。以后第二次再包含`__CMD_H__已经存在` 于是直接跳过。
 
-# 28 函数指针（❗）
+## 28 函数指针（❗）
 
 这次把 Bootloader 函数指针彻底讲清楚
 
@@ -1330,7 +1341,7 @@ uint32_t整数
 
 函数本身没有被“创造出来”。
 
-# 29 Static组合题（❗）
+## 29 Static组合题（❗）
  
  `static` 函数 + Header 的组合题
 
