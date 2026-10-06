@@ -210,32 +210,20 @@ set_value(&a);
 
 是同一个思路。
 
-## 9. 为什么 FreeRTOS 喜欢 Handle
+### FreeRTOS 喜欢 Handle
 
 因为这样可以做到：
 
-```
+```text
 API
 只需要知道一个Handle
 ↓
 不用把内部结构全部暴露给用户
 ```
 
-比如 FreeRTOS 不希望你直接：
+比如 FreeRTOS 不希望直接`task1_tcb->uxPriority = 5;` 而希望`vTaskPrioritySet(task1_handle, 5);`。好处很多：
 
-```
-task1_tcb->uxPriority = 5;
-```
-
-而希望你：
-
-```
-vTaskPrioritySet(task1_handle, 5);
-```
-
-好处很多：
-
-```
+```text
 封装
 隐藏内部实现
 接口统一
@@ -243,9 +231,9 @@ vTaskPrioritySet(task1_handle, 5);
 以后内核结构变化也更容易维护
 ```
 
-这个和你前面学的：
+这个和
 
-```
+```text
 flash.h
 → 暴露接口
 
@@ -255,9 +243,8 @@ flash.c
 
 其实是同一个工程思想。
 
----
 
-## 10. Handle 和普通指针的关系
+### Handle 和普通指针的关系
 
 很多 FreeRTOS Handle 底层确实就是指针类型。比如概念上可以类似：
 
@@ -265,31 +252,13 @@ flash.c
 typedef struct tskTaskControlBlock * TaskHandle_t;
 ```
 
-所以：
-
-```
-TaskHandle_t handle;
-```
-
-看起来就类似：
-
-```
-struct tskTaskControlBlock *handle;
-```
-
-但工程里不要老想着：
-
-> Handle 就一定等于某个具体结构体裸指针。
-
-更好的理解是：
+所以`TaskHandle_t handle;`，看起来就类似`struct tskTaskControlBlock *handle;` 但工程里不要老想着Handle 就一定等于某个具体结构体裸指针。更好的理解是：
 
 > **Handle 是 API 暴露给用户的“对象引用类型”。**
 
 因为库作者可能不希望你依赖内部具体结构。
 
 ---
-
-## 11. Handle 和函数指针有什么区别
 
 这个你特别容易混，我给你并排放。
 
@@ -429,7 +398,7 @@ int main(void)
 }
 ```
 
-这里你可以按角色分：
+这里可以按角色分：
 
 ```
 led_task
@@ -448,15 +417,9 @@ xTaskCreate()
 → 把Handle写回led_handle
 ```
 
-以后：
+以后`vTaskSuspend(led_handle);` FreeRTOS：
 
-```
-vTaskSuspend(led_handle);
-```
-
-FreeRTOS：
-
-```
+```text
 拿到led_handle
 ↓
 找到对应Task
@@ -470,11 +433,9 @@ FreeRTOS：
 
 ---
 
-你现在可以把 Handle 固定成一句话：
+ Handle 固定成一句话 **Handle 是“用来找到某个 FreeRTOS 对象的引用”。**
 
-> **Handle 是“用来找到某个 FreeRTOS 对象的引用”。**
-
-然后分对象记：
+然后分对象：
 
 ```
 TaskHandle_t
@@ -490,7 +451,6 @@ TimerHandle_t
 → 找Software Timer
 ```
 
-而且和你目前 C 学习正好能连接：
 
 ```
 函数名
