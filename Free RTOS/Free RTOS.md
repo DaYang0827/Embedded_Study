@@ -1886,15 +1886,45 @@ xQueueSend(queue, &data, ...)
 
 所以 Queue 保存的是`100 的副本`，不是保存`&data`。前提是 Queue 创建时`xQueueCreate(..., sizeof(uint32_t))`
 
+---
+
+例子：
+
+```c
+uint32_t data = 100;
+
+xQueueSend(queue, &data, 0);
+```
+
+发送前：
+
+```text
+Queue
+
+[ 空 ]
+[ 空 ]
+[ 空 ]
+```
+
+发送后：
+
+```text
+Queue
+
+[ 100 ]
+[ 空 ]
+[ 空 ]
+```
+
+然后再`data = 200;` Queue 里面原来的 100 不会跟着变。因为Queue 已经把数据复制了一份。这是非常重要的。
+
 ## 7.4 QueueReceive
 
 ```c
-uint32_t received;
-
-xQueueReceive(
-    queue,
-    &received,
-    portMAX_DELAY
+BaseType_t xQueueReceive(
+    QueueHandle_t xQueue,
+    void *pvBuffer,
+    TickType_t xTicksToWait
 );
 ```
 
