@@ -118,68 +118,29 @@ void led_task(void *arg)
 
 可能用这个函数创建两个 Task：
 
-```
+```c
 xTaskCreate(led_task, "LED1", 128, &led1, 1, &handle1);
 xTaskCreate(led_task, "LED2", 128, &led2, 1, &handle2);
 ```
 
-注意：
+注意，任务函数只有一个led_task。但创建出来的是Task实例1、Task实例2。它们分别有：
 
-```
-任务函数只有一个：
-led_task
-```
-
-但创建出来的是：
-
-```
-Task实例1
-Task实例2
-```
-
-它们分别有：
-
-```
+```text
 不同TCB
 不同Task Stack
 不同参数
 不同运行状态
 ```
 
-所以：
-
-```
-led_task
-```
-
-根本不能唯一代表其中某一个 Task。
-
-这时候：
-
-```
-handle1
-handle2
-```
-
-才负责区分。
-
-所以以后：
-
-```
-vTaskSuspend(handle1);
-```
-
-意思是：
-
-> 找到 handle1 对应的那个 Task 实例，把它挂起。
+所以led_task根本不能唯一代表其中某一个 Task。这时候`handle1`、`handle2` 才负责区分。所以以后`vTaskSuspend(handle1);` 意思是找到 handle1 对应的那个 Task 实例，把它挂起。
 
 ---
 
-## 3. Handle 和 TCB 什么关系
+### Handle 和 TCB 的关系
 
-你可以暂时这样理解：
+暂时理解为：
 
-```
+```text
 TaskHandle_t
 ↓
 指向/引用某个 Task 的 TCB
@@ -187,7 +148,7 @@ TaskHandle_t
 
 比如：
 
-```
+```text
 task1_handle
         │
         ↓
