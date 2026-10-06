@@ -65,11 +65,11 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 | `vTaskPrioritySet`  |      返回值类型：`void`  <br>在`task.c`中定义       |
 |   `xQueueReceive`   |  返回值类型：`BaseType_t`   <br>在`queue.c`中定义   |
 | `pvTimerGetTimerID` | 返回值类型：`pointer to void`  <br>在`tmer.c`中定义 |
-## Handle
+## 3.4 Handle
 
 **句柄不是那个对象本身，而是“找到那个对象的一个引用/标识”。** 在 FreeRTOS 里，大多数 Handle 本质上通常是某种指针类型。
 
-### TaskHandle_t 
+### 3.4.1 TaskHandle_t 
 
 ```c
 TaskHandle_t task1_handle;
@@ -136,7 +136,7 @@ xTaskCreate(led_task, "LED2", 128, &led2, 1, &handle2);
 
 ---
 
-### Handle 和 TCB 的关系
+### 3.4.2 Handle 和 TCB 的关系
 
 暂时理解为：
 
@@ -166,7 +166,7 @@ task1_handle
 
 **Handle 是供 API 使用的对象引用，不是对象本身。**
 
-### `TaskHandle_t *pxCreatedTask`
+### 3.4.3 `TaskHandle_t *pxCreatedTask`
 
 `xTaskCreate()` 最后一个参数是`TaskHandle_t *pxCreatedTask` 注意这里：
 
@@ -210,7 +210,7 @@ set_value(&a);
 
 是同一个思路。
 
-### FreeRTOS 喜欢 Handle
+### 3.4.4 FreeRTOS 喜欢 Handle
 
 因为这样可以做到：
 
@@ -244,7 +244,7 @@ flash.c
 其实是同一个工程思想。
 
 
-### Handle 和普通指针的关系
+### 3.4.5 Handle 和普通指针的关系
 
 很多 FreeRTOS Handle 底层确实就是指针类型。比如概念上可以类似：
 
@@ -252,17 +252,15 @@ flash.c
 typedef struct tskTaskControlBlock * TaskHandle_t;
 ```
 
-所以`TaskHandle_t handle;`，看起来就类似`struct tskTaskControlBlock *handle;` 但工程里不要老想着Handle 就一定等于某个具体结构体裸指针。更好的理解是：
+所以`TaskHandle_t handle;`，看起来就类似`struct tskTaskControlBlock *handle;` 但工程里不要老想着Handle 就一定等于某个具体结构体裸指针。更好的理解是**Handle 是 API 暴露给用户的“对象引用类型”。**
 
-> **Handle 是 API 暴露给用户的“对象引用类型”。**
-
-因为库作者可能不希望你依赖内部具体结构。
+库作者不希望依赖内部具体结构。
 
 ---
 
-这个你特别容易混，我给你并排放。
+handle与普通指针的区别
 
-```
+```text
 函数指针
 → 指向函数代码
 → 用来“执行行为”
@@ -272,57 +270,11 @@ Handle
 → 用来“找到并操作对象”
 ```
 
-例如：
+例如`void (*callback)(uint8_t);` 是函数指针。而`TaskHandle_t task_handle;` 是Task Handle。
 
-```
-void (*callback)(uint8_t);
-```
+前者最终`callback(data);` 会跳去执行函数。 后者`vTaskSuspend(task_handle);`是把这个引用传给 FreeRTOS，让内核找到对应 Task。所以一个是“**去哪执行代码**”，另一个是“**要操作哪个对象**”
 
-是：
-
-> 函数指针。
-
-而：
-
-```
-TaskHandle_t task_handle;
-```
-
-是：
-
-> Task Handle。
-
-前者最终：
-
-```
-callback(data);
-```
-
-会跳去执行函数。
-
-后者：
-
-```
-vTaskSuspend(task_handle);
-```
-
-是把这个引用传给 FreeRTOS，让内核找到对应 Task。
-
-所以一个是：
-
-```
-“去哪执行代码”
-```
-
-另一个是：
-
-```
-“我要操作哪个对象”
-```
-
----
-
-### Handle 通常初始化为 NULL
+### 3.4.6 Handle 通常初始化为 NULL
 
 比如：
 
@@ -369,7 +321,7 @@ task_handle
 → 对象句柄
 ```
 
-###  完整例子
+### 3.4.7 完整例子
 
 ```c
 TaskHandle_t led_handle = NULL;
@@ -1854,7 +1806,7 @@ xQueueSend()
 xQueueReceive()
 ```
 
-1. 创建：
+## 7.2 QueueCreate
 
 ```c
 QueueHandle_t queue;
@@ -1862,7 +1814,21 @@ QueueHandle_t queue;
 queue = xQueueCreate(5, sizeof(uint32_t));
 ```
 
-意思是：
+- `xQueueCreat` 函数有两个参数`uxQueueLength`和 `uxItemSize`
+- `uxQueueLength`：队列能够存储的最大消息数目，即队列长度
+- `uxItemSize`：队列中消息的大小，一字节为单位
+
+返回值：**如果创建成功则返回一个队列句柄**（就是队列结构体的地址），用于访问创建的队列如果创建不成功则返回NULL，可能原因是创建队列需要的RAM无法分配成功。
+
+| 内容          | 任务 Task          | 队列 Queue      |
+| :-----------:| :----------------: | :-------------: |
+| 本质          | 一段独立运行的代码        | 一个数据缓冲区       |
+| 是否会被 CPU 执行 | 会                | 不会            |
+| 作用          | 执行功能             | 传递数据          |
+| 例子          | 读取传感器、BLE发送、控制电机 | 传颜色、传传感器值、传命令 |
+| 由谁使用        | 调度器调度任务运行        | 任务之间读写队列      |
+
+相当于创建了一个大数组。意思是：
 
 ```text
 创建一个队列
@@ -1872,7 +1838,7 @@ queue = xQueueCreate(5, sizeof(uint32_t));
 
 注意这里`sizeof(uint32_t)`，说明 Queue 每格放的是一个 `uint32_t`。
 
-2. 发送：
+## 7.3 QueueSend
 
 ```c
 uint32_t value = 10;
@@ -1884,9 +1850,18 @@ xQueueSend(
 );
 ```
 
+- `xQueue`：要写入的队列
+- `pvItemToQueue`：要写入的消息（数据的地址）
+- `xTicksToWait`：阻塞超时时间（当队列为满，是否需要进行阻塞等待）
+
+返回值：
+
+1. `pdTRUE`：写入成功
+2. `errQUEUE_FULL`：队列满，写入失败
+
 这里非常重要 `xQueueSend()` **传的是数据地址**，但 Queue 会把数据内容复制进去。也就是说不是把`&value` 这个地址存进去，而是把`value的4个字节` 复制到 Queue 里。所以即使后面`value = 100;` Queue 里面之前存的 `10` 不会变。
 
-3. 接收：
+## 7.4 QueueReceive
 
 ```c
 uint32_t received;
@@ -1897,6 +1872,14 @@ xQueueReceive(
     portMAX_DELAY
 );
 ```
+
+- `xQueue`：要写入的队列
+- `pvBuffer`：要写入的消息（数据的地址）
+- `xTicksToWait`：阻塞超时时间（当队列为空，是否需要进行阻塞等待）
+
+返回值:
+1. `pdTRUE`：写入成功
+2. `errQUEUE_FULL`：队列为空，写入失败
 
 FreeRTOS 会把 Queue 里的数据复制出来放到`received`，所以过程是：
 
@@ -1957,66 +1940,6 @@ Blocked → Ready
 ```
 
 Queue 会直接利用这个机制。
-
-## 7.2 QueueCreat
-
-```c
-QueueHandle_t xQueueCreate(UBaseType_t uxQueueLength,
-                           UBaseType_t uxItemSize);  
-```
-
-- `xQueueCreat` 函数有两个参数`uxQueueLength`和 `uxItemSize`
-- `uxQueueLength`：队列能够存储的最大消息数目，即队列长度
-- `uxItemSize`：队列中消息的大小，一字节为单位
-
-返回值：**如果创建成功则返回一个队列句柄**（就是队列结构体的地址），用于访问创建的队列如果创建不成功则返回NULL，可能原因是创建队列需要的RAM无法分配成功。
-
-| 内容          | 任务 Task          | 队列 Queue      |
-| :-----------:| :----------------: | :-------------: |
-| 本质          | 一段独立运行的代码        | 一个数据缓冲区       |
-| 是否会被 CPU 执行 | 会                | 不会            |
-| 作用          | 执行功能             | 传递数据          |
-| 例子          | 读取传感器、BLE发送、控制电机 | 传颜色、传传感器值、传命令 |
-| 由谁使用        | 调度器调度任务运行        | 任务之间读写队列      |
-
-相当于创建了一个大数组
-
-## 7.3  QueueSend
-
-```c
-BaseType_t xQueueSend(QueueHandle_t xQueue,
-
-                      const void * pvItemToQueue,
-
-                      TickType_t xTicksToWait);
-```
-
-- `xQueue`：要写入的队列
-- `pvItemToQueue`：要写入的消息（数据的地址）
-- `xTicksToWait`：阻塞超时时间（当队列为满，是否需要进行阻塞等待）
-
-返回值：
-
-1. `pdTRUE`：写入成功
-2. `errQUEUE_FULL`：队列满，写入失败
-
-## 7.4  QueueReceive
-
-```c
-BaseType_t xQueueReceive(QueueHandle_t xQueue,
-
-                         const void * pvBuffer,
-
-                         TickType_t xTicksToWait);
-```
-
-- `xQueue`：要写入的队列
-- `pvBuffer`：要写入的消息（数据的地址）
-- `xTicksToWait`：阻塞超时时间（当队列为空，是否需要进行阻塞等待）
-
-返回值:
-1. `pdTRUE`：写入成功
-2. `errQUEUE_FULL`：队列为空，写入失败
 
 ## 7.5 ISR
 
