@@ -100,11 +100,13 @@ task1_handle
 → 用来找到“这个具体任务实例”
 ```
 
-## 2. 为什么不能直接拿函数名控制 Task
+---
+
+**不能直接拿函数名控制 Task**
 
 比如：
 
-```
+```c
 void led_task(void *arg)
 {
     while(1)
@@ -114,7 +116,7 @@ void led_task(void *arg)
 }
 ```
 
-你可能用这个函数创建两个 Task：
+可能用这个函数创建两个 Task：
 
 ```
 xTaskCreate(led_task, "LED1", 128, &led1, 1, &handle1);
