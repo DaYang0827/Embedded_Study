@@ -65,6 +65,724 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 | `vTaskPrioritySet`  |      返回值类型：`void`  <br>在`task.c`中定义       |
 |   `xQueueReceive`   |  返回值类型：`BaseType_t`   <br>在`queue.c`中定义   |
 | `pvTimerGetTimerID` | 返回值类型：`pointer to void`  <br>在`tmer.c`中定义 |
+## Handle
+
+**句柄不是那个对象本身，而是“找到那个对象的一个引用/标识”。** 在 FreeRTOS 里，大多数 Handle 本质上通常是某种指针类型。
+
+### TaskHandle_t 
+
+你已经见过：
+
+```
+TaskHandle_t task1_handle;
+```
+
+然后：
+
+```
+xTaskCreate(
+    send_task1,
+    "TASK1",
+    128,
+    NULL,
+    1,
+    &task1_handle
+);
+```
+
+这里最容易混的是：
+
+```
+send_task1
+task1_handle
+```
+
+这两个完全不是一回事。
+
+```
+send_task1
+→ 任务函数
+→ Flash里的代码入口
+
+task1_handle
+→ 句柄变量
+→ 用来找到“这个具体任务实例”
+```
+
+---
+
+## 2. 为什么不能直接拿函数名控制 Task
+
+比如：
+
+```
+void led_task(void *arg)
+{
+    while(1)
+    {
+        ...
+    }
+}
+```
+
+你可能用这个函数创建两个 Task：
+
+```
+xTaskCreate(led_task, "LED1", 128, &led1, 1, &handle1);
+xTaskCreate(led_task, "LED2", 128, &led2, 1, &handle2);
+```
+
+注意：
+
+```
+任务函数只有一个：
+led_task
+```
+
+但创建出来的是：
+
+```
+Task实例1
+Task实例2
+```
+
+它们分别有：
+
+```
+不同TCB
+不同Task Stack
+不同参数
+不同运行状态
+```
+
+所以：
+
+```
+led_task
+```
+
+根本不能唯一代表其中某一个 Task。
+
+这时候：
+
+```
+handle1
+handle2
+```
+
+才负责区分。
+
+所以以后：
+
+```
+vTaskSuspend(handle1);
+```
+
+意思是：
+
+> 找到 handle1 对应的那个 Task 实例，把它挂起。
+
+---
+
+## 3. Handle 和 TCB 什么关系
+
+你可以暂时这样理解：
+
+```
+TaskHandle_t
+↓
+指向/引用某个 Task 的 TCB
+```
+
+比如：
+
+```
+task1_handle
+        │
+        ↓
+┌──────────────────┐
+│ Task1 的 TCB      │
+│                  │
+│ pxTopOfStack     │
+│ uxPriority       │
+│ pcTaskName       │
+│ ...              │
+└──────────────────┘
+```
+
+所以调：
+
+```
+vTaskPrioritySet(task1_handle, 3);
+```
+
+FreeRTOS 就能顺着句柄找到这个 Task 的管理信息，然后修改优先级。
+
+你之前的笔记里把 Handle 理解成“身份证/引用”，这个方向是对的。更准确地说：
+
+> **Handle 是供 API 使用的对象引用，不是对象本身。**
+
+---
+
+## 4. `&task1_handle` 为什么还要加 `&`
+
+这个也很关键。
+
+你定义：
+
+```
+TaskHandle_t task1_handle;
+```
+
+这是一个变量。
+
+而：
+
+```
+xTaskCreate(..., &task1_handle);
+```
+
+为什么传：
+
+```
+&task1_handle
+```
+
+因为 `xTaskCreate()` 需要：
+
+> 把“新建出来的 Task Handle”写回你的变量。
+
+也就是说：
+
+```
+你提供：
+task1_handle 这个变量的地址
+
+FreeRTOS：
+创建Task
+↓
+获得Task的Handle
+↓
+写入 task1_handle
+```
+
+类似：
+
+```
+void set_value(int *p)
+{
+    *p = 100;
+}
+```
+
+调用：
+
+```
+int a;
+set_value(&a);
+```
+
+是同一个思路。
+
+---
+
+## 5. 所以 `TaskHandle_t *pxCreatedTask` 是什么
+
+`xTaskCreate()` 最后一个参数大概是：
+
+```
+TaskHandle_t *pxCreatedTask
+```
+
+注意这里：
+
+```
+TaskHandle_t
+→ Handle类型
+
+TaskHandle_t *
+→ 指向Handle变量的指针
+```
+
+为什么需要“指向 Handle 的指针”？
+
+因为 FreeRTOS 想修改调用者的：
+
+```
+task1_handle
+```
+
+所以要传它地址。
+
+这和你最近学的二级指针思想其实是连起来的。
+
+如果：
+
+```
+TaskHandle_t
+```
+
+本身底层就是某种 TCB 指针，那么：
+
+```
+TaskHandle_t *
+```
+
+概念上就接近：
+
+```
+指向“TCB指针变量”的指针
+```
+
+---
+
+## 6. QueueHandle_t 也是同样道理
+
+比如：
+
+```
+QueueHandle_t queue;
+```
+
+然后：
+
+```
+queue = xQueueCreate(10, sizeof(uint32_t));
+```
+
+这里：
+
+```
+queue
+```
+
+不是队列里面的数据。
+
+也不是整个队列结构体本身。
+
+它是：
+
+> 用来找到这个 Queue 对象的 Handle。
+
+后面：
+
+```
+xQueueSend(queue, &data, 0);
+xQueueReceive(queue, &data, 0);
+```
+
+FreeRTOS 就通过：
+
+```
+queue
+```
+
+知道你操作的是哪个 Queue。
+
+---
+
+## 7. SemaphoreHandle_t / Mutex 也是一样
+
+比如：
+
+```
+SemaphoreHandle_t sem;
+```
+
+创建：
+
+```
+sem = xSemaphoreCreateBinary();
+```
+
+后面：
+
+```
+xSemaphoreGive(sem);
+xSemaphoreTake(sem, portMAX_DELAY);
+```
+
+这里：
+
+```
+sem
+```
+
+不是“信号量值本身”。
+
+而是：
+
+> 找到这个 Semaphore 对象的句柄。
+
+Mutex 也常用同一个：
+
+```
+SemaphoreHandle_t mutex;
+```
+
+---
+
+## 8. TimerHandle_t 也是一样
+
+```
+TimerHandle_t timer;
+```
+
+它也是：
+
+> 软件定时器对象的引用。
+
+后面：
+
+```
+xTimerStart(timer, 0);
+xTimerStop(timer, 0);
+```
+
+都靠 Handle 找到具体 Timer。
+
+---
+
+## 9. 为什么 FreeRTOS 喜欢 Handle
+
+因为这样可以做到：
+
+```
+API
+只需要知道一个Handle
+↓
+不用把内部结构全部暴露给用户
+```
+
+比如 FreeRTOS 不希望你直接：
+
+```
+task1_tcb->uxPriority = 5;
+```
+
+而希望你：
+
+```
+vTaskPrioritySet(task1_handle, 5);
+```
+
+好处很多：
+
+```
+封装
+隐藏内部实现
+接口统一
+用户不需要知道内部结构
+以后内核结构变化也更容易维护
+```
+
+这个和你前面学的：
+
+```
+flash.h
+→ 暴露接口
+
+flash.c
+→ 隐藏实现
+```
+
+其实是同一个工程思想。
+
+---
+
+## 10. Handle 和普通指针是不是一回事
+
+很多 FreeRTOS Handle 底层确实就是指针类型。
+
+比如概念上可以类似：
+
+```
+typedef struct tskTaskControlBlock * TaskHandle_t;
+```
+
+所以：
+
+```
+TaskHandle_t handle;
+```
+
+看起来就类似：
+
+```
+struct tskTaskControlBlock *handle;
+```
+
+但工程里不要老想着：
+
+> Handle 就一定等于某个具体结构体裸指针。
+
+更好的理解是：
+
+> **Handle 是 API 暴露给用户的“对象引用类型”。**
+
+因为库作者可能不希望你依赖内部具体结构。
+
+---
+
+## 11. Handle 和函数指针有什么区别
+
+这个你特别容易混，我给你并排放。
+
+```
+函数指针
+→ 指向函数代码
+→ 用来“执行行为”
+
+Handle
+→ 指向/引用一个系统对象
+→ 用来“找到并操作对象”
+```
+
+例如：
+
+```
+void (*callback)(uint8_t);
+```
+
+是：
+
+> 函数指针。
+
+而：
+
+```
+TaskHandle_t task_handle;
+```
+
+是：
+
+> Task Handle。
+
+前者最终：
+
+```
+callback(data);
+```
+
+会跳去执行函数。
+
+后者：
+
+```
+vTaskSuspend(task_handle);
+```
+
+是把这个引用传给 FreeRTOS，让内核找到对应 Task。
+
+所以一个是：
+
+```
+“去哪执行代码”
+```
+
+另一个是：
+
+```
+“我要操作哪个对象”
+```
+
+---
+
+## 12. Handle 和 ID 有什么区别
+
+可以类比，但不完全一样。
+
+ID 常常是：
+
+```
+1
+2
+3
+100
+```
+
+这种编号。
+
+Handle 更像：
+
+```
+“系统内部对象的引用”
+```
+
+它可能底层就是地址。
+
+所以：
+
+```
+Handle ≠ 简单整数编号
+```
+
+你可以暂时理解成：
+
+> ID 更像“编号”，Handle 更像“对象引用”。
+
+---
+
+## 13. 为什么 Handle 常常初始化为 NULL
+
+比如：
+
+```
+TaskHandle_t task_handle = NULL;
+```
+
+创建前：
+
+```
+task_handle
+→ 还没指向有效Task
+```
+
+创建成功后：
+
+```
+task_handle
+→ 有效Handle
+```
+
+所以工程里经常：
+
+```
+if (task_handle != NULL)
+{
+    vTaskSuspend(task_handle);
+}
+```
+
+这和 callback 的：
+
+```
+if (callback != NULL)
+```
+
+很像。
+
+区别只是：
+
+```
+callback
+→ 函数指针
+
+task_handle
+→ 对象句柄
+```
+
+---
+
+## 14. 一个完整例子
+
+```
+TaskHandle_t led_handle = NULL;
+
+void led_task(void *arg)
+{
+    while(1)
+    {
+        LED_Toggle();
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+int main(void)
+{
+    xTaskCreate(
+        led_task,
+        "LED",
+        128,
+        NULL,
+        1,
+        &led_handle
+    );
+
+    vTaskStartScheduler();
+}
+```
+
+这里你可以按角色分：
+
+```
+led_task
+→ Task函数
+→ Flash里的代码
+
+led_handle
+→ Handle变量
+
+&led_handle
+→ Handle变量自己的地址
+
+xTaskCreate()
+→ 创建Task实例
+→ 创建TCB/Stack
+→ 把Handle写回led_handle
+```
+
+以后：
+
+```
+vTaskSuspend(led_handle);
+```
+
+FreeRTOS：
+
+```
+拿到led_handle
+↓
+找到对应Task
+↓
+修改它的状态
+↓
+移出Ready相关调度结构
+↓
+进入Suspended
+```
+
+---
+
+你现在可以把 Handle 固定成一句话：
+
+> **Handle 是“用来找到某个 FreeRTOS 对象的引用”。**
+
+然后分对象记：
+
+```
+TaskHandle_t
+→ 找Task
+
+QueueHandle_t
+→ 找Queue
+
+SemaphoreHandle_t
+→ 找Semaphore/Mutex
+
+TimerHandle_t
+→ 找Software Timer
+```
+
+而且和你目前 C 学习正好能连接：
+
+```
+函数名
+→ 函数入口地址
+
+函数指针
+→ 保存函数地址
+
+TCB
+→ Task管理对象
+
+TaskHandle_t
+→ 找到某个TCB/Task实例
+
+TaskHandle_t *
+→ 指向Handle变量
+→ 常用于让函数把Handle写回来
+```
 
 # 4 TCB
 
