@@ -1943,7 +1943,7 @@ struct
 const void *pvItemToQueue
 ```
 
-也就是$\boxed{\text{通用指针}}$，这个 `void *` 的意思就是“不管这个数据到底是什么类型，把地址给我就行。”然后 FreeRTOS 再根据创建 Queue 时给的`xQueueCreate(length, item_size);` 里的`item_size` 决定复制多少字节。
+也就是$\boxed{\text{通用指针}}$，这个 `void *` 的意思就是“不管这个数据到底是什么类型，把地址给我就行。”然后 FreeRTOS 再根据创建 Queue 时给的`xQueueCreate(length, item_size);` 里的`item_size` **决定复制多少字节**。
 
 比如创建：
 
@@ -1951,7 +1951,7 @@ const void *pvItemToQueue
 QueueHandle_t q = xQueueCreate(5, sizeof(int));
 ```
 
-FreeRTOS 已经知道每个元素 = 4 Byte，之后：
+FreeRTOS 已经知道`每个元素 = 4 Byte`，之后：
 
 ```c
 int data = 100;
@@ -1965,13 +1965,7 @@ xQueueSend(q, &data, 0);
 长度 = 4 Byte
 ```
 
-然后：
-
-```
-memcpy(queue_buffer, &data, 4);
-```
-
-就行了。
+然后`memcpy(queue_buffer, &data, 4);`就行了。
 
 ---
 
@@ -2022,10 +2016,7 @@ BaseType_t xQueueSend(
 );
 ```
 
-那这个函数只能发`int`，那如果要发`float`，可能还得再写`xQueueSendFloat();`，要发`struct`又得写`xQueueSendStruct();
-```
-
-那 API 就会变成：
+那这个函数只能发`int`，那如果要发`float`，可能还得再写`xQueueSendFloat();`，要发`struct`又得写`xQueueSendStruct();`，那 API 就会变成：
 
 ```
 xQueueSendInt()
@@ -2036,73 +2027,43 @@ xQueueSendPointer()
 ...
 ```
 
-非常丑，而且用户自定义结构体根本列不完。
+非常丑，而且用户自定义结构体根本列不完。所以 C 里面非常常见一种设计$\boxed{\text{void * + 数据长度}}$ 来实现“通用数据处理”。
 
-所以 C 里面非常常见一种设计：
-
-\[ \boxed{\text{void * + 数据长度}} \]
-
-来实现“通用数据处理”。
-
-还有一个更深的原因：
-
-**如果参数是普通变量，C 函数必须提前知道这个变量有多大。**
+还有一个更深的原因**如果参数是普通变量，C 函数必须提前知道这个变量有多大。**
 
 比如：
 
-```
+```c
 void func(int data);
 ```
 
-编译器知道：
+编译器知道`data = 4 Byte`，但如果是：
 
-```
-data = 4 Byte
-```
-
-但如果是：
-
-```
+```c
 void func(??? data);
 ```
 
-你想让 `???` 同时支持：
+想让 `???` 同时支持：
 
-```
-int        4 Byte
-double     8 Byte
-struct     12 Byte
-其他struct 100 Byte
-```
-
-C 语言没有“万能值类型”。
-
-但是地址的大小基本固定。
-
-在 STM32F4 这种 32 位 MCU：
-
-```
-指针 = 4 Byte
+```text
+int         4 Byte
+double      8 Byte
+struct      12 Byte
+其他struct  100 Byte
 ```
 
-无论它指向：
+C 语言没有“万能值类型”。但是地址的大小基本固定。在 STM32F4 这种 32 位 MCU中指针 = 4 Byte。无论它指向：
 
-```
+```text
 int
 char
 float
 100 Byte struct
 ```
 
-地址本身都还是：
+地址本身都还是`4 Byte`，所以传地址非常方便：
 
-```
-4 Byte
-```
-
-所以传地址非常方便：
-
-```
+```text
 调用者
 ↓
 给我一个地址
@@ -2112,63 +2073,21 @@ Queue 根据 item_size
 从那个地址复制对应字节
 ```
 
-这也是为什么函数原型里：
+这也是为什么函数原型里`const void *pvItemToQueue`会这么设计。
 
-```
-const void *pvItemToQueue
-```
 
-会这么设计。
 
----
+C 语言里**很多“通用接口”都靠指针来实现**。例如：
 
-你可以把这个思想和你前面刚学的函数指针、callback 联系起来。
-
-C 语言里很多“通用接口”都靠：
-
-```
-指针
-```
-
-来实现。
-
-例如：
-
-```
+```c
 void *buffer
 void *context
 void (*callback)(void)
 ```
 
-因为：
+因为$\boxed{\text{地址是一种非常通用的“接口”}}$
 
-\[ \boxed{\text{地址是一种非常通用的“接口”}} \]
-
----
-
-所以最终你可以这样记：
-
-```
-xQueueSend(queue, &data, 0);
-```
-
-不是因为 FreeRTOS “非要你加 `&`”。
-
-而是因为它的设计是：
-
-```
-Queue 不关心 data 是什么类型
-↓
-只需要 data 的地址
-↓
-再根据 item_size
-↓
-复制对应数量的字节
-```
-
-核心就是：
-
-\[ \boxed{ \texttt{void *} + \texttt{item\_size} = \text{支持任意数据类型} } \]
+$\boxed{ \texttt{void *} + \texttt{item\_size} = \text{支持任意数据类型} }$
 
 ## 7.4 QueueReceive
 
