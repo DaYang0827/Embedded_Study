@@ -178,19 +178,7 @@ TaskHandle_t *
 → 指向Handle变量的指针
 ```
 
-为什么需要“指向 Handle 的指针”？
-
-因为 FreeRTOS 想修改调用者的：
-
-```
-task1_handle
-```
-
-所以要传它地址。
-
-`&task1_handle` 要加 `&`
-
-定义`TaskHandle_t task1_handle;`这是一个变量。而`xTaskCreate(..., &task1_handle);`，要传`&task1_handle`。因为 `xTaskCreate()` 需要**把“新建出来的 Task Handle”写回变量**。也就是说：
+需要“指向 Handle 的指针”因为 FreeRTOS 想修改调用者的`task1_handle` 所以要传`&task1_handle` 。定义`TaskHandle_t task1_handle;`这是一个变量。 `xTaskCreate()` 需要**把“新建出来的 Task Handle”写回变量**。也就是说：
 
 ```text
 提供：
@@ -221,143 +209,6 @@ set_value(&a);
 ```
 
 是同一个思路。
-
-## 5. 所以 `TaskHandle_t *pxCreatedTask` 是什么
-
-`xTaskCreate()` 最后一个参数大概是：
-
-```
-TaskHandle_t *pxCreatedTask
-```
-
-注意这里：
-
-```
-TaskHandle_t
-→ Handle类型
-
-TaskHandle_t *
-→ 指向Handle变量的指针
-```
-
-为什么需要“指向 Handle 的指针”？
-
-因为 FreeRTOS 想修改调用者的：
-
-```
-task1_handle
-```
-
-所以要传它地址。
-
-
-
-## 6. QueueHandle_t 也是同样道理
-
-比如：
-
-```
-QueueHandle_t queue;
-```
-
-然后：
-
-```
-queue = xQueueCreate(10, sizeof(uint32_t));
-```
-
-这里：
-
-```
-queue
-```
-
-不是队列里面的数据。
-
-也不是整个队列结构体本身。
-
-它是：
-
-> 用来找到这个 Queue 对象的 Handle。
-
-后面：
-
-```
-xQueueSend(queue, &data, 0);
-xQueueReceive(queue, &data, 0);
-```
-
-FreeRTOS 就通过：
-
-```
-queue
-```
-
-知道你操作的是哪个 Queue。
-
----
-
-## 7. SemaphoreHandle_t / Mutex 也是一样
-
-比如：
-
-```
-SemaphoreHandle_t sem;
-```
-
-创建：
-
-```
-sem = xSemaphoreCreateBinary();
-```
-
-后面：
-
-```
-xSemaphoreGive(sem);
-xSemaphoreTake(sem, portMAX_DELAY);
-```
-
-这里：
-
-```
-sem
-```
-
-不是“信号量值本身”。
-
-而是：
-
-> 找到这个 Semaphore 对象的句柄。
-
-Mutex 也常用同一个：
-
-```
-SemaphoreHandle_t mutex;
-```
-
----
-
-## 8. TimerHandle_t 也是一样
-
-```
-TimerHandle_t timer;
-```
-
-它也是：
-
-> 软件定时器对象的引用。
-
-后面：
-
-```
-xTimerStart(timer, 0);
-xTimerStop(timer, 0);
-```
-
-都靠 Handle 找到具体 Timer。
-
----
 
 ## 9. 为什么 FreeRTOS 喜欢 Handle
 
@@ -406,13 +257,11 @@ flash.c
 
 ---
 
-## 10. Handle 和普通指针是不是一回事
+## 10. Handle 和普通指针的关系
 
-很多 FreeRTOS Handle 底层确实就是指针类型。
+很多 FreeRTOS Handle 底层确实就是指针类型。比如概念上可以类似：
 
-比如概念上可以类似：
-
-```
+```c
 typedef struct tskTaskControlBlock * TaskHandle_t;
 ```
 
@@ -504,66 +353,31 @@ vTaskSuspend(task_handle);
 
 ---
 
-## 12. Handle 和 ID 有什么区别
-
-可以类比，但不完全一样。
-
-ID 常常是：
-
-```
-1
-2
-3
-100
-```
-
-这种编号。
-
-Handle 更像：
-
-```
-“系统内部对象的引用”
-```
-
-它可能底层就是地址。
-
-所以：
-
-```
-Handle ≠ 简单整数编号
-```
-
-你可以暂时理解成：
-
-> ID 更像“编号”，Handle 更像“对象引用”。
-
----
-
-## 13. 为什么 Handle 常常初始化为 NULL
+### Handle 通常初始化为 NULL
 
 比如：
 
-```
+```c
 TaskHandle_t task_handle = NULL;
 ```
 
 创建前：
 
-```
+```text
 task_handle
 → 还没指向有效Task
 ```
 
 创建成功后：
 
-```
+```text
 task_handle
 → 有效Handle
 ```
 
 所以工程里经常：
 
-```
+```c
 if (task_handle != NULL)
 {
     vTaskSuspend(task_handle);
@@ -572,15 +386,13 @@ if (task_handle != NULL)
 
 这和 callback 的：
 
-```
+```c
 if (callback != NULL)
 ```
 
-很像。
+很像。区别只是：
 
-区别只是：
-
-```
+```text
 callback
 → 函数指针
 
@@ -588,11 +400,9 @@ task_handle
 → 对象句柄
 ```
 
----
+###  完整例子
 
-## 14. 一个完整例子
-
-```
+```c
 TaskHandle_t led_handle = NULL;
 
 void led_task(void *arg)
