@@ -1799,8 +1799,6 @@ Task2接收：
 
 FreeRTOS Queue 默认是 **FIFO**（First In First Out） 先进先出，所以先进去的先出来。
 
----
-
 Queue 最关键的三个 API ：
 
 ```c
@@ -2020,6 +2018,108 @@ Blocked → Ready
 ```
 
 Queue 会直接利用这个机制。
+
+## `xTicksToWait`
+
+这个参数决定**Queue 满/空的时候，要不要 Block**。
+
+### Send
+如果：
+
+```c
+xQueueSend(queue, &data, 0);
+```
+
+如果 Queue 满马上返回失败，不等。
+
+如果`xQueueSend(queue, &data, pdMS_TO_TICKS(100));`，Queue 满时：
+
+```text
+当前Task
+Running
+↓
+等待Queue有空间
+↓
+Blocked
+↓
+最多等100ms
+```
+
+如果 100ms 之内有别的 Task `Receive` 走一个数据：
+
+```
+Queue出现空位
+↓
+发送Task可能被唤醒
+↓
+重新尝试发送
+```
+
+---
+
+如果：
+
+```
+xQueueSend(queue, &data, portMAX_DELAY);
+```
+
+通常表示：
+
+> 一直等到能发送成功。
+
+当然具体是否真正无限等待还和 FreeRTOS 配置有关，但你现在先这样理解。
+
+### Receive
+
+```
+xQueueReceive(queue, &recv, 0);
+```
+
+如果 Queue 为空：
+
+```
+马上失败返回
+```
+
+---
+
+```
+xQueueReceive(
+    queue,
+    &recv,
+    pdMS_TO_TICKS(1000)
+);
+```
+
+Queue 为空：
+
+```
+当前Task
+↓
+Blocked
+↓
+等待数据
+↓
+最多1秒
+```
+
+如果期间有 Task Send：
+
+```
+Queue有数据
+↓
+Receive Task被唤醒
+↓
+Blocked → Ready
+```
+
+这个就是你之前学的：
+
+```
+Blocked = 等事件
+```
+
+Queue 就是一种事件等待来源。
 
 ## 7.5 ISR
 
