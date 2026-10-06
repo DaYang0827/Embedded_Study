@@ -1999,8 +1999,7 @@ xQueueSend(queue, &data, 0);
 如果`xQueueSend(queue, &data, pdMS_TO_TICKS(100));`，Queue 满时：
 
 ```text
-当前Task
-Running
+当前Task Running
 ↓
 等待Queue有空间
 ↓
@@ -2011,7 +2010,7 @@ Blocked
 
 如果 100ms 之内有别的 Task `Receive` 走一个数据：
 
-```
+```text
 Queue出现空位
 ↓
 发送Task可能被唤醒
@@ -2023,15 +2022,11 @@ Queue出现空位
 
 如果：
 
-```
+```c
 xQueueSend(queue, &data, portMAX_DELAY);
 ```
 
-通常表示：
-
-> 一直等到能发送成功。
-
-当然具体是否真正无限等待还和 FreeRTOS 配置有关，但你现在先这样理解。
+通常表示**一直等到能发送成功**。具体是否真正无限等待还和 FreeRTOS 配置有关。
 
 ### 7.5.2 Receive
 
