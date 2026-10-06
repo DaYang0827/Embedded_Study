@@ -1974,56 +1974,20 @@ xQueueReceive(queue, &recv_data, 0);
 
 所以 Queue **通常是FIFO，先进先出**。
 
----
-
-注意第三个参数：
-
-`portMAX_DELAY` 这是 Queue 和 `Blocked` 联系起来的关键。例如：
+## 7.5 `xTicksToWait`
 
 ```c
-xQueueReceive(
-    queue,
-    &received,
-    portMAX_DELAY
+BaseType_t xQueueSend(
+    QueueHandle_t xQueue,
+    const void *pvItemToQueue,
+    TickType_t xTicksToWait
 );
 ```
 
-如果 Queue 是空的：
+`xTicksToWait` 这个参数决定**Queue 满/空的时候，要不要 Block**。
 
-```text
-Task Running
-↓
-xQueueReceive()
-↓
-没数据
-↓
-Task → Blocked
-```
+### 7.5.1 Send
 
-它不会一直占 CPU 检查：
-
-```text
-有数据吗？
-有数据吗？
-有数据吗？
-```
-
-而是直接退出 CPU 竞争。等另一个 Task `xQueueSend(...)` 发送数据：
-
-```text
-Queue里有数据
-↓
-等待Queue的Task
-Blocked → Ready
-```
-
-Queue 会直接利用这个机制。
-
-## `xTicksToWait`
-
-这个参数决定**Queue 满/空的时候，要不要 Block**。
-
-### Send
 如果：
 
 ```c
@@ -2069,7 +2033,7 @@ xQueueSend(queue, &data, portMAX_DELAY);
 
 当然具体是否真正无限等待还和 FreeRTOS 配置有关，但你现在先这样理解。
 
-### Receive
+### 7.5.2 Receive
 
 ```
 xQueueReceive(queue, &recv, 0);
@@ -2121,7 +2085,7 @@ Blocked = 等事件
 
 Queue 就是一种事件等待来源。
 
-## 7.5 ISR
+## 7.6 ISR
 
 ```c
 BaseType_t xQueueSendFromISR (QueueHandle_t xQueue,
