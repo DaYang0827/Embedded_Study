@@ -2030,7 +2030,7 @@ xQueueSend(queue, &data, portMAX_DELAY);
 
 ### 7.5.2 Receive
 
-```
+```c
 xQueueReceive(queue, &recv, 0);
 ```
 
