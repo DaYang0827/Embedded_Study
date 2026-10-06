@@ -71,15 +71,13 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 
 ### TaskHandle_t 
 
-你已经见过：
-
-```
+```c
 TaskHandle_t task1_handle;
 ```
 
 然后：
 
-```
+```c
 xTaskCreate(
     send_task1,
     "TASK1",
@@ -90,16 +88,9 @@ xTaskCreate(
 );
 ```
 
-这里最容易混的是：
+这里最容易混的是`send_task1`,`task1_handle` 这两个完全不是一回事。
 
-```
-send_task1
-task1_handle
-```
-
-这两个完全不是一回事。
-
-```
+```text
 send_task1
 → 任务函数
 → Flash里的代码入口
@@ -108,8 +99,6 @@ task1_handle
 → 句柄变量
 → 用来找到“这个具体任务实例”
 ```
-
----
 
 ## 2. 为什么不能直接拿函数名控制 Task
 
