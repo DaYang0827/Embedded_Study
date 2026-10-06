@@ -1810,9 +1810,11 @@ xQueueReceive()
 ## 7.2 QueueCreate
 
 ```c
-QueueHandle_t queue;
+QueueHandle_t xQueueCreate( 
+    UBaseType_t uxQueueLength,   /* 队列深度：最多能存放多少个数据项 */
+    UBaseType_t uxItemSize       /* 每个数据项的大小（单位：字节） */
+);
 
-queue = xQueueCreate(5, sizeof(uint32_t));
 ```
 
 - `xQueueCreat` 函数有两个参数`uxQueueLength`和 `uxItemSize`
@@ -1828,6 +1830,12 @@ queue = xQueueCreate(5, sizeof(uint32_t));
 | 作用          | 执行功能             | 传递数据          |
 | 例子          | 读取传感器、BLE发送、控制电机 | 传颜色、传传感器值、传命令 |
 | 由谁使用        | 调度器调度任务运行        | 任务之间读写队列      |
+
+```c
+QueueHandle_t queue;
+
+queue = xQueueCreate(5, sizeof(uint32_t));
+```
 
 相当于创建了一个大数组。意思是：
 
@@ -1935,52 +1943,24 @@ struct
 const void *pvItemToQueue
 ```
 
-也就是$\boxed{\text{通用指针}}$，这个 `void *` 的意思就是：
+也就是$\boxed{\text{通用指针}}$，这个 `void *` 的意思就是“不管这个数据到底是什么类型，把地址给我就行。”然后 FreeRTOS 再根据创建 Queue 时给的`xQueueCreate(length, item_size);` 里的`item_size` 决定复制多少字节。
 
-> “我不管你这个数据到底是什么类型，你把地址给我就行。”
+比如创建：
 
-然后 FreeRTOS 再根据你创建 Queue 时给的：
-
-```
-xQueueCreate(length, item_size);
-```
-
-里的：
-
-```
-item_size
-```
-
-决定复制多少字节。
-
----
-
-比如你创建：
-
-```
+```c
 QueueHandle_t q = xQueueCreate(5, sizeof(int));
 ```
 
-FreeRTOS 已经知道：
+FreeRTOS 已经知道每个元素 = 4 Byte，之后：
 
-```
-每个元素 = 4 Byte
-```
-
-之后：
-
-```
+```c
 int data = 100;
 xQueueSend(q, &data, 0);
 ```
 
-它根本不需要知道：
+它根本不需要知道这是 int。它只需要知道：
 
-> 这是 int。
-
-它只需要知道：
-
-```
+```text
 地址 = &data
 长度 = 4 Byte
 ```
@@ -1995,9 +1975,9 @@ memcpy(queue_buffer, &data, 4);
 
 ---
 
-如果你换成结构体：
+如果换成结构体：
 
-```
+```c
 typedef struct
 {
     int temperature;
@@ -2005,25 +1985,17 @@ typedef struct
 } Sensor_t;
 ```
 
-创建：
+创建`QueueHandle_t q = xQueueCreate(5, sizeof(Sensor_t));`，然后：
 
-```
-QueueHandle_t q = xQueueCreate(5, sizeof(Sensor_t));
-```
-
-然后：
-
-```
+```c
 Sensor_t data;
 
 xQueueSend(q, &data, 0);
 ```
 
-FreeRTOS 还是同一个 `xQueueSend()`。
+FreeRTOS 还是同一个 `xQueueSend()`。它只会：
 
-它只会：
-
-```
+```text
 从 &data 开始
 ↓
 复制 sizeof(Sensor_t) Byte
@@ -2031,7 +2003,7 @@ FreeRTOS 还是同一个 `xQueueSend()`。
 
 它甚至不需要知道：
 
-```
+```text
 temperature 是什么
 humidity 是什么
 ```
@@ -2040,11 +2012,9 @@ humidity 是什么
 
 ---
 
-你可以反过来想。
+可以反过来想。如果 FreeRTOS 把函数写成：
 
-如果 FreeRTOS 把函数写成：
-
-```
+```c
 BaseType_t xQueueSend(
     QueueHandle_t queue,
     int data,
@@ -2052,36 +2022,7 @@ BaseType_t xQueueSend(
 );
 ```
 
-那这个函数只能发：
-
-```
-int
-```
-
-那如果你要发：
-
-```
-float
-```
-
-怎么办？
-
-可能还得再写：
-
-```
-xQueueSendFloat();
-```
-
-要发：
-
-```
-struct
-```
-
-又得写：
-
-```
-xQueueSendStruct();
+那这个函数只能发`int`，那如果要发`float`，可能还得再写`xQueueSendFloat();`，要发`struct`又得写`xQueueSendStruct();
 ```
 
 那 API 就会变成：
