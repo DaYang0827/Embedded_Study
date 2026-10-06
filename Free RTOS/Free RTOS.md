@@ -1868,7 +1868,7 @@ uint32_t data = 100;
 xQueueSend(queue, &data, 0);
 ```
 
-注意传的是`&data`，不是`data`。因为 Queue 需要知道“去哪个内存地址，把这 4 Byte 数据复制进 Queue。”内部概念上类似：
+注意传的是 `&data`，不是 `data`。因为 Queue 需要知道“去哪个内存地址，把这 4 Byte 数据复制进 Queue。”内部概念上类似：
 
 ```text
 data
@@ -2034,15 +2034,11 @@ xQueueSend(queue, &data, portMAX_DELAY);
 xQueueReceive(queue, &recv, 0);
 ```
 
-如果 Queue 为空：
-
-```
-马上失败返回
-```
+如果 Queue 为空马上失败返回
 
 ---
 
-```
+```c
 xQueueReceive(
     queue,
     &recv,
@@ -2052,7 +2048,7 @@ xQueueReceive(
 
 Queue 为空：
 
-```
+```text
 当前Task
 ↓
 Blocked
@@ -2064,7 +2060,7 @@ Blocked
 
 如果期间有 Task Send：
 
-```
+```text
 Queue有数据
 ↓
 Receive Task被唤醒
@@ -2072,13 +2068,90 @@ Receive Task被唤醒
 Blocked → Ready
 ```
 
-这个就是你之前学的：
+Blocked = 等事件，Queue 就是一种事件等待来源。
 
-```
-Blocked = 等事件
+## Task-to-Task 例子
+
+发送 Task：
+
+```c
+void sender_task(void *arg)
+{
+    uint32_t count = 0;
+
+    while (1)
+    {
+        count++;
+
+        xQueueSend(
+            queue,
+            &count,
+            portMAX_DELAY
+        );
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
 ```
 
-Queue 就是一种事件等待来源。
+接收 Task：
+
+```c
+void receiver_task(void *arg)
+{
+    uint32_t value;
+
+    while (1)
+    {
+        if (xQueueReceive(
+                queue,
+                &value,
+                portMAX_DELAY
+            ) == pdPASS)
+        {
+            printf("%u\n", value);
+        }
+    }
+}
+```
+
+逻辑：
+
+```text
+Sender Task
+每1秒产生一个数字
+↓
+Send进Queue
+↓
+Receiver Task 原本 Blocked
+↓
+Queue有数据
+↓
+Receiver醒来
+↓
+Receive
+↓
+打印
+↓
+Queue为空
+↓
+Receiver再次Blocked
+```
+
+这就是 RTOS 的典型写法。
+
+不是：
+
+```c
+while (1)
+{
+    if (queue_has_data())
+    {
+    }
+}
+```
+
+疯狂轮询。而是没数据就睡、有数据再醒
 
 ## 7.6 ISR
 
