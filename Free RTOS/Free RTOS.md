@@ -1844,12 +1844,10 @@ queue = xQueueCreate(5, sizeof(uint32_t));
 ## 7.3 QueueSend
 
 ```c
-uint32_t value = 10;
-
-xQueueSend(
-    queue,
-    &value,
-    portMAX_DELAY
+BaseType_t xQueueSend(
+    QueueHandle_t xQueue,
+    const void *pvItemToQueue,
+    TickType_t xTicksToWait
 );
 ```
 
@@ -1862,7 +1860,7 @@ xQueueSend(
 - `pdTRUE`：写入成功
 - `errQUEUE_FULL`：队列满，写入失败
 
-这里非常重要 `xQueueSend()` **传的是数据地址**，但 Queue 会把数据内容复制进去。也就是说不是把`&value` 这个地址存进去，而是把`value的4个字节` 复制到 Queue 里。所以即使后面`value = 100;` Queue 里面之前存的 `10` 不会变。
+ `xQueueSend()` 的第三个数据 **传的是数据地址**，但 Queue 会把数据内容复制进去。也就是说不是把`&value` 这个地址存进去，而是把`value的4个字节` 复制到 Queue 里。所以即使后面`value = 100;` Queue 里面之前存的 `10` 不会变。
 
 ## 7.4 QueueReceive
 
