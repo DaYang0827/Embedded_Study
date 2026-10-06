@@ -1916,6 +1916,319 @@ Queue
 
 然后再`data = 200;` Queue 里面原来的 100 不会跟着变。因为Queue 已经把数据复制了一份。这是非常重要的。
 
+#### 使用通用指针
+
+`xQueueSend()` 的设计目标是**它要能发送任意类型的数据，而不是只能发送某一种固定类型。** 所以它不能把第二个参数写成`int data` ，因为这样就只能发送 `int`。也不能写成`SensorData_t data`，因为这样就只能发送这个结构体。FreeRTOS 要做到：
+
+```text
+int
+float
+char
+struct
+指针
+自定义类型
+```
+
+全都能发。所以它用了：
+
+```c
+const void *pvItemToQueue
+```
+
+也就是$\boxed{\text{通用指针}}$，这个 `void *` 的意思就是：
+
+> “我不管你这个数据到底是什么类型，你把地址给我就行。”
+
+然后 FreeRTOS 再根据你创建 Queue 时给的：
+
+```
+xQueueCreate(length, item_size);
+```
+
+里的：
+
+```
+item_size
+```
+
+决定复制多少字节。
+
+---
+
+比如你创建：
+
+```
+QueueHandle_t q = xQueueCreate(5, sizeof(int));
+```
+
+FreeRTOS 已经知道：
+
+```
+每个元素 = 4 Byte
+```
+
+之后：
+
+```
+int data = 100;
+xQueueSend(q, &data, 0);
+```
+
+它根本不需要知道：
+
+> 这是 int。
+
+它只需要知道：
+
+```
+地址 = &data
+长度 = 4 Byte
+```
+
+然后：
+
+```
+memcpy(queue_buffer, &data, 4);
+```
+
+就行了。
+
+---
+
+如果你换成结构体：
+
+```
+typedef struct
+{
+    int temperature;
+    int humidity;
+} Sensor_t;
+```
+
+创建：
+
+```
+QueueHandle_t q = xQueueCreate(5, sizeof(Sensor_t));
+```
+
+然后：
+
+```
+Sensor_t data;
+
+xQueueSend(q, &data, 0);
+```
+
+FreeRTOS 还是同一个 `xQueueSend()`。
+
+它只会：
+
+```
+从 &data 开始
+↓
+复制 sizeof(Sensor_t) Byte
+```
+
+它甚至不需要知道：
+
+```
+temperature 是什么
+humidity 是什么
+```
+
+这就是 `void *` 非常强大的地方。
+
+---
+
+你可以反过来想。
+
+如果 FreeRTOS 把函数写成：
+
+```
+BaseType_t xQueueSend(
+    QueueHandle_t queue,
+    int data,
+    TickType_t wait
+);
+```
+
+那这个函数只能发：
+
+```
+int
+```
+
+那如果你要发：
+
+```
+float
+```
+
+怎么办？
+
+可能还得再写：
+
+```
+xQueueSendFloat();
+```
+
+要发：
+
+```
+struct
+```
+
+又得写：
+
+```
+xQueueSendStruct();
+```
+
+那 API 就会变成：
+
+```
+xQueueSendInt()
+xQueueSendChar()
+xQueueSendFloat()
+xQueueSendStruct()
+xQueueSendPointer()
+...
+```
+
+非常丑，而且用户自定义结构体根本列不完。
+
+所以 C 里面非常常见一种设计：
+
+\[ \boxed{\text{void * + 数据长度}} \]
+
+来实现“通用数据处理”。
+
+还有一个更深的原因：
+
+**如果参数是普通变量，C 函数必须提前知道这个变量有多大。**
+
+比如：
+
+```
+void func(int data);
+```
+
+编译器知道：
+
+```
+data = 4 Byte
+```
+
+但如果是：
+
+```
+void func(??? data);
+```
+
+你想让 `???` 同时支持：
+
+```
+int        4 Byte
+double     8 Byte
+struct     12 Byte
+其他struct 100 Byte
+```
+
+C 语言没有“万能值类型”。
+
+但是地址的大小基本固定。
+
+在 STM32F4 这种 32 位 MCU：
+
+```
+指针 = 4 Byte
+```
+
+无论它指向：
+
+```
+int
+char
+float
+100 Byte struct
+```
+
+地址本身都还是：
+
+```
+4 Byte
+```
+
+所以传地址非常方便：
+
+```
+调用者
+↓
+给我一个地址
+↓
+Queue 根据 item_size
+↓
+从那个地址复制对应字节
+```
+
+这也是为什么函数原型里：
+
+```
+const void *pvItemToQueue
+```
+
+会这么设计。
+
+---
+
+你可以把这个思想和你前面刚学的函数指针、callback 联系起来。
+
+C 语言里很多“通用接口”都靠：
+
+```
+指针
+```
+
+来实现。
+
+例如：
+
+```
+void *buffer
+void *context
+void (*callback)(void)
+```
+
+因为：
+
+\[ \boxed{\text{地址是一种非常通用的“接口”}} \]
+
+---
+
+所以最终你可以这样记：
+
+```
+xQueueSend(queue, &data, 0);
+```
+
+不是因为 FreeRTOS “非要你加 `&`”。
+
+而是因为它的设计是：
+
+```
+Queue 不关心 data 是什么类型
+↓
+只需要 data 的地址
+↓
+再根据 item_size
+↓
+复制对应数量的字节
+```
+
+核心就是：
+
+\[ \boxed{ \texttt{void *} + \texttt{item\_size} = \text{支持任意数据类型} } \]
+
 ## 7.4 QueueReceive
 
 ```c
@@ -1996,7 +2309,7 @@ BaseType_t xQueueSend(
 
 ### 7.5.1 Send
 
-1. 为0
+1. 0
 
 ```c
 xQueueSend(queue, &data, 0);
@@ -2004,7 +2317,7 @@ xQueueSend(queue, &data, 0);
 
    如果 **Queue 满马上返回失败，不等**。
 
-2. 为固定值
+2. 固定值
 
 ```c
 xQueueSend(queue, &data, pdMS_TO_TICKS(100));，
@@ -2045,7 +2358,7 @@ Queue出现空位
     - 时间到了，任务“闹钟”响了。
     - 任务会被迫唤醒，但因为没拿到数据，函数会返回 `pdFALSE`。任务接着往下执行（通常需要您写代码判断返回值，做超时处理）。
 
-3. 为portMAX_DELAY
+3. portMAX_DELAY
 
 ```c
 xQueueSend(queue, &data, portMAX_DELAY);
@@ -2055,13 +2368,15 @@ xQueueSend(queue, &data, portMAX_DELAY);
 
 ### 7.5.2 Receive
 
+1. 0
+
 ```c
 xQueueReceive(queue, &recv, 0);
 ```
 
 如果 Queue 为空马上失败返回
 
----
+2. 固定值
 
 ```c
 xQueueReceive(
@@ -2095,7 +2410,7 @@ Blocked → Ready
 
 Blocked = 等事件，Queue 就是一种事件等待来源。
 
-## Task-to-Task 例子
+## 7.6 Task-to-Task 例子
 
 发送 Task：
 
@@ -2178,7 +2493,7 @@ while (1)
 
 疯狂轮询。而是没数据就睡、有数据再醒
 
-## 7.6 ISR
+## 7.7 ISR
 
 ```c
 BaseType_t xQueueSendFromISR (QueueHandle_t xQueue,
