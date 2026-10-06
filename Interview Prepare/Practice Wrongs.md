@@ -1,7 +1,7 @@
 
-# 指针与数组
+# 1 指针与数组
 
-## 1 `(*p)++`（❌）
+## 1.1 `(*p)++`（❌）
 
 ```
 int a[] = {5, 10, 15};
@@ -38,7 +38,7 @@ printf("%d\n", a[0]);   6
 ```
 
 
-## 2 数组下标本质（❌）
+## 1.2 数组下标本质（❌）
 
 ```
 int a[] = {11, 22, 33, 44};
@@ -80,7 +80,7 @@ printf("%d\n", *(p + 2));    33
 printf("%d\n", a[2]);    33
 ```
 
-## 3 函数里修改指针本身（❗）
+## 1.3 函数里修改指针本身（❗）
 
 ```
 void change(int *p)
@@ -122,7 +122,7 @@ p = &b;
 
 ```
 
-## 22 指针没有初始化（❗）
+## 1.4 指针没有初始化（❗）
 
 下面代码有什么问题？
 
@@ -155,7 +155,7 @@ RAM数据被破坏
 > `p` 是一个未初始化指针，保存的是不确定地址。直接解引用 `*p` 属于未定义行为，可能访问非法内存并导致 HardFault。
 
 
-## 10 数组名与取地址（❌）
+## 1.5 数组名与取地址（❌）
 
 ```
 int arr[5] = {1, 2, 3, 4, 5};
@@ -188,9 +188,9 @@ arr + 1    对应的是2    即数组第二个元素
  `&arr` 这个非常重要。类型不是 `int *`，而是：`int (*)[5]`读作： 指向“5 个 int 数组”的指针。
  
 
-# 链表与二级指针
+# 2 链表与二级指针
 
-## 8 写头插（❌）
+## 2.1 写头插（❌）
 
 补全：
 
@@ -265,7 +265,7 @@ Node *insert_head(Node *head, int data)
 }
 ```
 
-## 9 二级指针头插（❌）
+## 2.2 二级指针头插（❌）
 
 ```
 void insert_head(Node **head, int data)
@@ -349,93 +349,86 @@ void insert_head(Node **head, int data)
 }
 ```
 
-# 函数指针与 Callback
-# C语言内存与工程组织
-# STM32底层与通信
-# Bootloader 与 Debug
+# 3 函数指针与 Callback
 
-## 4 带数据的 UART callback（❌）
 
-现在改成：
+## 3.1 函数指针（❗）
 
-```c
-void (*uart_callback)(uint8_t data) = NULL;
-```
-
-要求：
-
-UART 每收到一个字节：
-
-```c
-UART_IRQHandler()
-```
-
-就调用 callback，并把收到的数据传出去。
-
-请补全：
-
-```c
-uint8_t UART_DR;
-
-void UART_RegisterCallback(____________________)
-{
-    uart_callback = cb;
-}
-
-void UART_IRQHandler(void)
-{
-    uint8_t data = UART_DR;
-
-    if (uart_callback != NULL)
-    {
-        ____________________;
-    }
-}
-
-void app_uart_receive(uint8_t data)
-{
-    printf("%c\n", data);
-}
-```
-
-然后在 `main()` 中注册：
+这次把 Bootloader 函数指针彻底讲清楚
 
 ```
-_____________________________;
+typedef void (*AppEntry_t)(void);
+
+uint32_t app_reset_handler =
+    *(uint32_t *)(0x08010000 + 4);
+
+AppEntry_t app_entry =
+    (AppEntry_t)app_reset_handler;
+
+app_entry();
 ```
 
-```c
-uint8_t UART_DR;
+逐行解释：
 
-void (*uart_callback)(uint8_t data) = NULL;
-
-void UART_RegisterCallback(void (*cb)(uint8_t)) //注意这里的问题
-{
-    uart_callback = cb;
-}
-
-void UART_IRQHandler(void)
-{
-    uint8_t data = UART_DR;
-
-    if (uart_callback != NULL)
-    {
-        uart_callback(data);
-    }
-}
-
-void app_uart_receive(uint8_t data)
-{
-    printf("%c\n", data);
-}
-
-int main(void)
-{
-    UART_RegisterCallback(app_uart_receive);
-}
+```
+AppEntry_t
+app_reset_handler
+(AppEntry_t)app_reset_handler
+app_entry
+app_entry()
 ```
 
-## 5 typedef callback（❗）
+特别回答：
+
+> `app_entry` 是函数吗？
+
+> `app_reset_handler` 是函数吗？
+
+回答：
+
+```
+AppEntry_t
+→ 函数指针类型
+
+app_reset_handler
+→ uint32_t变量
+→ 保存Reset_Handler地址值
+
+app_entry
+→ 函数指针变量
+→ 保存一个函数地址
+
+app_entry()
+→ 通过函数指针调用目标地址上的函数
+```
+
+还有`(AppEntry_t)app_reset_handler`，不是把变量转化成函数，而是**把这个整数地址值解释成一个 `AppEntry_t` 类型的函数指针**。这个区别非常重要。
+
+例如：
+
+```
+app_reset_handler = 0x08010229
+```
+
+它只是一个：
+
+```
+uint32_t整数
+```
+
+强转后：
+
+```
+(AppEntry_t)0x08010229
+```
+
+变成：
+
+> “把 0x08010229 当成一个函数入口地址”。
+
+函数本身没有被“创造出来”。
+
+## 3.2 typedef callback（❗）
 
 解释下面代码：
 
@@ -510,94 +503,7 @@ void RegisterC(UART_Callback_t cb);
 ```
 
 
-## 6 手写一个 callback 系统(❌)
-
-不看前面的代码，自己写一个程序，实现：
-
-有一个函数：
-
-```c
-button_register_callback(...)
-```
-
-用于注册按键 callback。
-
-然后有：
-
-```c
-button_irq_handler()
-```
-
-模拟按键中断。
-
-应用层有：
-
-```c
-void button_pressed(void)
-{
-    printf("Button Pressed!\n");
-}
-```
-
-最终：
-
-```c
-int main(void)
-{
-    button_register_callback(button_pressed);
-
-    button_irq_handler();
-
-    return 0;
-}
-```
-
-要求你自己定义：
-
-- callback 类型
-- callback 变量
-- register 函数
-- IRQ handler
-- NULL 判断
-
-这题能独立写出来，说明 callback 基本入门了。
-
-```c
-##include <stdio.h>
-
-typedef void (*Callback_t)(void);
-
-Callback_t button_callback = NULL;
-
-void button_register_callback(Callback_t cb)
-{
-    button_callback = cb;
-}
-
-void button_irq_handler(void)
-{
-    if (button_callback != NULL)   //这里需要进行NULL判断
-    {
-        button_callback();    //需要注意，在调用函数的时候后面需要加()
-    }
-}
-
-void button_pressed(void)
-{
-    printf("Button Pressed!\n");
-}
-
-int main(void)
-{
-    button_register_callback(button_pressed);
-
-    button_irq_handler();
-
-    return 0;
-}
-```
-
-## 7 区分Callback_t的相关命名（❗）
+## 3.3 区分Callback_t的相关命名（❗）
 
 ```c
 typedef void (*Callback_t)(int);
@@ -711,7 +617,209 @@ callback  → 函数指针变量
 Callback_t → 函数指针类型
 ```
 
-## 11 函数内 static（❌）
+## 3.4 带数据的 UART callback（❌）
+
+现在改成：
+
+```c
+void (*uart_callback)(uint8_t data) = NULL;
+```
+
+要求：
+
+UART 每收到一个字节：
+
+```c
+UART_IRQHandler()
+```
+
+就调用 callback，并把收到的数据传出去。
+
+请补全：
+
+```c
+uint8_t UART_DR;
+
+void UART_RegisterCallback(____________________)
+{
+    uart_callback = cb;
+}
+
+void UART_IRQHandler(void)
+{
+    uint8_t data = UART_DR;
+
+    if (uart_callback != NULL)
+    {
+        ____________________;
+    }
+}
+
+void app_uart_receive(uint8_t data)
+{
+    printf("%c\n", data);
+}
+```
+
+然后在 `main()` 中注册：
+
+```
+_____________________________;
+```
+
+```c
+uint8_t UART_DR;
+
+void (*uart_callback)(uint8_t data) = NULL;
+
+void UART_RegisterCallback(void (*cb)(uint8_t)) //注意这里的问题
+{
+    uart_callback = cb;
+}
+
+void UART_IRQHandler(void)
+{
+    uint8_t data = UART_DR;
+
+    if (uart_callback != NULL)
+    {
+        uart_callback(data);
+    }
+}
+
+void app_uart_receive(uint8_t data)
+{
+    printf("%c\n", data);
+}
+
+int main(void)
+{
+    UART_RegisterCallback(app_uart_receive);
+}
+```
+
+## 3.5 手写一个 callback 系统(❌)
+
+不看前面的代码，自己写一个程序，实现：
+
+有一个函数：
+
+```c
+button_register_callback(...)
+```
+
+用于注册按键 callback。
+
+然后有：
+
+```c
+button_irq_handler()
+```
+
+模拟按键中断。
+
+应用层有：
+
+```c
+void button_pressed(void)
+{
+    printf("Button Pressed!\n");
+}
+```
+
+最终：
+
+```c
+int main(void)
+{
+    button_register_callback(button_pressed);
+
+    button_irq_handler();
+
+    return 0;
+}
+```
+
+要求你自己定义：
+
+- callback 类型
+- callback 变量
+- register 函数
+- IRQ handler
+- NULL 判断
+
+这题能独立写出来，说明 callback 基本入门了。
+
+```c
+##include <stdio.h>
+
+typedef void (*Callback_t)(void);
+
+Callback_t button_callback = NULL;
+
+void button_register_callback(Callback_t cb)
+{
+    button_callback = cb;
+}
+
+void button_irq_handler(void)
+{
+    if (button_callback != NULL)   //这里需要进行NULL判断
+    {
+        button_callback();    //需要注意，在调用函数的时候后面需要加()
+    }
+}
+
+void button_pressed(void)
+{
+    printf("Button Pressed!\n");
+}
+
+int main(void)
+{
+    button_register_callback(button_pressed);
+
+    button_irq_handler();
+
+    return 0;
+}
+```
+
+# 4 C语言内存与工程组织
+
+## 4.1 `.data` 和 `.bss` 有什么区别？（❌）
+
+请按嵌入式角度回答，不只说“一个初始化，一个没初始化”。
+```text
+.data：
+运行地址在 RAM
+初始值存储在 Flash
+启动时 C runtime 从 Flash copy 到 RAM
+
+.bss：
+运行地址在 RAM
+Flash 不需要保存一堆 0
+启动时 C runtime 清零
+```
+
+## 4.2 Heap和 Stack 最大区别是什么？（❗）
+
+```text
+Stack：
+自动管理
+函数调用自动分配/释放
+速度快
+生命周期跟调用关系密切
+
+Heap：
+动态分配
+malloc/free
+程序员负责管理
+生命周期可以跨函数
+可能碎片化
+```
+
+## 4.3 函数内 static（❌）
 
 ```
 void parser(void)
@@ -735,320 +843,7 @@ void parser(void)
 因为初始值为0   所以放在.bss里面
 ```
 
-## 12 MAP 文件
-
-MAP 文件是在
-
-```
-编译阶段
-链接阶段
-烧录阶段
-```
-
-中的哪个阶段产生？
-
-为什么它能告诉你：
-
-```
-Reset_Handler 在哪里
-main 在哪里
-.data/.bss 在哪里
-Stack 在哪里
-```
-
-**MAP 是链接阶段的产物**。
-
-```
-把整个流程记成：
-
-.c
-↓ 编译
-.o
-
-↓ 链接
-
-.axf / .elf
-.map
-.bin / .hex
-
-↓ 烧录
-
-MCU Flash
-```
-
-所以 MAP 能告诉你：
-
-```
-Reset_Handler → 最终被链接到哪里
-main → 最终被链接到哪里
-.data → RAM什么地方
-.bss → RAM什么地方
-```
-
-因为这些地址正是**链接器决定的**。
-
-
-## 13 Bootloader流程排列（❌）
-
-```
-A. 设置 APP MSP
-B. 检查 Reset_Handler
-C. 读取 APP Vector Table
-D. 设置 VTOR
-E. 跳转 Reset_Handler
-F. 检查 MSP
-```
-
-你认为正确顺序是什么？
-
-```text
-C. 读取 APP Vector Table
-↓
-F. 检查 MSP
-↓
-B. 检查 Reset_Handler
-↓
-D. 设置 VTOR
-↓
-A. 设置 APP MSP
-↓
-E. 跳转 Reset_Handler
-```
-
-## 14 `.data` 和 `.bss` 有什么区别？（❌）
-
-请按嵌入式角度回答，不只说“一个初始化，一个没初始化”。
-```text
-.data：
-运行地址在 RAM
-初始值存储在 Flash
-启动时 C runtime 从 Flash copy 到 RAM
-
-.bss：
-运行地址在 RAM
-Flash 不需要保存一堆 0
-启动时 C runtime 清零
-```
-
-## 15 Heap和 Stack 最大区别是什么？（❗）
-
-```text
-Stack：
-自动管理
-函数调用自动分配/释放
-速度快
-生命周期跟调用关系密切
-
-Heap：
-动态分配
-malloc/free
-程序员负责管理
-生命周期可以跨函数
-可能碎片化
-```
-
-## 16 MSP和PSP（❗）
-
-在 Cortex-M 里分别通常在什么情况下使用？
-
-```text
-MSP = Main Stack Pointer
-PSP = Process Stack Pointer
-
-MSP：
-复位后默认使用
-异常/中断 Handler mode 使用
-裸机程序通常主要使用 MSP
-
-PSP：
-通常用于 Thread mode
-RTOS 常给不同任务使用 PSP
-```
-
-## 17 为什么 DMA 不能完全代替 RingBuffer？（❌）
-
-```text
-真正区别是：
-
-DMA解决：
-谁负责把数据从 USART DR 搬到 RAM？
-
-RingBuffer解决：
-生产速度和消费速度不一致时，数据怎么缓存和管理？
-
-所以：
-
-USART
-↓
-DMA负责搬到 dma_buffer
-↓
-CPU把新增区域推进 RingBuffer
-↓
-Parser慢慢消费
-```
-
-DMA 是**传输机制**。
-
-RingBuffer 是**软件缓冲数据结构**。
-
-它们不在一个层次，所以不能互相替代。
-
-## 18 状态机和memcpy（❗）
-
-你当前 Parser 有：
-
-```
-WAIT_AA
-WAIT_55
-WAIT_LEN
-WAIT_CMD
-WAIT_DATA
-WAIT_SUM
-```
-
-为什么这种方式比“收到一包后直接 memcpy 然后解析”更适合串口流？
-
-```text
-“直接 memcpy”不是一定不能判断 LEN/SUM，而是它通常要求你：已经知道完整包在哪里、什么时候收完整。
-
-但 UART 是 stream：
-
-可能半包
-可能两包粘一起
-可能中间丢字节
-可能从包中间开始接收
-
-状态机的优势是：一个 byte 一个 byte 地重建帧边界，因此更适合流式串口。
-```
-
-## 19 Hardfault（❗）
-
-如果 APP 跳转后马上 HardFault，你会按什么顺序排查？
-
-这一题很重要，请你自己列调试流程。
-
-```text
-1. 检查APP镜像是否完整
-   CRC是否正确
-
-2. 检查Vector Table
-   [APP_START]     → MSP
-   [APP_START+4]   → Reset_Handler
-
-3. 检查MSP
-   是否在有效SRAM范围
-   是否满足对齐
-
-4. 检查Reset_Handler
-   是否在APP Flash
-   bit0是否为1
-
-5. 检查VTOR
-   是否已经切换到APP_START
-
-6. 检查Bootloader残留状态
-   SysTick
-   NVIC enable/pending
-   DMA
-   USART等
-
-7. 查看Fault寄存器
-   SCB->CFSR
-   SCB->HFSR
-   SCB->BFAR
-   SCB->MMFAR
-
-8. 看发生异常时的
-   PC
-   LR
-   MSP
-   Call Stack
-
-9. 用MAP/Disassembly
-   把PC对应到具体函数/指令
-```
-
-## 20 Keil Debug
-
-```
-Memory
-Watch
-Registers
-Call Stack
-Disassembly
-Peripherals
-```
-
-分别适合看什么？
-```text
-Memory
-→ 看某个地址里的实际数据
-→ Flash/RAM
-
-Watch
-→ 看C变量/表达式实时值
-
-Registers
-→ 看CPU寄存器
-→ PC LR MSP PSP xPSR
-
-Call Stack
-→ 看当前函数是谁
-→ 是谁调用来的
-
-Disassembly
-→ 看C代码对应机器指令
-→ 精确定位PC
-
-Peripherals
-→ 看USART/DMA/RCC/GPIO/FLASH等外设寄存器
-```
-
-## 21 寄存器没有变化原因判断
-
-如果某个寄存器一直没变化，你会怎么判断是：
-
-```
-代码没执行
-寄存器没写进去
-还是外设条件没满足
-```
-
-假设：
-
-```
-USART1->CR1 |= USART_CR1_RXNEIE;
-```
-
-排查：
-
-```
-① 代码有没有执行？
-→ 在这一行下 breakpoint
-
-② 写之前寄存器多少？
-→ Peripheral/Register窗口看
-
-③ 单步执行写操作
-
-④ 写之后有没有变化？
-→ 如果没有，看这个bit是否可写
-→ 是否需要先开外设时钟
-→ 是否被硬件自动清除
-
-⑤ 如果寄存器已经设置正确
-但功能还是没发生
-→ 检查外设前置条件
-   RCC clock
-   GPIO AF
-   NVIC
-   DMA
-   状态flag
-```
-
-所以调试应该是 **程序执行 → 寄存器配置 → 硬件条件** 一层一层排。
-
-## 23 结构体的大小 1（❗）
+## 4.4 结构体的大小 1（❗）
 
 下面结构体的大小你认为是多少？为什么？
 
@@ -1070,7 +865,7 @@ b 为什么要对齐
 
 因为为了让 `b` 放在满足 `uint32_t` 对齐要求的地址上。通常 `uint32_t` 希望从 4 字节对齐地址开始。
 
-## 24 结构体的大小 2（❗）
+## 4.5 结构体的大小 2（❗）
 
 下面两个结构体大小可能一样吗？
 
@@ -1122,7 +917,7 @@ padding 2
 所以**通常把“大对齐要求成员”放前面，可以减少 padding**。
 
 
-## 25 宏定义（❌）
+## 4.6 宏定义（❌）
 
 下面宏有什么问题：
 
@@ -1155,7 +950,7 @@ uint32_t a = SQUARE(1 + 2);
 
 而不是 9。
 
-## 26 宏参数有副作用（❌）
+## 4.7 宏参数有副作用（❌）
 
 下面代码有什么风险：
 
@@ -1225,7 +1020,7 @@ y还会再加一次
 
 这种副作用，就很危险。
 
-## 27 头文件（❌）
+## 4.8 头文件（❌）
 
 为什么头文件里通常要写：
 
@@ -1265,83 +1060,7 @@ enum
 
 就可能报`重复定义redefinition` 所以`##ifndef __CMD_H__` 意思**如果这个宏还没定义，就进入**。然后`##define __CMD_H__` 表示已经包含过了。以后第二次再包含`__CMD_H__已经存在` 于是直接跳过。
 
-## 28 函数指针（❗）
-
-这次把 Bootloader 函数指针彻底讲清楚
-
-```
-typedef void (*AppEntry_t)(void);
-
-uint32_t app_reset_handler =
-    *(uint32_t *)(0x08010000 + 4);
-
-AppEntry_t app_entry =
-    (AppEntry_t)app_reset_handler;
-
-app_entry();
-```
-
-逐行解释：
-
-```
-AppEntry_t
-app_reset_handler
-(AppEntry_t)app_reset_handler
-app_entry
-app_entry()
-```
-
-特别回答：
-
-> `app_entry` 是函数吗？
-
-> `app_reset_handler` 是函数吗？
-
-回答：
-
-```
-AppEntry_t
-→ 函数指针类型
-
-app_reset_handler
-→ uint32_t变量
-→ 保存Reset_Handler地址值
-
-app_entry
-→ 函数指针变量
-→ 保存一个函数地址
-
-app_entry()
-→ 通过函数指针调用目标地址上的函数
-```
-
-还有`(AppEntry_t)app_reset_handler`，不是把变量转化成函数，而是**把这个整数地址值解释成一个 `AppEntry_t` 类型的函数指针**。这个区别非常重要。
-
-例如：
-
-```
-app_reset_handler = 0x08010229
-```
-
-它只是一个：
-
-```
-uint32_t整数
-```
-
-强转后：
-
-```
-(AppEntry_t)0x08010229
-```
-
-变成：
-
-> “把 0x08010229 当成一个函数入口地址”。
-
-函数本身没有被“创造出来”。
-
-## 29 Static组合题（❗）
+## 4.9 Static组合题（❗）
  
  `static` 函数 + Header 的组合题
 
@@ -1425,4 +1144,289 @@ flash.c
 这对你以后 Linux driver、模块化都会非常重要。
 
 
+
+# 5 STM32底层与通信
+
+## 5.1 MSP和PSP（❗）
+
+在 Cortex-M 里分别通常在什么情况下使用？
+
+```text
+MSP = Main Stack Pointer
+PSP = Process Stack Pointer
+
+MSP：
+复位后默认使用
+异常/中断 Handler mode 使用
+裸机程序通常主要使用 MSP
+
+PSP：
+通常用于 Thread mode
+RTOS 常给不同任务使用 PSP
+```
+
+## 5.2 为什么 DMA 不能完全代替 RingBuffer？（❌）
+
+```text
+真正区别是：
+
+DMA解决：
+谁负责把数据从 USART DR 搬到 RAM？
+
+RingBuffer解决：
+生产速度和消费速度不一致时，数据怎么缓存和管理？
+
+所以：
+
+USART
+↓
+DMA负责搬到 dma_buffer
+↓
+CPU把新增区域推进 RingBuffer
+↓
+Parser慢慢消费
+```
+
+DMA 是**传输机制**。
+
+RingBuffer 是**软件缓冲数据结构**。
+
+它们不在一个层次，所以不能互相替代。
+
+## 5.3 状态机和memcpy（❗）
+
+你当前 Parser 有：
+
+```
+WAIT_AA
+WAIT_55
+WAIT_LEN
+WAIT_CMD
+WAIT_DATA
+WAIT_SUM
+```
+
+为什么这种方式比“收到一包后直接 memcpy 然后解析”更适合串口流？
+
+```text
+“直接 memcpy”不是一定不能判断 LEN/SUM，而是它通常要求你：已经知道完整包在哪里、什么时候收完整。
+
+但 UART 是 stream：
+
+可能半包
+可能两包粘一起
+可能中间丢字节
+可能从包中间开始接收
+
+状态机的优势是：一个 byte 一个 byte 地重建帧边界，因此更适合流式串口。
+```
+
+# 6 Bootloader 与 Debug
+
+## 6.1 MAP 文件
+
+MAP 文件是在
+
+```
+编译阶段
+链接阶段
+烧录阶段
+```
+
+中的哪个阶段产生？
+
+为什么它能告诉你：
+
+```
+Reset_Handler 在哪里
+main 在哪里
+.data/.bss 在哪里
+Stack 在哪里
+```
+
+**MAP 是链接阶段的产物**。
+
+```
+把整个流程记成：
+
+.c
+↓ 编译
+.o
+
+↓ 链接
+
+.axf / .elf
+.map
+.bin / .hex
+
+↓ 烧录
+
+MCU Flash
+```
+
+所以 MAP 能告诉你：
+
+```
+Reset_Handler → 最终被链接到哪里
+main → 最终被链接到哪里
+.data → RAM什么地方
+.bss → RAM什么地方
+```
+
+因为这些地址正是**链接器决定的**。
+
+
+## 6.2 Bootloader流程排列（❌）
+
+```
+A. 设置 APP MSP
+B. 检查 Reset_Handler
+C. 读取 APP Vector Table
+D. 设置 VTOR
+E. 跳转 Reset_Handler
+F. 检查 MSP
+```
+
+你认为正确顺序是什么？
+
+```text
+C. 读取 APP Vector Table
+↓
+F. 检查 MSP
+↓
+B. 检查 Reset_Handler
+↓
+D. 设置 VTOR
+↓
+A. 设置 APP MSP
+↓
+E. 跳转 Reset_Handler
+```
+
+## 6.3 Hardfault（❗）
+
+如果 APP 跳转后马上 HardFault，你会按什么顺序排查？
+
+这一题很重要，请你自己列调试流程。
+
+```text
+1. 检查APP镜像是否完整
+   CRC是否正确
+
+2. 检查Vector Table
+   [APP_START]     → MSP
+   [APP_START+4]   → Reset_Handler
+
+3. 检查MSP
+   是否在有效SRAM范围
+   是否满足对齐
+
+4. 检查Reset_Handler
+   是否在APP Flash
+   bit0是否为1
+
+5. 检查VTOR
+   是否已经切换到APP_START
+
+6. 检查Bootloader残留状态
+   SysTick
+   NVIC enable/pending
+   DMA
+   USART等
+
+7. 查看Fault寄存器
+   SCB->CFSR
+   SCB->HFSR
+   SCB->BFAR
+   SCB->MMFAR
+
+8. 看发生异常时的
+   PC
+   LR
+   MSP
+   Call Stack
+
+9. 用MAP/Disassembly
+   把PC对应到具体函数/指令
+```
+
+## 6.4 Keil Debug
+
+```
+Memory
+Watch
+Registers
+Call Stack
+Disassembly
+Peripherals
+```
+
+分别适合看什么？
+```text
+Memory
+→ 看某个地址里的实际数据
+→ Flash/RAM
+
+Watch
+→ 看C变量/表达式实时值
+
+Registers
+→ 看CPU寄存器
+→ PC LR MSP PSP xPSR
+
+Call Stack
+→ 看当前函数是谁
+→ 是谁调用来的
+
+Disassembly
+→ 看C代码对应机器指令
+→ 精确定位PC
+
+Peripherals
+→ 看USART/DMA/RCC/GPIO/FLASH等外设寄存器
+```
+
+## 6.5 寄存器没有变化原因判断
+
+如果某个寄存器一直没变化，你会怎么判断是：
+
+```
+代码没执行
+寄存器没写进去
+还是外设条件没满足
+```
+
+假设：
+
+```
+USART1->CR1 |= USART_CR1_RXNEIE;
+```
+
+排查：
+
+```
+① 代码有没有执行？
+→ 在这一行下 breakpoint
+
+② 写之前寄存器多少？
+→ Peripheral/Register窗口看
+
+③ 单步执行写操作
+
+④ 写之后有没有变化？
+→ 如果没有，看这个bit是否可写
+→ 是否需要先开外设时钟
+→ 是否被硬件自动清除
+
+⑤ 如果寄存器已经设置正确
+但功能还是没发生
+→ 检查外设前置条件
+   RCC clock
+   GPIO AF
+   NVIC
+   DMA
+   状态flag
+```
+
+所以调试应该是 **程序执行 → 寄存器配置 → 硬件条件** 一层一层排。
 
