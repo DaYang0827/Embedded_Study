@@ -162,52 +162,38 @@ task1_handle
 └──────────────────┘
 ```
 
-所以调：
+所以调`vTaskPrioritySet(task1_handle, 3);` FreeRTOS 就能顺着句柄找到这个 Task 的管理信息，然后修改优先级。
 
-```
-vTaskPrioritySet(task1_handle, 3);
-```
+**Handle 是供 API 使用的对象引用，不是对象本身。**
 
-FreeRTOS 就能顺着句柄找到这个 Task 的管理信息，然后修改优先级。
+### `TaskHandle_t *pxCreatedTask`
 
-你之前的笔记里把 Handle 理解成“身份证/引用”，这个方向是对的。更准确地说：
+`xTaskCreate()` 最后一个参数是`TaskHandle_t *pxCreatedTask` 注意这里：
 
-> **Handle 是供 API 使用的对象引用，不是对象本身。**
+```text
+TaskHandle_t
+→ Handle类型
 
----
-
-## 4. `&task1_handle` 为什么还要加 `&`
-
-这个也很关键。
-
-你定义：
-
-```
-TaskHandle_t task1_handle;
+TaskHandle_t *
+→ 指向Handle变量的指针
 ```
 
-这是一个变量。
+为什么需要“指向 Handle 的指针”？
 
-而：
-
-```
-xTaskCreate(..., &task1_handle);
-```
-
-为什么传：
+因为 FreeRTOS 想修改调用者的：
 
 ```
-&task1_handle
+task1_handle
 ```
 
-因为 `xTaskCreate()` 需要：
+所以要传它地址。
 
-> 把“新建出来的 Task Handle”写回你的变量。
+`&task1_handle` 要加 `&`
 
-也就是说：
+定义`TaskHandle_t task1_handle;`这是一个变量。而`xTaskCreate(..., &task1_handle);`，要传`&task1_handle`。因为 `xTaskCreate()` 需要**把“新建出来的 Task Handle”写回变量**。也就是说：
 
-```
-你提供：
+```text
+提供：
 task1_handle 这个变量的地址
 
 FreeRTOS：
@@ -220,7 +206,7 @@ FreeRTOS：
 
 类似：
 
-```
+```c
 void set_value(int *p)
 {
     *p = 100;
@@ -229,14 +215,12 @@ void set_value(int *p)
 
 调用：
 
-```
+```c
 int a;
 set_value(&a);
 ```
 
 是同一个思路。
-
----
 
 ## 5. 所以 `TaskHandle_t *pxCreatedTask` 是什么
 
@@ -266,27 +250,7 @@ task1_handle
 
 所以要传它地址。
 
-这和你最近学的二级指针思想其实是连起来的。
 
-如果：
-
-```
-TaskHandle_t
-```
-
-本身底层就是某种 TCB 指针，那么：
-
-```
-TaskHandle_t *
-```
-
-概念上就接近：
-
-```
-指向“TCB指针变量”的指针
-```
-
----
 
 ## 6. QueueHandle_t 也是同样道理
 
