@@ -1753,8 +1753,8 @@ PendSV执行上下文切换
 
 ## 7.1 概念
 
-`xQueueSend()` = 往队列里**复制一份数据**。  
-`xQueueReceive()` = 从队列里**取出一份数据，并复制到你的变量里**。
+- `xQueueSend()` = 往队列里**复制一份数据**。  
+- `xQueueReceive()` = 从队列里**取出一份数据，并复制到你的变量里**。
 
 它们传递的是**数据副本**，不是“把原变量整个搬走”。Queue 是**任务之间传递数据的缓冲区，而且它还能让任务在“没有数据”或“没有空间”时进入 Blocked**。先把它想成：
 
@@ -1930,13 +1930,13 @@ BaseType_t xQueueReceive(
 
 - `xQueue`：要写入的队列
 - `pvBuffer`：要写入的消息（数据的地址）
-- `xTicksToWait`：阻塞超时时间（当队列为空，是否需要进行阻塞等待）
+- `xTicksToWait`：阻塞超时时间（**如果Queue为空，最多等多久**）
 
 返回值:
 1. `pdTRUE`：写入成功
 2. `errQUEUE_FULL`：队列为空，写入失败
 
-FreeRTOS 会把 Queue 里的数据复制出来放到`received`，所以过程是：
+FreeRTOS 会把 Queue 里的数据复制出来放到 `received`，所以过程是：
 
 ```text
 Queue里面：
@@ -1950,6 +1950,31 @@ received = 10
 ```
 
 然后 Queue 里的这个元素被移除。
+
+例如：
+
+```c
+uint32_t recv_data;
+
+xQueueReceive(queue, &recv_data, 0);
+```
+
+假设 Queue：
+
+```text
+[ 100 ]
+[ 200 ]
+[ 300 ]
+```
+
+执行后`recv_data = 100`，Queue 变成：
+
+```text
+[ 200 ]
+[ 300 ]
+```
+
+所以 Queue **通常是FIFO，先进先出**。
 
 ---
 
