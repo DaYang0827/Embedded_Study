@@ -1482,6 +1482,7 @@ for(int i = 0; i < 5; i++)
 ### 2.1.3 数组和指针的区别  （❗）
 
 相关知识点[[#2.1.5 数组与指针]]
+
 ```c
 int arr[4] = {10,20,30,40};
 int *p = arr;
@@ -1745,6 +1746,7 @@ arr[100] = 1;
 ```
 
 甚至还能运行。但是可能已经把：其他变量、栈、返回地址、控制数据破坏掉了。嵌入式里这尤其危险。
+
 ### 2.1.6 数组传给函数
 
 ```c
@@ -1802,7 +1804,7 @@ void func(int arr[])
 }
 ```
 
-你可能以为：`sizeof(arr) = 整个数组大小` 实际上不是。**因为进入函数以后：`arr` 已经只是一个指针。** 相当于：`int *arr;`  因此：`sizeof(arr)`  得到：指针大小而不是数组大小。
+可能以为：`sizeof(arr) = 整个数组大小` 实际上不是。**因为进入函数以后：`arr` 已经只是一个指针。** 相当于`int *arr;`  因此`sizeof(arr)`  ，得到：指针大小而不是数组大小。
 
 所以函数通常必须额外传：
 
@@ -1815,6 +1817,7 @@ void func(int arr[], int size)
 ```c
 void print_array(int *arr, size_t n)
 ```
+
 ### 2.1.7 注意
 
 ❗省略数组长度
@@ -1828,6 +1831,7 @@ int arr[] = {10, 20, 30, 40};
 ```
 int arr[4];
 ```
+
 在赋值的时候就不可以给`arr[4]`赋值，会引起数组越界，找不到这个地方
 
 ## 2.2 字符串
@@ -1841,6 +1845,7 @@ char str[] = "hello";
 编译器自动计算大小：`char str[6];`  内容：`h e l l o \0`  
 
 这个数组里的内容可以修改：
+
 ```c
 str[0] = 'H';
 ```
@@ -1852,11 +1857,12 @@ str[0] = 'H';
 指定数组大小
 
 例如：
+
 ```c
 char str[20] = "hello";
 ```
 
-内存是：`h e l l o \0 0 0 0 0 ...` 数组总大小：20 Byte。这在嵌入式里非常常见。
+内存是：`h e l l o \0 0 0 0 0 ...`  数组总大小：20 Byte。这在嵌入式里非常常见。
 
 例如 UART：
 ```c
@@ -1874,6 +1880,7 @@ char log_buffer[256];
 ### 2.2.2 字符串指针类型
 
 还有一种非常常见的写法：
+
 ```c
 char *str = "hello";
 //这个和：
@@ -1887,6 +1894,7 @@ char str[] = "hello"`
 ```
 
 通常会创建一个数组：
+
 ```text
 RAM
 
@@ -1902,6 +1910,7 @@ char *str = "hello"`
 ``` 
 
 这里：
+
 ```text
 str本身只是一个指针。指向字符串字面量：
 
@@ -1926,6 +1935,7 @@ const char *str = "hello";
 这才是推荐方式。意思是： `str` 指向的字符不允许通过这个指针修改。
 
 例如：
+
 ```c
 const char *cmd = "AT+RST\r\n";
 ```
@@ -1935,15 +1945,16 @@ const char *cmd = "AT+RST\r\n";
 ### 2.2.3 四种定义的区分
 
 1️⃣指针指向字符串
+
 ```c
 char str1[] = "hello";
 
 char *str2 = "hello";
 ```
 
-假设 STM32 32 位系统：`sizeof(str1)`   结果：6，因为：h e l l o \0   一共 6 Byte。
+假设 STM32 32 位系统：`sizeof(str1)`   结果是6，因为`h e l l o \0`   一共 6 Byte。
 
-但是：`sizeof(str2)`    通常：4，因为：**str2本质是一个指针**。32 位 MCU ：pointer = 4 Byte
+但是 `sizeof(str2)`    通常：4，因为：**str2本质是一个指针**。32 位 MCU ：pointer = 4 Byte
 
 ```text
 char str[] = "hello";
@@ -1963,6 +1974,7 @@ const char *str = "hello";
 这两种写法在函数结束之后对应的操作是不一样的
 
 指针的情况下:
+
 ```text
 str 是指针              "hello" 是真正的数据
 
@@ -1984,6 +1996,7 @@ str：消失        ❌
 ```
 
 数组的情况下：
+
 ```text
 char str[] = "hello";
 
@@ -2002,7 +2015,9 @@ str
 ```
 
 ---
+
 2️⃣字符串指针
+
 ```c
 char *p = "hello";`
 ```
@@ -2010,6 +2025,7 @@ char *p = "hello";`
 不是： 创建了一个字符串 `p` ,`p` 是：`char *`也就是**指针**。而真正的字符串是："hello" 因此更准确地拆开看：`const char *p = "hello";`
 
 是两个对象：
+
 ```text
 ① p
    指针变量
@@ -2043,6 +2059,7 @@ char str[] = "hello";
 ```
 
 ---
+
 3️⃣指针指向数组
 
 ```c
@@ -2105,6 +2122,7 @@ a 的首地址
 而：==`message[0][0]`==才得到：`H`
 
 需要注意区分：
+
 ```text
 uint8_t message[];     // 数组，里面放 uint8_t
 
@@ -2112,7 +2130,8 @@ uint8_t* message;      // 一个指针，指向 uint8_t
 
 uint8_t* message[];    // 数组，里面放 uint8_t*
 ```
-### 2.2.5 `char *`和：`uint8_t *`
+
+### 2.2.5 `char *` 和：`uint8_t *`
 
 在嵌入式里会频繁碰到：**`char *`和：`uint8_t *`**
 
@@ -2161,7 +2180,7 @@ void UART_SendString(char *str);
 
 含义：代表一个字符 (char)。本质：在 C 语言看来，它就是一个整数 (Integer)（对应的 ASCII 码值）。占用空间：**1 个字节**。
 
-举例：char = ‘A’;本质：在 C 语言看来，它就是一个**整数 (Integer)**（对应的 ASCII 码值）。
+举例：`char = ‘A’;`本质：在 C 语言看来，它就是一个**整数 (Integer)**（对应的 ASCII 码值）。
 
 2. 双引号 " " (String)
 
