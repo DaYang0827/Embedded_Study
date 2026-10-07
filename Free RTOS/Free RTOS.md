@@ -2650,7 +2650,7 @@ Counting Semaphore
 
 ## 8.2 Binary Semaphore
 
-### 概念
+### 8.2.1 概念
 
 Binary Semaphore 只有两种状态，可以理解为：
 
@@ -2725,7 +2725,7 @@ Semaphore没有token
 
 区别只是**Queue 里面有数据内容，而 Semaphore 本身通常不关心具体数据**。
 
-### SemaphoreCreateBinary
+### 8.2.2 SemaphoreCreateBinary
 
 ```c
 SemaphoreHandle_t sem;
@@ -2739,7 +2739,7 @@ sem = xSemaphoreCreateBinary();
 SemaphoreHandle_t → 用来找到这个 Semaphore 对象
 ```
 
-### SemaphoreGive
+### 8.2.3 SemaphoreGive
 
 ```c
 BaseType_t xSemaphoreGive( SemaphoreHandle_t xSemaphore);
@@ -2753,8 +2753,6 @@ BaseType_t xSemaphoreGive( SemaphoreHandle_t xSemaphore);
 
 - **`pdPASS`** (通常为 1)：**释放成功**。
 - **`pdFALSE`** (通常为 0)：**释放失败**。这通常发生在信号量已经处于“满状态”，无法再增加时（例如二值信号量已经有效，却连续调用了两次 `Give`）。
-
----
 
 例如：
 
@@ -2782,44 +2780,21 @@ BaseType_t xSemaphoreTake(
 
 第一个参数：
 
-```
+```text
 xSemaphore
 → 取哪个Semaphore
 ```
 
 第二个：
 
-```
+```text
 xTicksToWait
 → 如果当前拿不到信号，最多等多久
 ```
 
-比如：
+比如`xSemaphoreTake(sem, 0);` ，如果当前 Semaphore 没有信号就立即失败返回，不会 Block。而`xSemaphoreTake(sem, pdMS_TO_TICKS(1000));`，如果没有信号：
 
-```
-xSemaphoreTake(sem, 0);
-```
-
-如果当前 Semaphore 没有信号：
-
-```
-立即失败返回
-```
-
-不会 Block。
-
-而：
-
-```
-xSemaphoreTake(
-    sem,
-    pdMS_TO_TICKS(1000)
-);
-```
-
-如果没有信号：
-
-```
+```text
 当前Task Running
 ↓
 等待Semaphore
@@ -2829,13 +2804,7 @@ Blocked
 最多等1秒
 ```
 
-如果 1 秒之内有人：
-
-```
-xSemaphoreGive(sem);
-```
-
-那么等待这个 Semaphore 的任务：
+如果 1 秒之内有人`xSemaphoreGive(sem);` 那么等待这个 Semaphore 的任务：
 
 ```
 Blocked → Ready
@@ -2843,60 +2812,9 @@ Blocked → Ready
 
 之后根据优先级决定是否立刻 Running。
 
----
-
-### 4. `portMAX_DELAY`
-
-最常见：
-
-```
-xSemaphoreTake(
-    sem,
-    portMAX_DELAY
-);
-```
-
-意思基本就是：
-
-> 当前没有 Semaphore，就一直等。
-
-所以任务可能：
-
-```
-Running
-↓
-xSemaphoreTake()
-↓
-发现没有信号
-↓
-Blocked
-```
-
-这和：
-
-```
-xQueueReceive(queue, &data, portMAX_DELAY);
-```
-
-非常像。
-
-区别只是：
-
-```
-Queue Receive
-→ 等“数据”
-
-Semaphore Take
-→ 等“事件/许可”
-```
-
----
-
-### SemaphoreTake
+### 8.2.4 SemaphoreTake
 
 **`xSemaphoreTake`** 是一个用于**获取（或者是占有、等待）信号量**的宏定义。
-
-宏定义原型
 
 ```c
 BaseType_t xSemaphoreTake( 
@@ -2920,7 +2838,7 @@ BaseType_t xSemaphoreTake(
 
 
 
-### 典型例子
+### 8.2.5 典型例子
 
 比如有一个按键中断，按键按下以后让 LED Task 工作。
 
@@ -2962,28 +2880,16 @@ LED Task
 Blocked → Ready
 ```
 
-如果它优先级够高：
+如果它优先级够高`Ready → Running`，然后 Take 成功：
 
-```
-Ready → Running
-```
-
-然后 Take 成功：
-
-```
+```text
 Semaphore:
 1 → 0
 ```
 
-最后：
+最后`LED_Toggle();`。所以整个模型：
 
-```
-LED_Toggle();
-```
-
-所以整个模型：
-
-```
+```text
 事件发生
 ↓
 Give
@@ -2998,6 +2904,7 @@ Take成功
 ```
 
 ## 8.3 Counting Semaphore
+### 概念
 
 Counting Semaphore 和 Binary 的区别主要是数量。Binary，最大就是1。Counting，可以有0、1、2、3...N
 
