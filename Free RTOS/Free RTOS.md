@@ -73,11 +73,22 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 | `vTaskPrioritySet`  |      返回值类型：`void`  <br>在`task.c`中定义       |
 |   `xQueueReceive`   |  返回值类型：`BaseType_t`   <br>在`queue.c`中定义   |
 | `pvTimerGetTimerID` | 返回值类型：`pointer to void`  <br>在`tmer.c`中定义 |
-## 3.4 Handle
+
+## 3.4 常见前缀
+
+|      前缀      |            完整英文            |                实际含义                |                                 常见经典例子                                  |
+| :----------: | :------------------------: | :--------------------------------: | :---------------------------------------------------------------------: |
+|   **`pd`**   | **P**roject **D**efinition |      **项目底层的基础定义**（常用于状态、布尔值）      |        `pdPASS` (通关/成功)  <br>`pdFALSE` (假/失败)  <br>`pdTRUE` (真)         |
+|  **`err`**   |       **Err**or Code       |       **错误代码**（用于精准描述哪里出错了）        |           `errQUEUE_FULL` (队列满了)  <br>`errQUEUE_EMPTY` (队列空了)           |
+| **`config`** |     **Config**uration      | **系统配置开关**（在 `FreeRTOSConfig.h` 里） | `configUSE_PREEMPTION` (是否开启抢占)  <br>`configMINIMAL_STACK_SIZE` (最小任务栈) |
+|  **`port`**  |     **Port**ing Layer      |     **硬件接口/接口层定义**（和具体芯片硬件挂钩的）     |    `portMAX_DELAY` (最大死等时间)  <br>`portTICK_PERIOD_MS` (每个 Tick 多少毫秒)    |
+
+
+## 3.5 Handle
 
 **句柄不是那个对象本身，而是“找到那个对象的一个引用/标识”。** 在 FreeRTOS 里，大多数 Handle 本质上通常是某种指针类型。
 
-### 3.4.1 TaskHandle_t 
+### 3.5.1 TaskHandle_t 
 
 ```c
 TaskHandle_t task1_handle;
@@ -144,7 +155,7 @@ xTaskCreate(led_task, "LED2", 128, &led2, 1, &handle2);
 
 ---
 
-### 3.4.2 Handle 和 TCB 的关系
+### 3.5.2 Handle 和 TCB 的关系
 
 暂时理解为：
 
@@ -174,7 +185,7 @@ task1_handle
 
 **Handle 是供 API 使用的对象引用，不是对象本身。**
 
-### 3.4.3 `TaskHandle_t *pxCreatedTask`
+### 3.5.3 `TaskHandle_t *pxCreatedTask`
 
 `xTaskCreate()` 最后一个参数是`TaskHandle_t *pxCreatedTask` 注意这里：
 
@@ -218,7 +229,7 @@ set_value(&a);
 
 是同一个思路。
 
-### 3.4.4 FreeRTOS 喜欢 Handle
+### 3.5.4 FreeRTOS 喜欢 Handle
 
 因为这样可以做到：
 
@@ -252,7 +263,7 @@ flash.c
 其实是同一个工程思想。
 
 
-### 3.4.5 Handle 和普通指针的关系
+### 3.5.5 Handle 和普通指针的关系
 
 很多 FreeRTOS Handle 底层确实就是指针类型。比如概念上可以类似：
 
@@ -282,7 +293,7 @@ Handle
 
 前者最终`callback(data);` 会跳去执行函数。 后者`vTaskSuspend(task_handle);`是把这个引用传给 FreeRTOS，让内核找到对应 Task。所以一个是“**去哪执行代码**”，另一个是“**要操作哪个对象**”
 
-### 3.4.6 Handle 通常初始化为 NULL
+### 3.5.6 Handle 通常初始化为 NULL
 
 比如：
 
@@ -329,7 +340,7 @@ task_handle
 → 对象句柄
 ```
 
-### 3.4.7 完整例子
+### 3.5.7 完整例子
 
 ```c
 TaskHandle_t led_handle = NULL;
