@@ -2935,83 +2935,21 @@ SemaphoreHandle_t xSemaphoreCreateCounting(
 
 两个参数非常重要。
 
-假设：
+- `uxMaxCount`，表示 **这个 Counting Semaphore 最大能累计几个“许可/事件”。**
+- `uxInitialCount`，表示**创建出来的时候，当前计数是多少。** 
 
-```c
-SemaphoreHandle_t count_sem;
-
-count_sem = xSemaphoreCreateCounting(5,0);
-```
-
-意思是：
+比如`xSemaphoreCreateCounting(5, 3);` 那么一创建：
 
 ```text
-最大计数值 = 5
-初始计数值 = 0
-```
-
-也就是创建之后count_sem，当前count = 0，最大count = 5
-
----
-
-第一个参数`uxMaxCount`，表示 **这个 Counting Semaphore 最大能累计几个“许可/事件”。**
-
-例如：
-
-```
-xSemaphoreCreateCounting(5, 0);
-```
-
-最多：
-
-```
-0 1 2 3 4 5
-```
-
-不能变成：
-
-```
-6
-```
-
----
-
-第二个参数：
-
-```
-uxInitialCount
-```
-
-表示：
-
-> **创建出来的时候，当前计数是多少。**
-
-比如：
-
-```
-xSemaphoreCreateCounting(5, 3);
-```
-
-那么一创建：
-
-```
 当前count = 3
 最大count = 5
 ```
 
-也就是说一开始就已经有：
-
-```
-3个许可
-```
-
-可以被 Take。
-
----
+也就是说一开始就已经有3个许可可以被 Take。
 
 最典型调用就是：
 
-```
+```c
 SemaphoreHandle_t count_sem;
 
 count_sem = xSemaphoreCreateCounting(5, 0);
@@ -3024,49 +2962,11 @@ if (count_sem == NULL)
 
 之后：
 
-```
+```c
 xSemaphoreGive(count_sem);
 ```
 
-计数：
-
-```
-0 → 1
-```
-
-再 Give：
-
-```
-1 → 2
-```
-
-再 Give：
-
-```
-2 → 3
-```
-
----
-
-然后：
-
-```
-xSemaphoreTake(count_sem, 0);
-```
-
-成功：
-
-```
-3 → 2
-```
-
-再 Take：
-
-```
-2 → 1
-```
-
-所以完整变化：
+计数 `0 → 1`，再 Give `1 → 2`，再 Give `2 → 3`。然后`xSemaphoreTake(count_sem, 0);`，成功`3 → 2`，再 Take `2 → 1`。所以完整变化：
 
 ```
 初始：
@@ -3096,13 +2996,7 @@ count = 1
 
 ---
 
-如果当前：
-
-```
-count = 0
-```
-
-执行：
+如果当前 `count = 0`执行：
 
 ```
 xSemaphoreTake(count_sem, 0);
@@ -3152,9 +3046,10 @@ Blocked → Ready
 
 之后这个 Task 被调度运行时，就可以继续 Take。
 
----
+### SemaphoreCreate
 
-你可以看一个完整例子。
+
+### 典型例子
 
 生产者 Task：
 
@@ -3277,35 +3172,6 @@ Give
 ```
 
 能记住事件发生了几次。
-
-Counting Semaphore 和 Binary 的区别主要是数量。Binary，最大就是1。Counting，可以有0、1、2、3...N
-
-比如停车位：
-
-```c
-Counting Semaphore = 3
-```
-
-表示同时允许 3 个资源被使用。
-
-Take 一个 `3 → 2`，再 Take `2 → 1`。Give `1 → 2`， 所以 Counting Semaphore 更适合：
-
-```text
-有限数量资源管理
-事件累计计数
-```
-
-例如中断来了 5 次，而 Task 还没来得及处理，可以用 counting semaphore 记录“来了5次”。
-
-Binary Semaphore 就只能记：
-
-```
-有 / 没有
-```
-
-### SemaphoreCreate
-
-
 
 ## Mutex
 
