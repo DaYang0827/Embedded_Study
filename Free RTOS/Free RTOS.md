@@ -501,7 +501,7 @@ typedef struct tskTaskControlBlock
 - **Stack (任务栈)**：是放在 RAM 里用来**存局部变量和恢复寄存器**的临时干粮仓库。
 - **TCB (任务控制块)**：是操作系统内核握在手里的**遥控器和绝密档案**。它通过记录每个任务的栈顶指针（`pxTopOfStack`）和优先级，实现了在多任务之间“移形换影”的闭环调度。
 
-## TCB与Task Stack
+## TCB 与 Task Stack 的区别
 
 `xTaskCreate()` 创建一个任务时，**不是创建两个 Stack，而是通常为这个任务准备一个 TCB + 一块独立的 Task Stack**。
 
@@ -532,7 +532,7 @@ Task Stack = 任务自己的栈空间
 
 使用 `xTaskCreate()` 动态创建任务时，可以理解：
 
-```
+```text
 xTaskCreate()
 ↓
 为任务准备 TCB
@@ -546,11 +546,43 @@ xTaskCreate()
 
 例如 STM32F4 上：
 
-```
+```c
 xTaskCreate(task1, "TASK1", 128, NULL, 1, &task1_handle);
 ```
 
-如果 sizeof(StackType_t) = 4 Byte，那么 128 表示大约 512 Byte 的 Task Stack；除此之外还要有一块 RAM 用来存 Task1 的 TCB。
+如果 `sizeof(StackType_t) = 4 Byte`，那么 128 表示大约 `512 Byte` 的 Task Stack；除此之外还要有一块 RAM 用来存 Task1 的 TCB。
+
+### TCB 和任务现场的关系
+
+任务被切走时，不是把所有寄存器都直接塞进 TCB。更准确的是：
+
+```text
+CPU 上下文
+↓
+主要保存在这个 Task 自己的 Stack 中
+
+TCB->pxTopOfStack
+↓
+记录“这个任务的栈顶现在在哪里”
+```
+
+可以记**TCB 负责“记录到哪里找”，Task Stack 负责“真正保存任务现场”**。以后任务重新运行：
+
+```text
+Scheduler 选中 Task1
+↓
+找到 Task1 的 TCB
+↓
+读取 pxTopOfStack
+↓
+找到 Task1 的 Task Stack
+↓
+恢复寄存器 / PC / LR 等上下文
+↓
+Task1 从之前被打断的位置继续执行
+```
+
+这也是为什么任务被抢占以后，不需要从任务函数开头重新执行。
 
 
 # 5 Task/Thread
@@ -1648,6 +1680,135 @@ Ready → Running
 ```
 
 这就是**抢占**。所以可以记**更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务**。
+
+### 6.2.1 抢占、同优先级轮转与 taskYIELD()
+
+调度时要分成 **“不同优先级”和“同优先级”** 两种情况。
+
+#### 不同优先级的 Preemption
+
+假设：
+
+```text
+Task_Low   priority = 1   Running
+Task_High  priority = 3   Blocked
+```
+
+某个事件让高优先级任务：
+
+```text
+Task_High: Blocked → Ready
+```
+
+如果 `configUSE_PREEMPTION = 1`，那么高优先级任务可以立即抢占低优先级任务：
+
+```text
+Task_Low:  Running → Ready
+Task_High: Ready   → Running
+```
+
+这里最重要的是**被抢占的低优先级任务不会进入 Blocked，而是回到 Ready**。因为它并没有在等时间或事件，只是暂时失去了 CPU。
+
+等高优先级任务以后进入 Blocked、Suspended，或者不再占用 CPU 时，LowTask 仍然是 Ready；如果此时它成为最高优先级的 Ready Task，就会：
+
+```
+Ready → Running
+```
+
+并**从之前被打断的位置继续执行**。
+
+#### 同优先级：Time Slicing
+
+假设：
+
+```
+TaskA priority = 2
+TaskB priority = 2
+```
+
+两个任务都 Ready，并且：
+
+```
+configUSE_TIME_SLICING = 1
+```
+
+那么即使 TaskA 不主动 Block、也不调用 taskYIELD()，Tick 到来时，同优先级任务之间也可以进行时间片轮转：
+
+```
+TaskA Running
+TaskB Ready
+↓ Tick
+TaskA Ready
+TaskB Running
+```
+
+所以：
+
+```
+configUSE_PREEMPTION
+→ 主要决定高优先级 Ready 后能不能抢占低优先级 Running
+
+configUSE_TIME_SLICING
+→ 主要决定同优先级 Ready Task 是否按 Tick 轮转
+```
+
+如果关闭时间片：
+
+```
+configUSE_TIME_SLICING = 0
+```
+
+同优先级任务不会因为 Tick 自动轮转。此时通常要等当前任务主动 Block，或者调用 taskYIELD()，其他同优先级任务才有机会运行。
+
+#### taskYIELD()
+
+`taskYIELD()` 的本质是：
+
+```
+当前 Task 主动请求 Scheduler 重新调度
+```
+
+它不会进入 Blocked，也不会进入 Suspended。可以理解成：
+
+```
+Running → Ready → Scheduler重新选择
+```
+
+如果存在同优先级 Ready Task，对方就可能获得 CPU；如果当前任务仍然是最高优先级，它也可能很快再次 Running。
+
+### 6.2.2 被抢占以后为什么还能继续执行
+
+例如低优先级任务运行到一半，高优先级任务变成 Ready：
+
+```
+LowTask Running
+↓
+保存 LowTask 上下文
+↓
+LowTask → Ready
+↓
+HighTask → Running
+```
+
+保存的上下文包括 PC、LR、通用寄存器、xPSR、栈相关信息等。上下文主要保存在 LowTask 自己的 Task Stack 中，TCB 通过 pxTopOfStack 等成员记录任务栈的位置。
+
+以后 LowTask 再次被调度：
+
+```
+Scheduler 选中 LowTask
+↓
+通过 TCB 找到 pxTopOfStack
+↓
+从 LowTask Stack 恢复上下文
+↓
+恢复 PC
+↓
+继续从之前被抢占的位置执行
+```
+
+一句话：
+
+> 任务切换不是“重新运行函数”，而是“保存现场 → 切走 → 恢复现场”。
 
 ## 6.3 `Ready List` 和 `Blocked List`。
 
