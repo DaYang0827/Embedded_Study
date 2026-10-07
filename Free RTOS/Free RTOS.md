@@ -530,7 +530,7 @@ TCB = 任务管理结构体
 Task Stack = 任务自己的栈空间
 ```
 
-使用 `xTaskCreate()` 动态创建任务时，可以理解为：
+使用 `xTaskCreate()` 动态创建任务时，可以理解：
 
 ```
 xTaskCreate()
