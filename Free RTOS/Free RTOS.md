@@ -2906,6 +2906,400 @@ Take成功
 ## 8.3 Counting Semaphore
 ### 概念
 
+Counting Semaphore 本质可以先理解成**一个有上限的计数器 + 可以让 Task 阻塞等待。** 比如：
+
+```text
+最大值 = 5
+当前值 = 0
+```
+
+每`xSemaphoreGive()`一次，`count + 1`。每`xSemaphoreTake()`一次，
+
+```
+count - 1
+```
+
+但：
+
+```
+count不能超过最大值
+count也不能小于0
+```
+
+---
+
+创建函数是：
+
+```
+SemaphoreHandle_t xSemaphoreCreateCounting(
+    UBaseType_t uxMaxCount,
+    UBaseType_t uxInitialCount
+);
+```
+
+两个参数非常重要。
+
+假设：
+
+```
+SemaphoreHandle_t count_sem;
+
+count_sem = xSemaphoreCreateCounting(
+    5,
+    0
+);
+```
+
+意思是：
+
+```
+最大计数值 = 5
+初始计数值 = 0
+```
+
+也就是创建之后：
+
+```
+count_sem：
+
+当前count = 0
+最大count = 5
+```
+
+---
+
+第一个参数：
+
+```
+uxMaxCount
+```
+
+表示：
+
+> **这个 Counting Semaphore 最大能累计几个“许可/事件”。**
+
+例如：
+
+```
+xSemaphoreCreateCounting(5, 0);
+```
+
+最多：
+
+```
+0 1 2 3 4 5
+```
+
+不能变成：
+
+```
+6
+```
+
+---
+
+第二个参数：
+
+```
+uxInitialCount
+```
+
+表示：
+
+> **创建出来的时候，当前计数是多少。**
+
+比如：
+
+```
+xSemaphoreCreateCounting(5, 3);
+```
+
+那么一创建：
+
+```
+当前count = 3
+最大count = 5
+```
+
+也就是说一开始就已经有：
+
+```
+3个许可
+```
+
+可以被 Take。
+
+---
+
+最典型调用就是：
+
+```
+SemaphoreHandle_t count_sem;
+
+count_sem = xSemaphoreCreateCounting(5, 0);
+
+if (count_sem == NULL)
+{
+    // 创建失败
+}
+```
+
+之后：
+
+```
+xSemaphoreGive(count_sem);
+```
+
+计数：
+
+```
+0 → 1
+```
+
+再 Give：
+
+```
+1 → 2
+```
+
+再 Give：
+
+```
+2 → 3
+```
+
+---
+
+然后：
+
+```
+xSemaphoreTake(count_sem, 0);
+```
+
+成功：
+
+```
+3 → 2
+```
+
+再 Take：
+
+```
+2 → 1
+```
+
+所以完整变化：
+
+```
+初始：
+
+count = 0
+
+Give
+↓
+count = 1
+
+Give
+↓
+count = 2
+
+Give
+↓
+count = 3
+
+Take
+↓
+count = 2
+
+Take
+↓
+count = 1
+```
+
+---
+
+如果当前：
+
+```
+count = 0
+```
+
+执行：
+
+```
+xSemaphoreTake(count_sem, 0);
+```
+
+会：
+
+```
+立刻失败
+```
+
+因为没有许可可以拿。
+
+如果：
+
+```
+xSemaphoreTake(
+    count_sem,
+    portMAX_DELAY
+);
+```
+
+那么当前 Task：
+
+```
+发现 count = 0
+↓
+拿不到
+↓
+进入 Blocked
+↓
+等待别人 Give
+```
+
+当另一个 Task：
+
+```
+xSemaphoreGive(count_sem);
+```
+
+发生：
+
+```
+等待中的Task
+Blocked → Ready
+```
+
+之后这个 Task 被调度运行时，就可以继续 Take。
+
+---
+
+你可以看一个完整例子。
+
+生产者 Task：
+
+```
+void producer_task(void *arg)
+{
+    while (1)
+    {
+        // 假设发生了一个事件
+        xSemaphoreGive(count_sem);
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+```
+
+消费者 Task：
+
+```
+void consumer_task(void *arg)
+{
+    while (1)
+    {
+        if (xSemaphoreTake(
+                count_sem,
+                portMAX_DELAY
+            ) == pdTRUE)
+        {
+            process_event();
+        }
+    }
+}
+```
+
+逻辑：
+
+```
+Producer
+↓
+Give
+↓
+count + 1
+
+Consumer
+↓
+Take
+↓
+count - 1
+↓
+处理一次事件
+```
+
+---
+
+比如 Producer 很快：
+
+```
+Give
+Give
+Give
+```
+
+而 Consumer 还没来得及处理。
+
+Counting Semaphore 可以记住：
+
+```
+count = 3
+```
+
+Consumer 后面：
+
+```
+Take
+→ 3 → 2
+
+Take
+→ 2 → 1
+
+Take
+→ 1 → 0
+```
+
+所以它和 Binary Semaphore 最大区别就在这里。
+
+Binary：
+
+```
+只有0/1
+```
+
+例如连续：
+
+```
+Give
+Give
+Give
+```
+
+很可能最后还是：
+
+```
+1
+```
+
+中间多个事件可能被“合并”。
+
+而 Counting：
+
+```
+Give
+Give
+Give
+```
+
+可以：
+
+```
+0 → 1 → 2 → 3
+```
+
+能记住事件发生了几次。
+
 Counting Semaphore 和 Binary 的区别主要是数量。Binary，最大就是1。Counting，可以有0、1、2、3...N
 
 比如停车位：
@@ -2930,6 +3324,10 @@ Binary Semaphore 就只能记：
 ```
 有 / 没有
 ```
+
+### SemaphoreCreate
+
+
 
 ## Mutex
 
