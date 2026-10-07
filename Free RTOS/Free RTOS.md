@@ -2937,42 +2937,24 @@ SemaphoreHandle_t xSemaphoreCreateCounting(
 
 假设：
 
-```
+```c
 SemaphoreHandle_t count_sem;
 
-count_sem = xSemaphoreCreateCounting(
-    5,
-    0
-);
+count_sem = xSemaphoreCreateCounting(5,0);
 ```
 
 意思是：
 
-```
+```text
 最大计数值 = 5
 初始计数值 = 0
 ```
 
-也就是创建之后：
-
-```
-count_sem：
-
-当前count = 0
-最大count = 5
-```
+也就是创建之后count_sem，当前count = 0，最大count = 5
 
 ---
 
-第一个参数：
-
-```
-uxMaxCount
-```
-
-表示：
-
-> **这个 Counting Semaphore 最大能累计几个“许可/事件”。**
+第一个参数`uxMaxCount`，表示 **这个 Counting Semaphore 最大能累计几个“许可/事件”。**
 
 例如：
 
