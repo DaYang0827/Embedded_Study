@@ -2913,24 +2913,20 @@ Counting Semaphore 本质可以先理解成**一个有上限的计数器 + 可�
 当前值 = 0
 ```
 
-每`xSemaphoreGive()`一次，`count + 1`。每`xSemaphoreTake()`一次，
+每`xSemaphoreGive()`一次，`count + 1`。每`xSemaphoreTake()`一次，`count - 1`。但：
 
-```
-count - 1
-```
-
-但：
-
-```
+```text
 count不能超过最大值
 count也不能小于0
 ```
 
 ---
 
+### SemaphoreCreateCounting
+
 创建函数是：
 
-```
+```c
 SemaphoreHandle_t xSemaphoreCreateCounting(
     UBaseType_t uxMaxCount,
     UBaseType_t uxInitialCount
