@@ -2604,9 +2604,42 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 
 # 8 Semaphore
 
+## 概念
+
 信号量 `Semaphore` 本质上是 **RTOS 里用来做同步和资源控制的机制**。信号量不是用来传具体数据的，而是用来告诉任务：“某件事发生了” 或 “某个资源现在可以用了”
 
 我们希望**任务都是互斥的，同一个时间段一个任务只能被一个人调用** 在多任务里，每个任务一定是顺序执行的，他们各自独立，以不可预知的速度向前推进，但有时候希望多个任务能密切合作以实现一个共同的任务。
+
+最核心的一句话**Queue 主要传数据，Semaphore 主要传“发生了某件事”或“某个资源现在可以用了”。** 可以先把它和 Queue 对比：
+
+```text
+Queue
+= 我给你一份数据
+
+Semaphore
+= 我告诉你：可以行动了
+```
+
+比如中断里检测到按键按下：
+
+```text
+按键中断
+↓
+Give Semaphore
+↓
+Task被唤醒
+↓
+Task处理按键逻辑
+```
+
+这里根本不一定需要传具体数据，**只需要传递“事件发生了”这个事实**。
+
+Semaphore 常见分两类：
+
+```
+Binary Semaphore
+Counting Semaphore
+```
 
 `Task` = 人
 `Queue` = 快递柜，用来放数据
@@ -2614,6 +2647,10 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 `Mutex` （互斥）= 厕所门锁，同一时间只能一个人用
 `Handle` = 钥匙 / 编号 / 地址
 `Scheduler` = 管理员，决定谁先执行
+
+## Binary Semaphore
+
+
 
 # 9 Hook 函数
 
