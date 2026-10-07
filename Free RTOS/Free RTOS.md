@@ -501,6 +501,58 @@ typedef struct tskTaskControlBlock
 - **Stack (任务栈)**：是放在 RAM 里用来**存局部变量和恢复寄存器**的临时干粮仓库。
 - **TCB (任务控制块)**：是操作系统内核握在手里的**遥控器和绝密档案**。它通过记录每个任务的栈顶指针（`pxTopOfStack`）和优先级，实现了在多任务之间“移形换影”的闭环调度。
 
+## TCB与Task Stack
+
+`xTaskCreate()` 创建一个任务时，**不是创建两个 Stack，而是通常为这个任务准备一个 TCB + 一块独立的 Task Stack**。
+
+```text
+Task 实例
+│
+├── TCB
+│   ├── pxTopOfStack
+│   ├── uxPriority
+│   ├── xStateListItem
+│   ├── pcTaskName
+│   └── 其他任务管理信息
+│
+└── Task Stack
+    ├── 局部变量
+    ├── 函数调用现场
+    ├── 返回地址
+    └── 任务切换时保存的 CPU 上下文
+```
+
+所以：
+
+```text
+TCB ≠ Stack
+TCB = 任务管理结构体
+Task Stack = 任务自己的栈空间
+```
+
+使用 `xTaskCreate()` 动态创建任务时，可以理解为：
+
+```
+xTaskCreate()
+↓
+为任务准备 TCB
++
+为任务准备 Task Stack
+↓
+建立任务的初始状态
+↓
+进入 Ready 相关调度结构
+```
+
+例如 STM32F4 上：
+
+```
+xTaskCreate(task1, "TASK1", 128, NULL, 1, &task1_handle);
+```
+
+如果 sizeof(StackType_t) = 4 Byte，那么 128 表示大约 512 Byte 的 Task Stack；除此之外还要有一块 RAM 用来存 Task1 的 TCB。
+
+
 # 5 Task/Thread
 ## 5.1 TaskCreat
 
