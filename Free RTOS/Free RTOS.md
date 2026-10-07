@@ -1711,7 +1711,7 @@ Task_High: Ready   → Running
 
 等高优先级任务以后进入 Blocked、Suspended，或者不再占用 CPU 时，LowTask 仍然是 Ready；如果此时它成为最高优先级的 Ready Task，就会：
 
-```
+```text
 Ready → Running
 ```
 
@@ -1721,20 +1721,14 @@ Ready → Running
 
 假设：
 
-```
+```c
 TaskA priority = 2
 TaskB priority = 2
 ```
 
-两个任务都 Ready，并且：
+两个任务都 Ready，并且 `configUSE_TIME_SLICING = 1`。那么即使 TaskA 不主动 Block、也不调用 `taskYIELD()`，Tick 到来时，同优先级任务之间也可以进行时间片轮转：
 
-```
-configUSE_TIME_SLICING = 1
-```
-
-那么即使 TaskA 不主动 Block、也不调用 taskYIELD()，Tick 到来时，同优先级任务之间也可以进行时间片轮转：
-
-```
+```text
 TaskA Running
 TaskB Ready
 ↓ Tick
@@ -1744,7 +1738,7 @@ TaskB Running
 
 所以：
 
-```
+```text
 configUSE_PREEMPTION
 → 主要决定高优先级 Ready 后能不能抢占低优先级 Running
 
@@ -1754,21 +1748,15 @@ configUSE_TIME_SLICING
 
 如果关闭时间片：
 
-```
+```c
 configUSE_TIME_SLICING = 0
 ```
 
-同优先级任务不会因为 Tick 自动轮转。此时通常要等当前任务主动 Block，或者调用 taskYIELD()，其他同优先级任务才有机会运行。
+同优先级任务不会因为 Tick 自动轮转。此时通常要等当前任务主动 Block，或者调用 `taskYIELD()`，其他同优先级任务才有机会运行。
 
-#### taskYIELD()
+#### `taskYIELD()`
 
-`taskYIELD()` 的本质是：
-
-```
-当前 Task 主动请求 Scheduler 重新调度
-```
-
-它不会进入 Blocked，也不会进入 Suspended。可以理解成：
+`taskYIELD()` 的本质是**当前 Task 主动请求 Scheduler 重新调度**。它不会进入 Blocked，也不会进入 Suspended。可以理解成：
 
 ```
 Running → Ready → Scheduler重新选择
