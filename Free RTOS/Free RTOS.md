@@ -2808,20 +2808,20 @@ SemaphoreHandle_t → 用来找到这个 Semaphore 对象
 
 ### SemaphoreGive
 
-```
-xSemaphoreGive()
-xSemaphoreTake()
+```c
+BaseType_t xSemaphoreGive( SemaphoreHandle_t xSemaphore);
 ```
 
-你可以先记：
+参数解析
 
-```
-Give
-→ 放出一个信号
+- **`xSemaphore`**：想要释放的**信号量句柄**。这个句柄必须是之前通过 `xSemaphoreCreateBinary()`、`xSemaphoreCreateCounting()` 或 `xSemaphoreCreateMutex()` 成功创建出来的。
 
-Take
-→ 获取/消耗一个信号
-```
+📤 返回值（`BaseType_t`）
+
+- **`pdPASS`** (通常为 1)：**释放成功**。
+- **`pdFALSE`** (通常为 0)：**释放失败**。这通常发生在信号量已经处于“满状态”，无法再增加时（例如二值信号量已经有效，你却连续调用了两次 `Give`）。
+
+---
 
 例如：
 
