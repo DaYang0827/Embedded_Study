@@ -431,6 +431,7 @@ TaskHandle_t *
 ```
 
 # 4 TCB
+## 4.1 概念
 
 **TCB** 的全称是 **Task Control Block（任务控制块）**。它的本质**就是 FreeRTOS 给每一个任务专门发放的“身份证/档案袋”。** 它是一个极其复杂的 C 语言**结构体（Struct）**。为了在多任务来回切换时实现“瞒天过海”的效果，每个任务在内存里都会躺着一个专属于自己的 TCB。
 
@@ -501,7 +502,7 @@ typedef struct tskTaskControlBlock
 - **Stack (任务栈)**：是放在 RAM 里用来**存局部变量和恢复寄存器**的临时干粮仓库。
 - **TCB (任务控制块)**：是操作系统内核握在手里的**遥控器和绝密档案**。它通过记录每个任务的栈顶指针（`pxTopOfStack`）和优先级，实现了在多任务之间“移形换影”的闭环调度。
 
-## TCB 与 Task Stack 的区别
+## 4.2 TCB 与 Task Stack 的区别
 
 `xTaskCreate()` 创建一个任务时，**不是创建两个 Stack，而是通常为这个任务准备一个 TCB + 一块独立的 Task Stack**。
 
@@ -552,7 +553,7 @@ xTaskCreate(task1, "TASK1", 128, NULL, 1, &task1_handle);
 
 如果 `sizeof(StackType_t) = 4 Byte`，那么 128 表示大约 `512 Byte` 的 Task Stack；除此之外还要有一块 RAM 用来存 Task1 的 TCB。
 
-### TCB 和任务现场的关系
+### 4.2.1 TCB 和任务现场的关系
 
 任务被切走时，不是把所有寄存器都直接塞进 TCB。更准确的是：
 
@@ -1685,7 +1686,7 @@ Ready → Running
 
 调度时要分成 **“不同优先级”和“同优先级”** 两种情况。
 
-#### 不同优先级的 Preemption
+#### 6.2.1.1 不同优先级的 Preemption
 
 假设：
 
@@ -1717,7 +1718,7 @@ Ready → Running
 
 并**从之前被打断的位置继续执行**。
 
-#### 同优先级：Time Slicing
+#### 6.2.1.2 同优先级：Time Slicing
 
 假设：
 
@@ -1754,7 +1755,7 @@ configUSE_TIME_SLICING = 0
 
 同优先级任务不会因为 Tick 自动轮转。此时通常要等当前任务主动 Block，或者调用 `taskYIELD()`，其他同优先级任务才有机会运行。
 
-#### `taskYIELD()`
+#### 6.2.1.3 `taskYIELD()`
 
 `taskYIELD()` 的本质是**当前 Task 主动请求 Scheduler 重新调度**。它不会进入 Blocked，也不会进入 Suspended。可以理解成：
 
@@ -2133,7 +2134,7 @@ Queue
 
 然后再`data = 200;` Queue 里面原来的 100 不会跟着变。因为Queue 已经把数据复制了一份。这是非常重要的。
 
-#### 使用通用指针
+#### 7.3.1.1 使用通用指针
 
 `xQueueSend()` 的设计目标是**它要能发送任意类型的数据，而不是只能发送某一种固定类型。** 所以它不能把第二个参数写成`int data` ，因为这样就只能发送 `int`。也不能写成`SensorData_t data`，因为这样就只能发送这个结构体。FreeRTOS 要做到：
 
