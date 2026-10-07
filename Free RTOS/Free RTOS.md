@@ -2703,7 +2703,7 @@ Running
 Blocked
 ```
 
-等别人`xSemaphoreGive(sem);`，之后：
+等别人 `xSemaphoreGive(sem);`，之后：
 
 ```text
 Blocked
@@ -2711,7 +2711,7 @@ Blocked
 Ready
 ```
 
-这和 Queue 空的时候`xQueueReceive(...)`，非常像。
+这和 Queue 空的时候 `xQueueReceive(...)`，非常像。
 
 可以直接类比：
 
@@ -2724,73 +2724,6 @@ Semaphore没有token
 ```
 
 区别只是**Queue 里面有数据内容，而 Semaphore 本身通常不关心具体数据**。
-
-举个最典型的例子。
-
-Task2：
-
-```c
-void task2(void *pvParameters)
-{
-    while(1)
-    {
-        xSemaphoreTake(sem, portMAX_DELAY);
-
-        usart_send_string(&usart1, "Event received!\r\n");
-    }
-}
-```
-
-一开始 Semaphore 没信号：
-
-```text
-Task2 Running
-↓
-Take
-↓
-没token
-↓
-Task2 Blocked
-```
-
-Task1：
-
-```c
-void task1(void *pvParameters)
-{
-    while(1)
-    {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-
-        xSemaphoreGive(sem);
-    }
-}
-```
-
-每隔一秒 Give 一次。
-
-于是：
-
-```text
-Task1 Give
-↓
-Semaphore可用
-↓
-Task2 Blocked → Ready
-↓
-Task2 Take
-↓
-token被取走
-↓
-Task2执行
-↓
-再次Take
-↓
-又Blocked
-```
-
-这就是 Semaphore 最典型的“同步”作用。
-
 
 ### SemaphoreCreateBinary
 
@@ -2959,13 +2892,41 @@ Semaphore Take
 
 ---
 
-### 5. 一个最典型例子
+### SemaphoreTake
+
+**`xSemaphoreTake`** 是一个用于**获取（或者是占有、等待）信号量**的宏定义。
+
+宏定义原型
+
+```c
+BaseType_t xSemaphoreTake( 
+    SemaphoreHandle_t xSemaphore,   /* 信号量句柄：你要拿哪把锁/等哪个暗号 */
+    TickType_t xTicksToWait         /* 等待超时时间：如果没空位，最多等多久 */
+);
+```
+
+📥 参数解析
+
+- **`xSemaphore`**：想要获取的**信号量句柄**（必须是提前创建好的）。
+- **`xTicksToWait`**：这个参数的逻辑与队列的 `xTicksToWait` **完全一模一样**：
+    - **`0`**：过来瞅一眼，有令牌就拿走；没令牌**立刻返回 `pdFALSE`**，绝不死等。
+    - **`固定的 Tick 值`**（如 10, 100）：没令牌我就去睡觉，只要期间有人 `Give` 了信号量，**立刻醒来**；如果等满了时间还没人给，被迫醒来并返回 `pdFALSE`。
+    - **`portMAX_DELAY`**：**死等**。只要没人 `Give`，就永远在这里睡下去，直到地老天荒。
+
+📤 返回值（`BaseType_t`）
+
+- **`pdPASS`** (通常为 1)：**获取成功**。信号量的计数值成功减 1。您可以安全地进入临界区或处理同步业务。
+- **`pdFALSE`** (通常为 0)：**获取失败 / 超时**。在规定时间内没有等到信号量。
+
+
+
+### 典型例子
 
 比如有一个按键中断，按键按下以后让 LED Task 工作。
 
 LED Task：
 
-```
+```c
 void led_task(void *arg)
 {
     while (1)
@@ -2980,28 +2941,16 @@ void led_task(void *arg)
 }
 ```
 
-一开始：
+一开始`Semaphore = 0`，LED Task 执行到`xSemaphoreTake(...)`，拿不到：
 
-```
-Semaphore = 0
-```
-
-LED Task 执行到：
-
-```
-xSemaphoreTake(...)
-```
-
-拿不到：
-
-```
+```text
 LED Task
 Running → Blocked
 ```
 
 这时候按键事件发生，Give：
 
-```
+```text
 Semaphore:
 0 → 1
 ```
@@ -3046,48 +2995,6 @@ Semaphore available
 Take成功
 ↓
 执行处理
-```
-
----
-
-### 6. 为什么叫 Binary Semaphore
-
-因为它最多就是：
-
-```
-0 / 1
-```
-
-不是：
-
-```
-0 1 2 3 4 ...
-```
-
-假设它已经是：
-
-```
-1
-```
-
-你再 Give，一般不会继续变成：
-
-```
-2
-```
-
-所以它特别适合：
-
-> “发生过一次事件，通知一个 Task。”
-
-比如：
-
-```
-UART收到一帧
-ADC转换完成
-按键触发
-DMA完成
-某个状态到达
 ```
 
 ## 8.3 Counting Semaphore
