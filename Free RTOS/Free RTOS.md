@@ -1682,7 +1682,7 @@ Ready → Running
 
 这就是**抢占**。所以可以记**更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务**。
 
-### 6.2.1 抢占、同优先级轮转与 taskYIELD()
+### 6.2.1 抢占、同优先级轮转与 taskYIELD
 
 调度时要分成 **“不同优先级”和“同优先级”** 两种情况。
 
@@ -1718,7 +1718,7 @@ Ready → Running
 
 并**从之前被打断的位置继续执行**。
 
-#### 6.2.1.2 同优先级：Time Slicing
+#### 6.2.1.2 同优先级使用 Time Slicing
 
 假设：
 
@@ -2650,6 +2650,8 @@ Counting Semaphore
 
 ## 8.2 Binary Semaphore
 
+### 概念
+
 Binary Semaphore 只有两种状态，可以理解为：
 
 ```
@@ -2668,7 +2670,7 @@ SemaphoreHandle_t sem;
 sem = xSemaphoreCreateBinary();
 ```
 
-需要`#include "semphr.h"`，然后有两个最关键的操作：
+需要 `#include "semphr.h"`，有两个最关键的操作：
 
 ```c
 xSemaphoreGive(sem);
@@ -2721,7 +2723,9 @@ Semaphore没有token
 → Take任务Blocked
 ```
 
-区别只是**Queue 里面有数据内容，而 Semaphore 本身通常不关心具体数据**。举个最典型的例子。
+区别只是**Queue 里面有数据内容，而 Semaphore 本身通常不关心具体数据**。
+
+举个最典型的例子。
 
 Task2：
 
@@ -2786,6 +2790,320 @@ Task2执行
 ```
 
 这就是 Semaphore 最典型的“同步”作用。
+
+
+### SemaphoreCreateBinary
+
+```c
+SemaphoreHandle_t sem;
+
+sem = xSemaphoreCreateBinary();
+```
+
+注意这里的 `sem` 也是 Handle：
+
+```
+SemaphoreHandle_t → 用来找到这个 Semaphore 对象
+```
+
+### SemaphoreGive
+
+```
+xSemaphoreGive()
+xSemaphoreTake()
+```
+
+你可以先记：
+
+```
+Give
+→ 放出一个信号
+
+Take
+→ 获取/消耗一个信号
+```
+
+例如：
+
+```
+xSemaphoreGive(sem);
+```
+
+相当于：
+
+```
+Semaphore:
+0 → 1
+```
+
+然后：
+
+```
+xSemaphoreTake(sem, portMAX_DELAY);
+```
+
+如果成功：
+
+```
+Semaphore:
+1 → 0
+```
+
+---
+
+### 3. `xSemaphoreTake()` 最像你刚学的 `xQueueReceive()`
+
+原型概念上：
+
+```
+BaseType_t xSemaphoreTake(
+    SemaphoreHandle_t xSemaphore,
+    TickType_t xTicksToWait
+);
+```
+
+第一个参数：
+
+```
+xSemaphore
+→ 取哪个Semaphore
+```
+
+第二个：
+
+```
+xTicksToWait
+→ 如果当前拿不到信号，最多等多久
+```
+
+比如：
+
+```
+xSemaphoreTake(sem, 0);
+```
+
+如果当前 Semaphore 没有信号：
+
+```
+立即失败返回
+```
+
+不会 Block。
+
+而：
+
+```
+xSemaphoreTake(
+    sem,
+    pdMS_TO_TICKS(1000)
+);
+```
+
+如果没有信号：
+
+```
+当前Task Running
+↓
+等待Semaphore
+↓
+Blocked
+↓
+最多等1秒
+```
+
+如果 1 秒之内有人：
+
+```
+xSemaphoreGive(sem);
+```
+
+那么等待这个 Semaphore 的任务：
+
+```
+Blocked → Ready
+```
+
+之后根据优先级决定是否立刻 Running。
+
+---
+
+### 4. `portMAX_DELAY`
+
+最常见：
+
+```
+xSemaphoreTake(
+    sem,
+    portMAX_DELAY
+);
+```
+
+意思基本就是：
+
+> 当前没有 Semaphore，就一直等。
+
+所以任务可能：
+
+```
+Running
+↓
+xSemaphoreTake()
+↓
+发现没有信号
+↓
+Blocked
+```
+
+这和：
+
+```
+xQueueReceive(queue, &data, portMAX_DELAY);
+```
+
+非常像。
+
+区别只是：
+
+```
+Queue Receive
+→ 等“数据”
+
+Semaphore Take
+→ 等“事件/许可”
+```
+
+---
+
+### 5. 一个最典型例子
+
+比如有一个按键中断，按键按下以后让 LED Task 工作。
+
+LED Task：
+
+```
+void led_task(void *arg)
+{
+    while (1)
+    {
+        xSemaphoreTake(
+            button_sem,
+            portMAX_DELAY
+        );
+
+        LED_Toggle();
+    }
+}
+```
+
+一开始：
+
+```
+Semaphore = 0
+```
+
+LED Task 执行到：
+
+```
+xSemaphoreTake(...)
+```
+
+拿不到：
+
+```
+LED Task
+Running → Blocked
+```
+
+这时候按键事件发生，Give：
+
+```
+Semaphore:
+0 → 1
+```
+
+于是：
+
+```
+LED Task
+Blocked → Ready
+```
+
+如果它优先级够高：
+
+```
+Ready → Running
+```
+
+然后 Take 成功：
+
+```
+Semaphore:
+1 → 0
+```
+
+最后：
+
+```
+LED_Toggle();
+```
+
+所以整个模型：
+
+```
+事件发生
+↓
+Give
+↓
+Semaphore available
+↓
+等待中的Task被唤醒
+↓
+Take成功
+↓
+执行处理
+```
+
+---
+
+### 6. 为什么叫 Binary Semaphore
+
+因为它最多就是：
+
+```
+0 / 1
+```
+
+不是：
+
+```
+0 1 2 3 4 ...
+```
+
+假设它已经是：
+
+```
+1
+```
+
+你再 Give，一般不会继续变成：
+
+```
+2
+```
+
+所以它特别适合：
+
+> “发生过一次事件，通知一个 Task。”
+
+比如：
+
+```
+UART收到一帧
+ADC转换完成
+按键触发
+DMA完成
+某个状态到达
+```
 
 ## 8.3 Counting Semaphore
 
