@@ -2819,43 +2819,28 @@ BaseType_t xSemaphoreGive( SemaphoreHandle_t xSemaphore);
 📤 返回值（`BaseType_t`）
 
 - **`pdPASS`** (通常为 1)：**释放成功**。
-- **`pdFALSE`** (通常为 0)：**释放失败**。这通常发生在信号量已经处于“满状态”，无法再增加时（例如二值信号量已经有效，你却连续调用了两次 `Give`）。
+- **`pdFALSE`** (通常为 0)：**释放失败**。这通常发生在信号量已经处于“满状态”，无法再增加时（例如二值信号量已经有效，却连续调用了两次 `Give`）。
 
 ---
 
 例如：
 
-```
+```c
 xSemaphoreGive(sem);
 ```
 
-相当于：
+相当于`Semaphore: 0 → 1`，然后`xSemaphoreTake(sem, portMAX_DELAY);`，如果成功：
 
-```
-Semaphore:
-0 → 1
-```
-
-然后：
-
-```
-xSemaphoreTake(sem, portMAX_DELAY);
-```
-
-如果成功：
-
-```
+```text
 Semaphore:
 1 → 0
 ```
 
 ---
 
-### 3. `xSemaphoreTake()` 最像你刚学的 `xQueueReceive()`
+`xSemaphoreTake()` 最像 `xQueueReceive()` 原型概念上：
 
-原型概念上：
-
-```
+```c
 BaseType_t xSemaphoreTake(
     SemaphoreHandle_t xSemaphore,
     TickType_t xTicksToWait
