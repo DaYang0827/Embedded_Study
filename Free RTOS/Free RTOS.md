@@ -2660,37 +2660,24 @@ Binary Semaphore 只有两种状态，可以理解为：
 = 有信号
 ```
 
-或者你也可以理解成：
+或者也可以理解成**空、有一个token**。创建：
 
-```
-空
-有一个token
-```
-
-创建：
-
-```
+```c
 SemaphoreHandle_t sem;
 
 sem = xSemaphoreCreateBinary();
 ```
 
-需要：
+需要`#include "semphr.h"`，然后有两个最关键的操作：
 
-```
-#include "semphr.h"
-```
-
-然后有两个最关键的操作：
-
-```
+```c
 xSemaphoreGive(sem);
 xSemaphoreTake(sem, timeout);
 ```
 
 含义是：
 
-```
+```text
 Give
 = 放一个信号进去
 
@@ -2698,9 +2685,9 @@ Take
 = 取走这个信号
 ```
 
-如果 Take 的时候没有信号，并且你允许等待：
+如果 Take 的时候没有信号，并且允许等待：
 
-```
+```c
 xSemaphoreTake(sem, portMAX_DELAY);
 ```
 
@@ -2714,27 +2701,15 @@ Running
 Blocked
 ```
 
-等别人：
+等别人`xSemaphoreGive(sem);`，之后：
 
-```
-xSemaphoreGive(sem);
-```
-
-之后：
-
-```
+```text
 Blocked
 ↓
 Ready
 ```
 
-这和你刚刚学 Queue 空的时候：
-
-```
-xQueueReceive(...)
-```
-
-非常像。
+这和 Queue 空的时候`xQueueReceive(...)`，非常像。
 
 你可以直接类比：
 
@@ -2813,6 +2788,63 @@ Task2执行
 ```
 
 这就是 Semaphore 最典型的“同步”作用。
+
+## Counting Semaphore
+
+Counting Semaphore 和 Binary 的区别主要是数量。
+
+Binary：
+
+```
+最大就是1
+```
+
+Counting：
+
+```
+可以有0、1、2、3...N
+```
+
+比如停车位：
+
+```
+Counting Semaphore = 3
+```
+
+表示同时允许 3 个资源被使用。
+
+Take 一个：
+
+```
+3 → 2
+```
+
+再 Take：
+
+```
+2 → 1
+```
+
+Give：
+
+```
+1 → 2
+```
+
+所以 Counting Semaphore 更适合：
+
+```
+有限数量资源管理
+事件累计计数
+```
+
+例如中断来了 5 次，而 Task 还没来得及处理，可以用 counting semaphore 记录“来了5次”。
+
+Binary Semaphore 就只能记：
+
+```
+有 / 没有
+```
 
 # 9 Hook 函数
 
