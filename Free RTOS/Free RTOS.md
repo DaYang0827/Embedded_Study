@@ -2650,7 +2650,169 @@ Counting Semaphore
 
 ## Binary Semaphore
 
+Binary Semaphore 只有两种状态，可以理解为：
 
+```
+0
+= 没有信号
+
+1
+= 有信号
+```
+
+或者你也可以理解成：
+
+```
+空
+有一个token
+```
+
+创建：
+
+```
+SemaphoreHandle_t sem;
+
+sem = xSemaphoreCreateBinary();
+```
+
+需要：
+
+```
+#include "semphr.h"
+```
+
+然后有两个最关键的操作：
+
+```
+xSemaphoreGive(sem);
+xSemaphoreTake(sem, timeout);
+```
+
+含义是：
+
+```
+Give
+= 放一个信号进去
+
+Take
+= 取走这个信号
+```
+
+如果 Take 的时候没有信号，并且你允许等待：
+
+```
+xSemaphoreTake(sem, portMAX_DELAY);
+```
+
+那么当前 Task 就会：
+
+```
+Running
+↓
+发现Semaphore不可用
+↓
+Blocked
+```
+
+等别人：
+
+```
+xSemaphoreGive(sem);
+```
+
+之后：
+
+```
+Blocked
+↓
+Ready
+```
+
+这和你刚刚学 Queue 空的时候：
+
+```
+xQueueReceive(...)
+```
+
+非常像。
+
+你可以直接类比：
+
+```
+Queue为空
+→ Receive任务Blocked
+
+Semaphore没有token
+→ Take任务Blocked
+```
+
+区别只是 Queue 里面有数据内容，而 Semaphore 本身通常不关心具体数据。
+
+举个最典型的例子。
+
+Task2：
+
+```
+void task2(void *pvParameters)
+{
+    while(1)
+    {
+        xSemaphoreTake(sem, portMAX_DELAY);
+
+        usart_send_string(&usart1, "Event received!\r\n");
+    }
+}
+```
+
+一开始 Semaphore 没信号：
+
+```
+Task2 Running
+↓
+Take
+↓
+没token
+↓
+Task2 Blocked
+```
+
+Task1：
+
+```
+void task1(void *pvParameters)
+{
+    while(1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        xSemaphoreGive(sem);
+    }
+}
+```
+
+每隔一秒 Give 一次。
+
+于是：
+
+```
+Task1 Give
+↓
+Semaphore可用
+↓
+Task2 Blocked → Ready
+↓
+Task2 Take
+↓
+token被取走
+↓
+Task2执行
+↓
+再次Take
+↓
+又Blocked
+```
+
+这就是 Semaphore 最典型的“同步”作用。
 
 # 9 Hook 函数
 
