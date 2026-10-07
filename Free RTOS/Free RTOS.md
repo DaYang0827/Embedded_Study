@@ -2904,7 +2904,7 @@ Take成功
 ```
 
 ## 8.3 Counting Semaphore
-### 概念
+### 8.3.1 概念
 
 Counting Semaphore 本质可以先理解成**一个有上限的计数器 + 可以让 Task 阻塞等待。** 比如：
 
@@ -2922,7 +2922,7 @@ count也不能小于0
 
 ---
 
-### SemaphoreCreateCounting
+### 8.3.2 SemaphoreCreateCounting
 
 创建函数是：
 
@@ -2996,23 +2996,11 @@ count = 1
 
 ---
 
-如果当前 `count = 0`执行：
-
-```
-xSemaphoreTake(count_sem, 0);
-```
-
-会：
-
-```
-立刻失败
-```
-
-因为没有许可可以拿。
+如果当前 `count = 0`，执行`xSemaphoreTake(count_sem, 0);` 会立刻失败，因为没有许可可以拿。
 
 如果：
 
-```
+```c
 xSemaphoreTake(
     count_sem,
     portMAX_DELAY
@@ -3031,29 +3019,20 @@ xSemaphoreTake(
 等待别人 Give
 ```
 
-当另一个 Task：
+当另一个 Task `xSemaphoreGive(count_sem);`发生：
 
-```
-xSemaphoreGive(count_sem);
-```
-
-发生：
-
-```
+```text
 等待中的Task
 Blocked → Ready
 ```
 
 之后这个 Task 被调度运行时，就可以继续 Take。
 
-### SemaphoreCreate
-
-
-### 典型例子
+### 8.3.3 典型例子
 
 生产者 Task：
 
-```
+```c
 void producer_task(void *arg)
 {
     while (1)
@@ -3068,7 +3047,7 @@ void producer_task(void *arg)
 
 消费者 Task：
 
-```
+```c
 void consumer_task(void *arg)
 {
     while (1)
@@ -3086,7 +3065,7 @@ void consumer_task(void *arg)
 
 逻辑：
 
-```
+```text
 Producer
 ↓
 Give
@@ -3106,21 +3085,13 @@ count - 1
 
 比如 Producer 很快：
 
-```
+```text
 Give
 Give
 Give
 ```
 
-而 Consumer 还没来得及处理。
-
-Counting Semaphore 可以记住：
-
-```
-count = 3
-```
-
-Consumer 后面：
+而 Consumer 还没来得及处理。Counting Semaphore 可以记住 count = 3。Consumer 后面：
 
 ```
 Take
@@ -3135,13 +3106,7 @@ Take
 
 所以它和 Binary Semaphore 最大区别就在这里。
 
-Binary：
-
-```
-只有0/1
-```
-
-例如连续：
+Binary 只有0/1，例如连续：
 
 ```
 Give
@@ -3149,15 +3114,7 @@ Give
 Give
 ```
 
-很可能最后还是：
-
-```
-1
-```
-
-中间多个事件可能被“合并”。
-
-而 Counting：
+很可能最后还是 1， 中间多个事件可能被“合并”。而 Counting：
 
 ```
 Give
@@ -3165,15 +3122,9 @@ Give
 Give
 ```
 
-可以：
+可以`0 → 1 → 2 → 3` 能记住事件发生了几次。
 
-```
-0 → 1 → 2 → 3
-```
-
-能记住事件发生了几次。
-
-## Mutex
+## 8.4 Mutex
 
 
 # 9 Hook 函数
