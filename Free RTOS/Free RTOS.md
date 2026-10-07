@@ -2604,7 +2604,7 @@ BaseType_t xQueueReceiveFromISR (QueueHandle_t xQueue,
 
 # 8 Semaphore
 
-## 概念
+## 8.1 概念
 
 信号量 `Semaphore` 本质上是 **RTOS 里用来做同步和资源控制的机制**。信号量不是用来传具体数据的，而是用来告诉任务：“某件事发生了” 或 “某个资源现在可以用了”
 
@@ -2648,7 +2648,7 @@ Counting Semaphore
 `Handle` = 钥匙 / 编号 / 地址
 `Scheduler` = 管理员，决定谁先执行
 
-## Binary Semaphore
+## 8.2 Binary Semaphore
 
 Binary Semaphore 只有两种状态，可以理解为：
 
@@ -2711,9 +2711,9 @@ Ready
 
 这和 Queue 空的时候`xQueueReceive(...)`，非常像。
 
-你可以直接类比：
+可以直接类比：
 
-```
+```text
 Queue为空
 → Receive任务Blocked
 
@@ -2721,13 +2721,11 @@ Semaphore没有token
 → Take任务Blocked
 ```
 
-区别只是 Queue 里面有数据内容，而 Semaphore 本身通常不关心具体数据。
-
-举个最典型的例子。
+区别只是**Queue 里面有数据内容，而 Semaphore 本身通常不关心具体数据**。举个最典型的例子。
 
 Task2：
 
-```
+```c
 void task2(void *pvParameters)
 {
     while(1)
@@ -2741,7 +2739,7 @@ void task2(void *pvParameters)
 
 一开始 Semaphore 没信号：
 
-```
+```text
 Task2 Running
 ↓
 Take
@@ -2753,7 +2751,7 @@ Task2 Blocked
 
 Task1：
 
-```
+```c
 void task1(void *pvParameters)
 {
     while(1)
@@ -2769,7 +2767,7 @@ void task1(void *pvParameters)
 
 于是：
 
-```
+```text
 Task1 Give
 ↓
 Semaphore可用
@@ -2789,51 +2787,21 @@ Task2执行
 
 这就是 Semaphore 最典型的“同步”作用。
 
-## Counting Semaphore
+## 8.3 Counting Semaphore
 
-Counting Semaphore 和 Binary 的区别主要是数量。
-
-Binary：
-
-```
-最大就是1
-```
-
-Counting：
-
-```
-可以有0、1、2、3...N
-```
+Counting Semaphore 和 Binary 的区别主要是数量。Binary，最大就是1。Counting，可以有0、1、2、3...N
 
 比如停车位：
 
-```
+```c
 Counting Semaphore = 3
 ```
 
 表示同时允许 3 个资源被使用。
 
-Take 一个：
+Take 一个 `3 → 2`，再 Take `2 → 1`。Give `1 → 2`， 所以 Counting Semaphore 更适合：
 
-```
-3 → 2
-```
-
-再 Take：
-
-```
-2 → 1
-```
-
-Give：
-
-```
-1 → 2
-```
-
-所以 Counting Semaphore 更适合：
-
-```
+```text
 有限数量资源管理
 事件累计计数
 ```
