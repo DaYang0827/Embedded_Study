@@ -3041,6 +3041,58 @@ Blocked → Ready
 
 ### 8.3.3 API
 
+常用操作：
+
+```c
+BaseType_t xSemaphoreGive(SemaphoreHandle_t xSemaphore);
+BaseType_t xSemaphoreTake(SemaphoreHandle_t xSemaphore,
+                          TickType_t xTicksToWait);
+UBaseType_t uxSemaphoreGetCount(SemaphoreHandle_t xSemaphore);
+```
+
+含义：
+
+```text
+xSemaphoreGive()
+→ count + 1
+→ 如果 count 已经等于 uxMaxCount，Give 失败
+
+xSemaphoreTake()
+→ count - 1
+→ 如果 count = 0，根据 xTicksToWait 决定是否阻塞等待
+
+uxSemaphoreGetCount()
+→ 读取当前 count 值
+```
+
+ISR 中使用：
+
+```
+xSemaphoreGiveFromISR(count_sem, &xHigherPriorityTaskWoken);
+xSemaphoreTakeFromISR(count_sem, &xHigherPriorityTaskWoken);
+```
+
+注意：
+
+```
+Counting Semaphore 可以用于“事件计数”
+比如 DMA 完成了 3 次，Task 后面可以连续 Take 3 次处理。
+
+Binary Semaphore 只能记 0/1
+Counting Semaphore 能记 0/N
+```
+
+典型判断：
+
+```
+count_sem = xSemaphoreCreateCounting(5, 0);
+
+if (count_sem == NULL)
+{
+    // 创建失败，通常是 heap 不够
+}
+```
+
 ### 8.3.4 典型例子
 
 生产者 Task：
@@ -3226,6 +3278,7 @@ xSemaphoreGive(uart_mutex);
 释放USART使用权
 ```
 
+全流程：
 
 如果 Mutex 当前没人占用`Mutex = available`，TaskA `xSemaphoreTake(uart_mutex, portMAX_DELAY);` 会立刻成功。然后`Mutex owner = TaskA`，这时候 TaskB 再`xSemaphoreTake(uart_mutex, portMAX_DELAY);` 拿不到`TaskB ：Running → Blocked`。等 TaskA `xSemaphoreGive(uart_mutex);`，之后 TaskB `Blocked → Ready` 后续再根据优先级调度。
 
