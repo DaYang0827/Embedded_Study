@@ -3359,7 +3359,17 @@ Task Take
 
 ### Priority Inheritance
 
-**Priority Inheritance，优先级继承。**
+RTOS不会对每个任务都上锁
+
+实时操作系统（RTOS）的核心灵魂是**实时响应**（高优先级的紧急任务一旦醒来，必须在几微秒内得到执行）。如果，“只要任务拿了锁，就能自动锁住所有人（包括比它优先级高的任务）”，那就会发生下面这种恐怖的场景：
+
+- **任务 L（最低优先级，比如打印日志）** 拿了一把锁。
+- 这时，系统的 **高优先级任务 H1（比如监测汽车安全气囊的防撞传感器）** 突然醒了，它根本不需要这把锁。
+- 如果因为 L 手里有锁，系统就“连带把不需要锁的 H1 也冻结了/不让执行”，那万一这时候发生碰撞，**安全气囊将无法弹出**。
+
+所以，操作系统**坚决不能让低优先级的任务通过拿一把锁，就无差别地绑架其他无关的高优先级任务**。**锁只能精准限制“在门口排队等这把锁”的任务。**
+
+这就出现了优先级继承，**Priority Inheritance，优先级继承。**
 
 假设：
 
@@ -3378,67 +3388,35 @@ Take Mutex
 正在使用USART
 ```
 
-突然 High 运行`High:Take Mutex`，但是 Mutex 在 Low 手里，于是 `High → Blocked` 现在麻烦来了。Mid 也是 Ready：
+突然 High 运行 `High:Take Mutex`，但是 Mutex 在 Low 手里，于是 `High → Blocked` 现在麻烦来了。Mid 也是 Ready：
 
-```
+```text
 Mid priority = 2
 Low priority = 1
 ```
 
-如果没有特殊机制 Mid 一直压着Low运行，Low 没机会运行，Low没法释放Mutex，High 又一直等 Low，High也运行不了，于是出现 **高优先级任务反而被低优先级任务间接卡住。** 这就是Priority Inversion**优先级翻转**。
+如果没有特殊机制 Mid 一直压着Low运行，Low 没机会运行，Low没法释放Mutex，High 又一直等 Low，High也运行不了，于是出现 **高优先级任务反而被低优先级任务间接卡住。** 这就是Priority Inversion **优先级翻转**。
 
 ---
 
-Mutex 的解决方式就是：
+Mutex 的解决方式就是`Priority Inheritance`，如果 High 在等 Low 手里的 Mutex：
 
-```
-Priority Inheritance
-```
-
-如果 High 在等 Low 手里的 Mutex：
-
-```
+```text
 Low 原 priority = 1
 High priority = 3
 ```
 
-FreeRTOS 会临时把 Low 的优先级提高：
+FreeRTOS 会临时把 Low 的优先级提高`Low 临时 priority = 3`，于是 Mid `priority = 2` 就不能一直压着 Low。Low 很快运行：
 
-```
-Low 临时 priority = 3
-```
-
-于是 Mid：
-
-```
-priority = 2
-```
-
-就不能一直压着 Low。
-
-Low 很快运行：
-
-```
+```text
 完成共享资源操作
 ↓
 Give Mutex
 ```
 
-然后：
+然后High获得Mutex，Low 再恢复原来的 `priority = 1` 流程可以记成：
 
-```
-High获得Mutex
-```
-
-Low 再恢复原来的：
-
-```
-priority = 1
-```
-
-流程可以记成：
-
-```
+```text
 Low拿Mutex
 ↓
 High想拿
