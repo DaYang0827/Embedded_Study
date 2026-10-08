@@ -3336,29 +3336,17 @@ Give释放
 
 ---
 
-最重要的规则之一：
-
-> **谁 Take 了 Mutex，通常就应该由谁 Give。**
-
-因为 Mutex 有“所有者”概念。
+最重要的规则之一**谁 Take 了 Mutex，通常就应该由谁 Give。** 因为 **Mutex 有“所有者”概念**。
 
 比如：
 
-```
+```text
 TaskA Take
 ↓
 Mutex owner = TaskA
 ```
 
-通常就应该：
-
-```
-TaskA Give
-```
-
-这和 Binary Semaphore 不一样。
-
-Binary Semaphore 常见就是：
+通常就应该TaskA Give，这和 Binary Semaphore 不一样。Binary Semaphore 常见就是：
 
 ```
 ISR Give
@@ -3369,15 +3357,13 @@ Task Take
 
 ---
 
-Mutex 还有一个非常关键的机制：
+### Priority Inheritance
 
-> **Priority Inheritance，优先级继承。**
-
-先看问题。
+**Priority Inheritance，优先级继承。**
 
 假设：
 
-```
+```c
 Task_High priority = 3
 Task_Mid  priority = 2
 Task_Low  priority = 1
@@ -3385,63 +3371,21 @@ Task_Low  priority = 1
 
 Low 先拿到了 Mutex：
 
-```
+```text
 Low:
 Take Mutex
 ↓
 正在使用USART
 ```
 
-突然 High 运行：
-
-```
-High:
-Take Mutex
-```
-
-但是 Mutex 在 Low 手里，于是：
-
-```
-High → Blocked
-```
-
-现在麻烦来了。
-
-Mid 也是 Ready：
+突然 High 运行`High:Take Mutex`，但是 Mutex 在 Low 手里，于是 `High → Blocked` 现在麻烦来了。Mid 也是 Ready：
 
 ```
 Mid priority = 2
 Low priority = 1
 ```
 
-如果没有特殊机制：
-
-```
-Mid一直压着Low运行
-```
-
-Low 没机会运行：
-
-```
-Low没法释放Mutex
-```
-
-High 又一直等 Low：
-
-```
-High也运行不了
-```
-
-于是出现：
-
-> **高优先级任务反而被低优先级任务间接卡住。**
-
-这就是：
-
-```
-Priority Inversion
-优先级翻转
-```
+如果没有特殊机制 Mid 一直压着Low运行，Low 没机会运行，Low没法释放Mutex，High 又一直等 Low，High也运行不了，于是出现 **高优先级任务反而被低优先级任务间接卡住。** 这就是Priority Inversion**优先级翻转**。
 
 ---
 
