@@ -3039,6 +3039,8 @@ Blocked → Ready
 
 之后这个 Task 被调度运行时，就可以继续 Take。
 
+### API
+
 ### 8.3.3 典型例子
 
 生产者 Task：
@@ -3187,26 +3189,22 @@ if (uart_mutex == NULL)
 }
 ```
 
-注意：
-
-```
-Mutex 句柄类型 也是 SemaphoreHandle_t
-```
-
-因为 FreeRTOS 里 Mutex API 属于 semaphore 这一套接口。
+注意，**Mutex 句柄类型 也是 `SemaphoreHandle_t`**。因为 FreeRTOS 里 Mutex API 属于 semaphore 这一套接口。
 
 ---
 
-最常用两个 API 还是：
+### API
 
-```
+最常用的 API 还是：
+
+```c
 xSemaphoreTake()
 xSemaphoreGive()
 ```
 
 例如：
 
-```
+```c
 xSemaphoreTake(uart_mutex, portMAX_DELAY);
 
 uart_send_string("hello");
@@ -3216,7 +3214,7 @@ xSemaphoreGive(uart_mutex);
 
 意思就是：
 
-```
+```text
 先申请USART使用权
 ↓
 申请成功
@@ -3232,27 +3230,25 @@ xSemaphoreGive(uart_mutex);
 
 如果 Mutex 当前没人占用：
 
-```
+```c
 Mutex = available
 ```
 
 TaskA：
 
-```
+```c
 xSemaphoreTake(uart_mutex, portMAX_DELAY);
 ```
 
-会立刻成功。
+会立刻成功。然后：
 
-然后：
-
-```
+```c
 Mutex owner = TaskA
 ```
 
 这时候 TaskB 再：
 
-```
+```c
 xSemaphoreTake(uart_mutex, portMAX_DELAY);
 ```
 
@@ -3265,13 +3261,13 @@ Running → Blocked
 
 等 TaskA：
 
-```
+```c
 xSemaphoreGive(uart_mutex);
 ```
 
 之后 TaskB：
 
-```
+```c
 Blocked → Ready
 ```
 
@@ -3279,36 +3275,25 @@ Blocked → Ready
 
 ---
 
-`xSemaphoreTake()` 第二个参数还是你熟悉的：
-
-```
-TickType_t xTicksToWait
-```
+`xSemaphoreTake()` 第二个参数还是 `TickType_t xTicksToWait`
 
 例如：
 
-```
+```c
 xSemaphoreTake(mutex, 0);
 ```
 
-拿不到：
-
-```
-立即返回失败
-```
+拿不到立即返回失败
 
 ---
 
-```
-xSemaphoreTake(
-    mutex,
-    pdMS_TO_TICKS(100)
-);
+```c
+xSemaphoreTake(mutex, pdMS_TO_TICKS(100));
 ```
 
 拿不到：
 
-```
+```text
 最多等100ms
 ↓
 期间Task进入Blocked
@@ -3316,20 +3301,11 @@ xSemaphoreTake(
 
 ---
 
-```
-xSemaphoreTake(
-    mutex,
-    portMAX_DELAY
-);
+```c
+xSemaphoreTake(mutex, portMAX_DELAY);
 ```
 
-就是：
-
-```
-一直等到Mutex可用
-```
-
-工程里保护共享资源最常见就是这个。
+就是**一直等到Mutex可用** 工程里保护共享资源最常见就是这个。
 
 ---
 
