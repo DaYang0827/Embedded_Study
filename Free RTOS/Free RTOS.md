@@ -3436,19 +3436,18 @@ Low恢复原优先级
 
 这就是 Mutex 和普通 Binary Semaphore 最大的区别之一。
 
----
 
-再说一个非常常见的完整例子。
+### 典型例子
 
 定义：
 
-```
+```c
 SemaphoreHandle_t uart_mutex;
 ```
 
 main：
 
-```
+```c
 int main(void)
 {
     uart_mutex = xSemaphoreCreateMutex();
@@ -3473,7 +3472,7 @@ int main(void)
 
 Task1：
 
-```
+```c
 void task1(void *arg)
 {
     while (1)
@@ -3495,7 +3494,7 @@ void task1(void *arg)
 
 Task2：
 
-```
+```c
 void task2(void *arg)
 {
     while (1)
@@ -3515,20 +3514,13 @@ void task2(void *arg)
 }
 ```
 
-这样：
+这样Task1和Task2，不会同时进入`uart_send_string()`
 
-```
-Task1和Task2
-不会同时进入uart_send_string()
-```
-
----
-
-这里你要理解“临界区”这个概念。
+### 临界区
 
 比如：
 
-```
+```c
 xSemaphoreTake(mutex, portMAX_DELAY);
 
 shared_data++;
@@ -3540,7 +3532,7 @@ xSemaphoreGive(mutex);
 
 Take 和 Give 中间：
 
-```
+```c
 shared_data++;
 uart_send_string(...);
 update_buffer();
