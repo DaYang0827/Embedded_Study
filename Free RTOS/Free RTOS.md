@@ -3310,7 +3310,7 @@ xSemaphoreTake(mutex, portMAX_DELAY);
 
 返回值一般这样判断：
 
-```
+```c
 if (xSemaphoreTake(
 		uart_mutex,
         portMAX_DELAY
@@ -3324,7 +3324,7 @@ if (xSemaphoreTake(
 
 逻辑：
 
-```
+```text
 Take成功
 ↓
 才允许访问共享资源
@@ -3518,7 +3518,27 @@ void task2(void *arg)
 
 ### 临界区
 
-比如：
+假设在系统里定义了一个全局变量 `uint32_t total_count = 100;`，有两个不同的任务都想对它进行减法操作。在 C 语言中， `total_count--;` 并不是一行代码，单片机（CPU）在底层换成汇编指令时，其实需要分 **3 步** 执行：
+
+1. **读（Read）**：把 `total_count` 的值从内存读到 CPU 寄存器里。
+2. **算（Modify）**：在 CPU 寄存器里执行减 1。
+3. **写（Write）**：把算好的新值写回到内存里。
+
+**⚠️ 灾难发生了（数据冲突）：**
+
+- **任务 A（低优先级）** 刚执行完“第 1 步”，把 `100` 读到了自己的寄存器里。
+- 就在这个瞬间，**任务 B（高优先级）** 突然强行插队（抢占），任务 B 非常快，一口气执行完了“读、算、写” 3 步，把内存里的 `total_count` 变成了 `99`。
+- 随后，**任务 A** 重新获得 CPU 权限，它接着执行自己剩下的“第 2、3 步”：在自己的寄存器里把 `100` 减 1 变成 `99`，然后写回内存。
+- **最终结果**：两个任务各自减了一次，内存里的值居然是 **`99`**（而正确结果应该是 `98`）。数据被踩坏了！
+
+这几行容易引发冲突的代码，就必须放进**临界区**保护起来。
+
+---
+
+2. FreeRTOS 中如何保护临界区？
+
+在 FreeRTOS 中，保护临界区最标准、最强力的做法是**直接关闭中断**。因为单片机里所有的任务切换、硬件响应都是靠中断实现的，一旦关了中断，CPU 就只能一门心思执行你当前的代码，谁也无法插队。
+
 
 ```c
 xSemaphoreTake(mutex, portMAX_DELAY);
@@ -3538,17 +3558,9 @@ uart_send_string(...);
 update_buffer();
 ```
 
-就是被 Mutex 保护的：
+就是被 Mutex 保护的**Critical Section / 临界区**。但注意**临界区尽量要短**。不要：
 
-> **Critical Section / 临界区**
-
-但注意：
-
-> 临界区尽量要短。
-
-不要：
-
-```
+```c
 xSemaphoreTake(mutex, portMAX_DELAY);
 
 vTaskDelay(pdMS_TO_TICKS(5000));
@@ -3556,52 +3568,24 @@ vTaskDelay(pdMS_TO_TICKS(5000));
 xSemaphoreGive(mutex);
 ```
 
-因为你拿着锁睡 5 秒：
-
-```
-其他所有等这个Mutex的Task
-全都Blocked
-```
-
-很容易造成性能问题。
+因为拿着锁睡 5 秒，其他所有等这个Mutex的Task，全都Blocked，很容易造成性能问题。
 
 ---
 
 Mutex 也不能在 ISR 里面用。
 
-不要在 ISR：
+不要在 ISR`xSemaphoreTake(mutex, ...);` ，因为ISR不能Blocked，而且 Mutex 有 owner / priority inheritance 的 Task 语义。所以**Mutex 是 Task-to-Task 的共享资源保护机制，不是 ISR 同步机制。** 如果 ISR 要通知 Task：
 
-```
-xSemaphoreTake(mutex, ...);
-```
-
-因为：
-
-```
-ISR不能Blocked
-```
-
-而且 Mutex 有 owner / priority inheritance 的 Task 语义。
-
-所以：
-
-> **Mutex 是 Task-to-Task 的共享资源保护机制，不是 ISR 同步机制。**
-
-如果 ISR 要通知 Task：
-
-```
+```text
 Binary Semaphore
 Task Notification
 Queue
 ```
 
-更合适。
 
----
+一定要区分 Mutex 和 Binary Semaphore：
 
-你现在一定要区分 Mutex 和 Binary Semaphore：
-
-```
+```text
 Binary Semaphore
 → “事情发生了”
 → 同步
@@ -3618,7 +3602,7 @@ Mutex
 
 比如：
 
-```
+```text
 DMA接收完成
 → Binary Semaphore
 
