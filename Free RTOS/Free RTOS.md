@@ -3255,8 +3255,7 @@ xSemaphoreTake(uart_mutex, portMAX_DELAY);
 拿不到：
 
 ```
-TaskB
-Running → Blocked
+TaskB ：Running → Blocked
 ```
 
 等 TaskA：
@@ -3313,7 +3312,7 @@ xSemaphoreTake(mutex, portMAX_DELAY);
 
 ```
 if (xSemaphoreTake(
-        uart_mutex,
+		uart_mutex,
         portMAX_DELAY
     ) == pdTRUE)
 {
