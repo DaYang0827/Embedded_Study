@@ -3138,6 +3138,613 @@ Give
 ## 8.4 Mutex
 ### 概念
 
+ **Mutex = 互斥锁，用来保护共享资源，保证同一时间只有一个 Task 能进入临界区。** 而 Binary Semaphore 更偏**事件同步 / 通知。**
+
+假设两个 Task 都要用同一个 USART：
+
+```c
+TaskA:
+uart_send("AAAA");
+
+TaskB:
+uart_send("BBBB");
+```
+
+如果没有保护，可能出现 `A A B A B B A B`，数据被穿插。 这时候就需要 Mutex：
+
+```
+TaskA
+Take Mutex
+↓
+使用USART
+↓
+Give Mutex
+
+TaskB
+只能等TaskA释放
+```
+
+---
+
+### CreateMutex
+
+Mutex 创建 API：
+
+```c
+SemaphoreHandle_t xSemaphoreCreateMutex(void);
+```
+
+调用：
+
+```c
+SemaphoreHandle_t uart_mutex;
+
+uart_mutex = xSemaphoreCreateMutex();
+
+if (uart_mutex == NULL)
+{
+    // 创建失败
+}
+```
+
+注意：
+
+```
+Mutex 句柄类型 也是 SemaphoreHandle_t
+```
+
+因为 FreeRTOS 里 Mutex API 属于 semaphore 这一套接口。
+
+---
+
+最常用两个 API 还是：
+
+```
+xSemaphoreTake()
+xSemaphoreGive()
+```
+
+例如：
+
+```
+xSemaphoreTake(uart_mutex, portMAX_DELAY);
+
+uart_send_string("hello");
+
+xSemaphoreGive(uart_mutex);
+```
+
+意思就是：
+
+```
+先申请USART使用权
+↓
+申请成功
+↓
+进入临界区
+↓
+发送数据
+↓
+释放USART使用权
+```
+
+---
+
+如果 Mutex 当前没人占用：
+
+```
+Mutex = available
+```
+
+TaskA：
+
+```
+xSemaphoreTake(uart_mutex, portMAX_DELAY);
+```
+
+会立刻成功。
+
+然后：
+
+```
+Mutex owner = TaskA
+```
+
+这时候 TaskB 再：
+
+```
+xSemaphoreTake(uart_mutex, portMAX_DELAY);
+```
+
+拿不到：
+
+```
+TaskB
+Running → Blocked
+```
+
+等 TaskA：
+
+```
+xSemaphoreGive(uart_mutex);
+```
+
+之后 TaskB：
+
+```
+Blocked → Ready
+```
+
+后续再根据优先级调度。
+
+---
+
+`xSemaphoreTake()` 第二个参数还是你熟悉的：
+
+```
+TickType_t xTicksToWait
+```
+
+例如：
+
+```
+xSemaphoreTake(mutex, 0);
+```
+
+拿不到：
+
+```
+立即返回失败
+```
+
+---
+
+```
+xSemaphoreTake(
+    mutex,
+    pdMS_TO_TICKS(100)
+);
+```
+
+拿不到：
+
+```
+最多等100ms
+↓
+期间Task进入Blocked
+```
+
+---
+
+```
+xSemaphoreTake(
+    mutex,
+    portMAX_DELAY
+);
+```
+
+就是：
+
+```
+一直等到Mutex可用
+```
+
+工程里保护共享资源最常见就是这个。
+
+---
+
+返回值一般这样判断：
+
+```
+if (xSemaphoreTake(
+        uart_mutex,
+        portMAX_DELAY
+    ) == pdTRUE)
+{
+    uart_send_string("hello");
+
+    xSemaphoreGive(uart_mutex);
+}
+```
+
+逻辑：
+
+```
+Take成功
+↓
+才允许访问共享资源
+↓
+访问完成
+↓
+Give释放
+```
+
+---
+
+最重要的规则之一：
+
+> **谁 Take 了 Mutex，通常就应该由谁 Give。**
+
+因为 Mutex 有“所有者”概念。
+
+比如：
+
+```
+TaskA Take
+↓
+Mutex owner = TaskA
+```
+
+通常就应该：
+
+```
+TaskA Give
+```
+
+这和 Binary Semaphore 不一样。
+
+Binary Semaphore 常见就是：
+
+```
+ISR Give
+Task Take
+```
+
+但 Mutex 不应该这样用。
+
+---
+
+Mutex 还有一个非常关键的机制：
+
+> **Priority Inheritance，优先级继承。**
+
+先看问题。
+
+假设：
+
+```
+Task_High priority = 3
+Task_Mid  priority = 2
+Task_Low  priority = 1
+```
+
+Low 先拿到了 Mutex：
+
+```
+Low:
+Take Mutex
+↓
+正在使用USART
+```
+
+突然 High 运行：
+
+```
+High:
+Take Mutex
+```
+
+但是 Mutex 在 Low 手里，于是：
+
+```
+High → Blocked
+```
+
+现在麻烦来了。
+
+Mid 也是 Ready：
+
+```
+Mid priority = 2
+Low priority = 1
+```
+
+如果没有特殊机制：
+
+```
+Mid一直压着Low运行
+```
+
+Low 没机会运行：
+
+```
+Low没法释放Mutex
+```
+
+High 又一直等 Low：
+
+```
+High也运行不了
+```
+
+于是出现：
+
+> **高优先级任务反而被低优先级任务间接卡住。**
+
+这就是：
+
+```
+Priority Inversion
+优先级翻转
+```
+
+---
+
+Mutex 的解决方式就是：
+
+```
+Priority Inheritance
+```
+
+如果 High 在等 Low 手里的 Mutex：
+
+```
+Low 原 priority = 1
+High priority = 3
+```
+
+FreeRTOS 会临时把 Low 的优先级提高：
+
+```
+Low 临时 priority = 3
+```
+
+于是 Mid：
+
+```
+priority = 2
+```
+
+就不能一直压着 Low。
+
+Low 很快运行：
+
+```
+完成共享资源操作
+↓
+Give Mutex
+```
+
+然后：
+
+```
+High获得Mutex
+```
+
+Low 再恢复原来的：
+
+```
+priority = 1
+```
+
+流程可以记成：
+
+```
+Low拿Mutex
+↓
+High想拿
+↓
+High被Blocked
+↓
+Low临时继承High优先级
+↓
+Low尽快运行
+↓
+释放Mutex
+↓
+High获得Mutex
+↓
+Low恢复原优先级
+```
+
+这就是 Mutex 和普通 Binary Semaphore 最大的区别之一。
+
+---
+
+再说一个非常常见的完整例子。
+
+定义：
+
+```
+SemaphoreHandle_t uart_mutex;
+```
+
+main：
+
+```
+int main(void)
+{
+    uart_mutex = xSemaphoreCreateMutex();
+
+    if (uart_mutex == NULL)
+    {
+        while (1)
+        {
+        }
+    }
+
+    xTaskCreate(task1, "TASK1", 128, NULL, 2, NULL);
+    xTaskCreate(task2, "TASK2", 128, NULL, 2, NULL);
+
+    vTaskStartScheduler();
+
+    while (1)
+    {
+    }
+}
+```
+
+Task1：
+
+```
+void task1(void *arg)
+{
+    while (1)
+    {
+        if (xSemaphoreTake(
+                uart_mutex,
+                portMAX_DELAY
+            ) == pdTRUE)
+        {
+            uart_send_string("Task1\r\n");
+
+            xSemaphoreGive(uart_mutex);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+```
+
+Task2：
+
+```
+void task2(void *arg)
+{
+    while (1)
+    {
+        if (xSemaphoreTake(
+                uart_mutex,
+                portMAX_DELAY
+            ) == pdTRUE)
+        {
+            uart_send_string("Task2\r\n");
+
+            xSemaphoreGive(uart_mutex);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+```
+
+这样：
+
+```
+Task1和Task2
+不会同时进入uart_send_string()
+```
+
+---
+
+这里你要理解“临界区”这个概念。
+
+比如：
+
+```
+xSemaphoreTake(mutex, portMAX_DELAY);
+
+shared_data++;
+uart_send_string(...);
+update_buffer();
+
+xSemaphoreGive(mutex);
+```
+
+Take 和 Give 中间：
+
+```
+shared_data++;
+uart_send_string(...);
+update_buffer();
+```
+
+就是被 Mutex 保护的：
+
+> **Critical Section / 临界区**
+
+但注意：
+
+> 临界区尽量要短。
+
+不要：
+
+```
+xSemaphoreTake(mutex, portMAX_DELAY);
+
+vTaskDelay(pdMS_TO_TICKS(5000));
+
+xSemaphoreGive(mutex);
+```
+
+因为你拿着锁睡 5 秒：
+
+```
+其他所有等这个Mutex的Task
+全都Blocked
+```
+
+很容易造成性能问题。
+
+---
+
+Mutex 也不能在 ISR 里面用。
+
+不要在 ISR：
+
+```
+xSemaphoreTake(mutex, ...);
+```
+
+因为：
+
+```
+ISR不能Blocked
+```
+
+而且 Mutex 有 owner / priority inheritance 的 Task 语义。
+
+所以：
+
+> **Mutex 是 Task-to-Task 的共享资源保护机制，不是 ISR 同步机制。**
+
+如果 ISR 要通知 Task：
+
+```
+Binary Semaphore
+Task Notification
+Queue
+```
+
+更合适。
+
+---
+
+你现在一定要区分 Mutex 和 Binary Semaphore：
+
+```
+Binary Semaphore
+→ “事情发生了”
+→ 同步
+→ 通常没有所有者概念
+→ 可以 ISR Give
+
+Mutex
+→ “这个资源现在只能一个Task用”
+→ 互斥
+→ 有所有者概念
+→ 有优先级继承
+→ 不用于 ISR
+```
+
+比如：
+
+```
+DMA接收完成
+→ Binary Semaphore
+
+USART只能一个Task发送
+→ Mutex
+
+I2C总线多个Task共用
+→ Mutex
+
+SPI多个设备Task共用
+→ Mutex
+
+中断通知Task处理数据
+→ Binary Semaphore / Notification
+```
 
 # 9 Hook 函数
 
