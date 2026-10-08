@@ -3067,14 +3067,14 @@ uxSemaphoreGetCount()
 
 ISR 中使用：
 
-```
+```c
 xSemaphoreGiveFromISR(count_sem, &xHigherPriorityTaskWoken);
 xSemaphoreTakeFromISR(count_sem, &xHigherPriorityTaskWoken);
 ```
 
 注意：
 
-```
+```text
 Counting Semaphore 可以用于“事件计数”
 比如 DMA 完成了 3 次，Task 后面可以连续 Take 3 次处理。
 
@@ -3084,7 +3084,7 @@ Counting Semaphore 能记 0/N
 
 典型判断：
 
-```
+```c
 count_sem = xSemaphoreCreateCounting(5, 0);
 
 if (count_sem == NULL)
@@ -3247,7 +3247,7 @@ if (uart_mutex == NULL)
 
 ### 8.4.3 API
 
-最常用的 API 还是：
+Mutex 使用的核心 API 仍然是：
 
 ```c
 xSemaphoreTake()
@@ -3287,14 +3287,14 @@ xSemaphoreGive(uart_mutex);
 `xSemaphoreTake()` 第二个参数还是 `TickType_t xTicksToWait`
 
 例如：
-
+1. 
 ```c
 xSemaphoreTake(mutex, 0);
 ```
 
 拿不到立即返回失败
 
----
+2. 
 
 ```c
 xSemaphoreTake(mutex, pdMS_TO_TICKS(100));
