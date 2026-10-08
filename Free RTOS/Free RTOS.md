@@ -3039,9 +3039,9 @@ Blocked → Ready
 
 之后这个 Task 被调度运行时，就可以继续 Take。
 
-### API
+### 8.3.3 API
 
-### 8.3.3 典型例子
+### 8.3.4 典型例子
 
 生产者 Task：
 
@@ -3138,7 +3138,7 @@ Give
 可以`0 → 1 → 2 → 3` 能记住事件发生了几次。
 
 ## 8.4 Mutex
-### 概念
+### 8.4.1 概念
 
  **Mutex = 互斥锁，用来保护共享资源，保证同一时间只有一个 Task 能进入临界区。** 而 Binary Semaphore 更偏**事件同步 / 通知。**
 
@@ -3168,7 +3168,7 @@ TaskB
 
 ---
 
-### CreateMutex
+### 8.4.2 CreateMutex
 
 Mutex 创建 API：
 
@@ -3193,7 +3193,7 @@ if (uart_mutex == NULL)
 
 ---
 
-### API
+### 8.4.3 API
 
 最常用的 API 还是：
 
@@ -3226,51 +3226,8 @@ xSemaphoreGive(uart_mutex);
 释放USART使用权
 ```
 
----
 
-如果 Mutex 当前没人占用：
-
-```c
-Mutex = available
-```
-
-TaskA：
-
-```c
-xSemaphoreTake(uart_mutex, portMAX_DELAY);
-```
-
-会立刻成功。然后：
-
-```c
-Mutex owner = TaskA
-```
-
-这时候 TaskB 再：
-
-```c
-xSemaphoreTake(uart_mutex, portMAX_DELAY);
-```
-
-拿不到：
-
-```
-TaskB ：Running → Blocked
-```
-
-等 TaskA：
-
-```c
-xSemaphoreGive(uart_mutex);
-```
-
-之后 TaskB：
-
-```c
-Blocked → Ready
-```
-
-后续再根据优先级调度。
+如果 Mutex 当前没人占用`Mutex = available`，TaskA `xSemaphoreTake(uart_mutex, portMAX_DELAY);` 会立刻成功。然后`Mutex owner = TaskA`，这时候 TaskB 再`xSemaphoreTake(uart_mutex, portMAX_DELAY);` 拿不到`TaskB ：Running → Blocked`。等 TaskA `xSemaphoreGive(uart_mutex);`，之后 TaskB `Blocked → Ready` 后续再根据优先级调度。
 
 ---
 
@@ -3357,7 +3314,7 @@ Task Take
 
 ---
 
-### Priority Inheritance
+### 8.4.4 Priority Inheritance
 
 RTOS不会对每个任务都上锁
 
@@ -3437,7 +3394,7 @@ Low恢复原优先级
 这就是 Mutex 和普通 Binary Semaphore 最大的区别之一。
 
 
-### 典型例子
+### 8.4.5 典型例子
 
 定义：
 
@@ -3516,7 +3473,7 @@ void task2(void *arg)
 
 这样Task1和Task2，不会同时进入`uart_send_string()`
 
-### 临界区
+### 8.4.6 临界区
 
 1. 为什么需要临界区
 
