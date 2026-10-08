@@ -24,7 +24,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 # 2  FreeRTOS移植
 
 1. 添加RTOS源码到Keil工程
-2. 添加head_4.c到Keil工程
+2. 添加heap_4.c到Keil工程
 3. 添加port.c到Keil工程
 4. 添加头文件路径
 5. 添加FreeRTOSConfig.h
@@ -3287,7 +3287,9 @@ xSemaphoreGive(uart_mutex);
 `xSemaphoreTake()` 第二个参数还是 `TickType_t xTicksToWait`
 
 例如：
+
 1. 
+
 ```c
 xSemaphoreTake(mutex, 0);
 ```
@@ -3308,7 +3310,7 @@ xSemaphoreTake(mutex, pdMS_TO_TICKS(100));
 期间Task进入Blocked
 ```
 
----
+3. 
 
 ```c
 xSemaphoreTake(mutex, portMAX_DELAY);
@@ -3346,26 +3348,12 @@ Give释放
 
 ---
 
-最重要的规则之一**谁 Take 了 Mutex，通常就应该由谁 Give。** 因为 **Mutex 有“所有者”概念**。
+重要规则：
 
-比如：
-
-```text
-TaskA Take
-↓
-Mutex owner = TaskA
-```
-
-通常就应该TaskA Give，这和 Binary Semaphore 不一样。Binary Semaphore 常见就是：
-
-```
-ISR Give
-Task Take
-```
-
-但 Mutex 不应该这样用。
-
----
+- 谁 Take，谁 Give
+- Mutex 有 owner 概念
+- Mutex 不能在 ISR 中使用
+- Mutex 用来保护共享资源，不是用来通知事件
 
 ### 8.4.4 Priority Inheritance
 
