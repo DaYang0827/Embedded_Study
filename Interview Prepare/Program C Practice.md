@@ -554,10 +554,13 @@ p
 > 指向函数指针变量的指针。
 
 ```text
-Handler_t  是typedef定义的函数指针
-handler
-parser_input
-handler(0xAA)
+Handler_t  是typedef定义的函数指针变量类型
+handler   是对应Handler_t变量类型的变量
+parser_input   是函数名
+handler(0xAA)  是把0xAA这个数据传入到handler这个变量中     此时这个变量已经代表了parser_input这个函数
+
+p   是指向函数指针变量的指针    保存的是Handler_t变量类型定义下的handler变量的地址
+*p   拿出来就是handler
 ```
 ---
 
@@ -604,7 +607,18 @@ entry() 最终意味着什么？
 至少说出 **两个更合理的合法性检查**。
 
 ```text
+0x08010000 里面保存的是MSP     就是程序栈的起始地址
+0x08010004 里面保存到的是resthandler程序的起始地址
 
+app_stack 是变量
+里面保存的是栈首的地址
+
+app_reset 是变量  它里面保存的是resethandler程序的起始地址
+
+entry 是函数吗？
+它是什么？
+
+entry() 最终意味着什么？
 ```
 ---
 
