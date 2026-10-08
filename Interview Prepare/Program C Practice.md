@@ -615,10 +615,12 @@ app_stack 是变量
 
 app_reset 是变量  它里面保存的是resethandler程序的起始地址
 
-entry 是函数吗？
-它是什么？
+entry 是变量     代表的是符合AppEntry_t这个变量类型的变量
 
-entry() 最终意味着什么？
+entry() 最终意味着执行app_reset 函数   就是开始app_resthandler函数
+
+还需要检查0x08010000里面保存的地址是在SRAM的合法区域
+以及0x08010004也是在flash的app区块    而不是在Bootloader区块内
 ```
 ---
 
@@ -674,7 +676,12 @@ pvParameters
 恢复成 `TaskConfig_t *`？
 
 ```text
+设置成void *    是通用指针变量     代表这个里面可以传入任意大小的变量     比如uint8 uint16 uint32等的数据    或者整个结构体也是可以直接传入的
 
+void task(void *pvParameters)
+{
+ （TaskConfig_t *） pvParameters
+}
 ```
 ---
 
