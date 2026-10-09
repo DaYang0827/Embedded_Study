@@ -236,7 +236,7 @@ TaskB priority = 1
 TaskA 调用 `taskYIELD()` 后，TaskB 一定运行吗？
 
 ```text
-
+不会进入block     只会进入ready列表等待scheduler的重新分配
 ```
 ---
 
