@@ -29,7 +29,9 @@ NULL
 &task1_handle
 ```
 
+```text
 
+```
 
 ---
 
@@ -57,6 +59,9 @@ task1_handle是什么？
 为什么同一个task函数可以创建多个任务？
 ```
 
+```text
+
+```
 ---
 
   3
@@ -70,7 +75,9 @@ task1_handle是什么？
 ```
 
 如果不是，分别是什么？
+```text
 
+```
 ---
 
   4
@@ -94,6 +101,9 @@ Handle
 ???
 ```
 
+```text
+
+```
 ---
 
   5
@@ -111,6 +121,9 @@ Suspended
 
 > Ready 和 Blocked 到底差在哪里？
 
+```text
+
+```
 ---
 
   6
@@ -142,6 +155,9 @@ HighTask变什么状态？
 
 为什么 LowTask 不是 Blocked？
 
+```text
+
+```
 ---
 
   7
@@ -172,6 +188,9 @@ TaskB 有没有机会运行？
 
 为什么？
 
+```text
+
+```
 ---
 
   8
@@ -199,6 +218,9 @@ TaskB priority = 1
 
 TaskA 调用 `taskYIELD()` 后，TaskB 一定运行吗？
 
+```text
+
+```
 ---
 
   9
@@ -224,7 +246,9 @@ Blocked → Running
 ```
 
 直接发生？
+```text
 
+```
 ---
 
   10
@@ -248,7 +272,9 @@ vTaskDelayUntil()
 ```
 
 通常更适合 `vTaskDelayUntil()`？
+```text
 
+```
 ---
 
   11
@@ -266,7 +292,9 @@ pxTopOfStack
 ```
 
 串起来。
+```text
 
+```
 ---
 
   12
@@ -285,6 +313,9 @@ PendSV
 
 > Scheduler 和 PendSV 是不是一回事？
 
+```text
+
+```
 ---
 
 # Queue 复习题
@@ -311,6 +342,9 @@ sizeof(uint32_t)是什么？
 一次Receive几个item？
 ```
 
+```text
+
+```
 ---
 
   14
@@ -337,6 +371,9 @@ Queue剩什么？
 一次是不是把10、20、30全拿走？
 ```
 
+```text
+
+```
 ---
 
   15
@@ -361,6 +398,9 @@ data
 
 但是 Queue 保存的却通常不是 `&data`？
 
+```text
+
+```
 ---
 
   16
@@ -376,7 +416,9 @@ data = 200;
 Queue 里原来的值是多少？
 
 为什么？
+```text
 
+```
 ---
 
   17
@@ -403,6 +445,9 @@ xQueueReceive(
 Receive Task发生什么状态变化？
 ```
 
+```text
+
+```
 ---
 
   18
