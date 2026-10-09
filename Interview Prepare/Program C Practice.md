@@ -562,7 +562,7 @@ xQueueSend(q, &msg, 0);
 为什么？
 
 ```text
-是一个完整的message_t    因为队列在创建的时候    就是有5个元素    每个元素是
+是一个完整的message_t    因为队列在创建的时候    就是有5个元素    每个元素是Message_t的大小     所以在发送的时候   也是一次直接接收整个Message_t的大小
 ```
 ---
 
@@ -594,7 +594,8 @@ msg的内容？
 
 这种设计最大的生命周期风险是什么？
 ```text
-
+现在保存的是指针值
+&p代表的是p这个指针自己的地址      对应的大小是uint32的     和sizeof(Message_t *)可能不符合    会发生错误    
 ```
 ---
 
@@ -611,7 +612,8 @@ Counting Semaphore
 
 它们最核心的区别是什么？
 ```text
-
+Binary Semaphore    只能记录有没有    就是0和1    
+Counting Semaphore   能记录有多少个信号量     可能有2个或者很多个
 ```
 ---
 
@@ -642,7 +644,8 @@ xSemaphoreGive(sem);
 
 以后又会怎样？
 ```text
-
+当前的task会进入阻塞状态    因为设定是portMAX_DELAY   没有收到信号量就会一直在阻塞态等待
+另一个taskgive之后    就会从阻塞态转变到ready态
 ```
 ---
 
@@ -666,7 +669,7 @@ Give
 
 为什么？
 ```text
-
+不能      因为binary只能记录0和1   是不能进行累记的
 ```
 ---
 
@@ -701,7 +704,10 @@ Take
 
 以后呢？
 ```text
-
+第一个参数是信号量的最大值
+第二个是当前信号量的值
+连续give之后count是3
+之后变成1
 ```
 ---
 
@@ -720,6 +726,7 @@ xSemaphoreCreateCounting(?, ?);
 ```
 
 为什么初始值不是 0？
+
 ```text
 
 ```
