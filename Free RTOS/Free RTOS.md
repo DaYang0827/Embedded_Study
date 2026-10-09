@@ -599,8 +599,439 @@ Task1 从之前被打断的位置继续执行
 这也是为什么任务被抢占以后，不需要从任务函数开头重新执行。
 
 
-# 5 Task/Thread
-## 5.1 TaskCreat
+# 5 Scheduler
+
+FreeRTOS 的 Scheduler 本质就是**从所有“现在可以运行”的任务里，选一个优先级最高的，让它占 CPU。** 所以 Scheduler 最关心的不是“这个任务是谁”，而是：
+
+```text
+这个任务现在是什么状态？
+它优先级多少？
+```
+
+把四个状态彻底区分开。
+
+```text
+Running
+正在CPU上执行
+
+Ready
+有资格运行，但现在CPU给了别人
+
+Blocked
+暂时没资格竞争CPU，正在等时间或事件
+
+Suspended
+被人为挂起，除非显式恢复，否则不参与调度
+```
+
+最关键的是 `Ready` 和 `Blocked`。
+
+- `Ready` 是**现在就能跑，但是CPU可能暂时给了更高优先级任务**
+- `Blocked` 是**现在先不跑，要等一个条件**
+
+比如`vTaskDelay(pdMS_TO_TICKS(500));` 意思不是“CPU原地等500ms”。而是：
+
+```text
+当前Task:
+Running
+↓
+调用 vTaskDelay()
+↓
+进入 Blocked
+↓
+调度器去运行其他 Ready Task
+```
+
+这就是 RTOS 和普通裸机 `delay()` 最大的区别之一。普通阻塞延时大概是CPU自己在那空等，而 FreeRTOS 的 `vTaskDelay()` 是当前任务让出CPU，CPU去干别的
+
+假设：
+
+```c
+Task1 priority = 2
+Task2 priority = 1
+```
+
+一开始，假设 Task1 被调度：
+
+```c
+Task1 = Running
+Task2 = Ready
+```
+
+Task1 执行`vTaskDelay(pdMS_TO_TICKS(500));`，于是：
+
+```text
+Task1:
+Running → Blocked
+```
+
+调度器再看剩下的任务：
+
+```text
+Task1 = Blocked
+Task2 = Ready
+```
+
+所以 Task2 运行。
+
+即使`Task1优先级更高`也没用，因为 **Blocked 的任务根本不参与竞争**。可以把 Scheduler 想象成：
+
+```text
+所有任务
+↓
+先筛选 Ready
+↓
+在 Ready 里找最高优先级
+↓
+让它 Running
+```
+
+## 5.1 Tick
+
+FreeRTOS 里有一个**周期性时钟中断**，一般叫 Tick interrupt。假设`configTICK_RATE_HZ = 1000`，那么：
+
+```text
+1秒1000次Tick
+1 Tick = 1 ms
+```
+
+所以`vTaskDelay(pdMS_TO_TICKS(500));`本质上就是这个任务需要等500个Tick。FreeRTOS 会记住：
+
+```text
+Task1现在进入Blocked
+它应该在哪个Tick醒来
+```
+
+然后每次 Tick 中断发生，系统会更新 tick count。比如：
+
+```text
+当前Tick = 1000
+Task1 delay 500
+```
+
+那么大概可以理解成`Task1 wake tick = 1500`，当 tick count 到 1500：
+
+```text
+Task1:
+Blocked → Ready
+```
+
+注意，**这时候它只是先变成 Ready，不一定立刻运行**。然后 Scheduler 再判断：
+
+```text
+现在有哪些 Ready Task？
+谁优先级最高？
+```
+
+如果 Task1 优先级比当前 Running Task 高，那么就可能发生抢占。
+
+## 5.2 Preemption
+
+Preemption，**抢占式调度**。比如当前：
+
+```text
+Task2 priority = 1
+Task2 Running
+```
+
+然后 Tick 到了：
+
+```text
+Task1 Blocked → Ready
+Task1 priority = 2
+```
+
+Scheduler 一看Task1优先级更高，于是 Task1 会抢占 Task2。状态变成：
+
+```text
+Task2:
+Running → Ready
+
+Task1:
+Ready → Running
+```
+
+这就是**抢占**。所以可以记**更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务**。
+
+### 5.2.1 抢占、同优先级轮转与 taskYIELD
+
+调度时要分成 **“不同优先级”和“同优先级”** 两种情况。
+
+#### 5.2.1.1 不同优先级的 Preemption
+
+假设：
+
+```text
+Task_Low   priority = 1   Running
+Task_High  priority = 3   Blocked
+```
+
+某个事件让高优先级任务：
+
+```text
+Task_High: Blocked → Ready
+```
+
+如果 `configUSE_PREEMPTION = 1`，那么高优先级任务可以立即抢占低优先级任务：
+
+```text
+Task_Low:  Running → Ready
+Task_High: Ready   → Running
+```
+
+这里最重要的是**被抢占的低优先级任务不会进入 Blocked，而是回到 Ready**。因为它并没有在等时间或事件，只是暂时失去了 CPU。
+
+等高优先级任务以后进入 Blocked、Suspended，或者不再占用 CPU 时，LowTask 仍然是 Ready；如果此时它成为最高优先级的 Ready Task，就会：
+
+```text
+Ready → Running
+```
+
+并**从之前被打断的位置继续执行**。
+
+#### 5.2.1.2 同优先级使用 Time Slicing
+
+假设：
+
+```c
+TaskA priority = 2
+TaskB priority = 2
+```
+
+两个任务都 Ready，并且 `configUSE_TIME_SLICING = 1`。那么即使 TaskA 不主动 Block、也不调用 `taskYIELD()`，Tick 到来时，同优先级任务之间也可以进行时间片轮转：
+
+```text
+TaskA Running
+TaskB Ready
+↓ Tick
+TaskA Ready
+TaskB Running
+```
+
+所以：
+
+```text
+configUSE_PREEMPTION
+→ 主要决定高优先级 Ready 后能不能抢占低优先级 Running
+
+configUSE_TIME_SLICING
+→ 主要决定同优先级 Ready Task 是否按 Tick 轮转
+```
+
+如果关闭时间片：
+
+```c
+configUSE_TIME_SLICING = 0
+```
+
+同优先级任务不会因为 Tick 自动轮转。此时通常要等当前任务主动 Block，或者调用 `taskYIELD()`，其他同优先级任务才有机会运行。
+
+#### 5.2.1.3 `taskYIELD()`
+
+`taskYIELD()` 的本质是**当前 Task 主动请求 Scheduler 重新调度**。它不会进入 Blocked，也不会进入 Suspended。可以理解成：
+
+```
+Running → Ready → Scheduler重新选择
+```
+
+如果存在同优先级 Ready Task，对方就可能获得 CPU；如果当前任务仍然是最高优先级，它也可能很快再次 Running。
+
+### 5.2.2 被抢占以后为什么还能继续执行
+
+例如低优先级任务运行到一半，高优先级任务变成 Ready：
+
+```
+LowTask Running
+↓
+保存 LowTask 上下文
+↓
+LowTask → Ready
+↓
+HighTask → Running
+```
+
+保存的上下文包括 PC、LR、通用寄存器、xPSR、栈相关信息等。上下文主要保存在 LowTask 自己的 Task Stack 中，TCB 通过 pxTopOfStack 等成员记录任务栈的位置。
+
+以后 LowTask 再次被调度：
+
+```
+Scheduler 选中 LowTask
+↓
+通过 TCB 找到 pxTopOfStack
+↓
+从 LowTask Stack 恢复上下文
+↓
+恢复 PC
+↓
+继续从之前被抢占的位置执行
+```
+
+一句话：
+
+> 任务切换不是“重新运行函数”，而是“保存现场 → 切走 → 恢复现场”。
+
+## 5.3 `Ready List` 和 `Blocked List`。
+
+FreeRTOS 内部不会只放几个变量说“Task1是Ready”。它会**用链表管理任务**。可以简化理解成：
+
+```text
+Ready List
+├── priority 0 的 Ready Task
+├── priority 1 的 Ready Task
+├── priority 2 的 Ready Task
+└── ...
+
+Blocked List
+├── 等到 Tick = 1500 的 Task
+├── 等到 Tick = 1800 的 Task
+└── ...
+```
+
+所以一个任务调用`vTaskDelay(...)`，内部大致做的就是：
+
+```text
+从 Ready List 移走
+↓
+放进 Blocked/Delayed List
+↓
+记录唤醒时间
+↓
+触发重新调度
+```
+
+等时间到了：
+
+```text
+从 Blocked List 移走
+↓
+放回对应优先级的 Ready List
+```
+
+然后 Scheduler 再从 Ready List 里选最高优先级任务。可以画成这样：
+
+```text
+          xTaskCreate()
+               ↓
+             Ready
+               ↓
+          Scheduler选中
+               ↓
+            Running
+          /    |     \
+         /     |      \
+vTaskDelay   被抢占   vTaskSuspend
+   ↓          ↓          ↓
+Blocked      Ready     Suspended
+   ↓
+时间/事件满足
+   ↓
+ Ready
+```
+
+这个图很重要。
+
+## 5.4 PendSV
+
+Scheduler 逻辑上**决定现在该换任务了**。但“真的把 CPU 从 Task1 切到 Task2”需要做很多事情：
+
+```text
+保存 Task1 的 CPU 上下文
+↓
+找到 Task2 的栈
+↓
+恢复 Task2 的 CPU 上下文
+↓
+CPU继续从 Task2 上次停的位置执行
+```
+
+这个真正的“上下文切换”在 Cortex-M 上通常主要靠 `PendSV` 来完成。可以先记：
+
+```text
+Scheduler
+= 决定“换成谁”
+
+PendSV
+= 真正执行“任务切换”
+```
+
+比如：
+
+```text
+Task1 Running
+↓
+Task1调用 vTaskDelay()
+↓
+Scheduler发现Task2该运行
+↓
+触发PendSV
+↓
+保存Task1现场
+↓
+恢复Task2现场
+↓
+Task2继续执行
+```
+
+所谓“现场”大概就是：
+
+```text
+寄存器
+栈指针
+返回地址
+程序执行位置
+```
+
+这也是为什么**每个 Task 必须有自己的栈**。因为任务切换时：
+
+```text
+Task1的现场
+存在Task1自己的栈
+
+Task2的现场
+存在Task2自己的栈
+```
+
+所以 `xTaskCreate()` 里面那个`128`不是随便给的。它决定了这个任务有多少栈空间可以保存：
+
+```text
+局部变量
+函数调用
+寄存器现场
+中断上下文相关内容
+```
+
+把 `SysTick / Tick / Scheduler / PendSV` 串一起。可以记成：
+
+```
+SysTick
+
+周期性产生Tick中断
+↓
+FreeRTOS更新Tick Count
+↓
+检查有没有Blocked任务到时间
+↓
+Blocked → Ready
+↓
+Scheduler判断是否需要换任务
+↓
+如果需要
+↓
+PendSV执行上下文切换
+↓
+新Task Running
+```
+
+- Blocked = 暂时退出CPU竞争
+- Ready = 有资格运行但还没拿到CPU
+- Running = 当前正在CPU执行
+- Scheduler = 从Ready任务里挑最高优先级
+- Tick = 提供系统时间基准
+- PendSV = 真正执行上下文切换
+
+
+# 6 Task/Thread
+## 6.1 TaskCreat
 
 |             函数             | 含义      | 返回值     |
 | :------------------------: | :-----: | :-----: |
@@ -826,7 +1257,7 @@ Scheduler启动
 Task1 / Task2开始运行
 ```
 
-## 5.2 任务状态
+## 6.2 任务状态
 
 主要有四种任务状态：
 
@@ -839,7 +1270,7 @@ Suspended 被人为挂起
 
 由于单片机通常只有**一个 CPU 内核**，同一时间其实**只能有一个任务真正霸占 CPU 执行代码**，其他任务都在后台根据状态进行排队和流转。FreeRTOS 官方对这四种状态的定义就像是一个精妙的“职场社会制度”：
 
-### 5.2.1 Running
+### 6.2.1 Running
 
 运行态 (Running) —— 正在干活的“现任总裁”
 
@@ -847,7 +1278,7 @@ Suspended 被人为挂起
 - **数量限制：** 对于单核 STM32（如常见的 F407），**同一微秒内，有且仅能有一个任务处于运行态！**
 - **切换触发：** 一旦它的干活时间到了（时间片轮转），或者来了一个优先级更高的大佬，它就会被无情剥离，交出 CPU 控制权。
 
-### 5.2.2 Ready
+### 6.2.2 Ready
 
 就绪态 (Ready) —— 万事俱备，只欠 CPU 的“候补队员”
 
@@ -855,7 +1286,7 @@ Suspended 被人为挂起
 - **排队机制（TCB 的舞台）：** 内核把所有就绪态任务的 **TCB** 挂在一个“就绪链表（Ready List）”里。每当时钟节拍爆发，内核调度器会去这个链表里翻看，**挑选优先级（`uxPriority`）最高的那个任务，直接升级为运行态。**
 - **特点：** 它没在干活，不是因为它被卡住了，纯粹是因为前面有更高优先级的任务在插队。
 
-### 5.2.3 Blocked
+### 6.2.3 Blocked
 
 阻塞态 (Blocked) —— 正在等信号或在“睡大觉”的退休员工
 
@@ -910,7 +1341,7 @@ Suspended 被人为挂起
 **关键点：** 此时 `Task1` 的状态从 **Blocked（阻塞）** 瞬间变成了 **Ready（就绪）**。如果此时它的优先级比正在跑的 `Task2` 还要高，内核会当场把 `Task2` 踹下来，把刚刚出狱的 `Task1` 重新送进 **Running（运行态）**。CPU 硬件把 `Task1` 栈里的寄存器一恢复，`Task1` 就会睁开眼，从 `vTaskDelay(pdMS_TO_TICKS(500));` 的下一行代码开始，继续开开心心地往下点灯了。
 
 ---
-### 5.2.4 Suspended
+### 6.2.4 Suspended
 
 挂起态 (Suspended) —— 被打入冷宫、彻底“社会性死亡”的员工
 
@@ -940,7 +1371,7 @@ Suspended 被人为挂起
 【 挂起态 (Suspended) 】 ─── 别人调用 vTaskResume() ───► 回到【就绪态】
 ```
 
-## 5.3 Starvation
+## 6.3 Starvation
 
 **Starvation（任务饥饿）** 是一个非常经典、极其危险的**多任务并发逻辑灾难**。它的本质是**由于低优先级的任务永远分配不到 CPU 的车钥匙，它在就绪态（Ready）里被活活憋死，一辈子没有机会进入运行态（Running）去执行一行代码。**
 
@@ -1000,9 +1431,9 @@ void Task_Mid(void *pvParameters)
 
    如果低优先级任务不仅被饿死了，还手里死死攥着某个锁（互斥量），导致高优先级任务也在等它，这就会引发更恐怖的灾难——**优先级翻转（Priority Inversion）**。FreeRTOS 内核通过互斥量自带的“优先级继承”机制，在低优先级任务被饿死前强行拉它一把，帮它快速干完活释放锁。
 
-## 5.4 任务常用的API
+## 6.4 任务常用的API
 
-### 5.4.1 TaskDelay
+### 6.4.1 TaskDelay
 
  `vTaskDelay()` 不是“CPU 停在那里等”，而是“**当前 Task 主动进入 Blocked 状态，把 CPU 让给其他 Task**”。比如：
 
@@ -1040,7 +1471,7 @@ Scheduler 选择其他 Ready Task
 
 所以它和裸机里的“死等”完全不是一个思路。
 
-#### 5.4.1.1 与普通 delay 的区别
+#### 6.4.1.1 与普通 delay 的区别
 
 裸机里写`delay_ms(1000);`，或者`for (volatile int i = 0; i < 1000000; i++);`，这种通常是：
 
@@ -1066,7 +1497,7 @@ CPU去运行其他Task
 
 ---
 
-#### 5.4.1.2 `vTaskDelay()` 参数
+#### 6.4.1.2 `vTaskDelay()` 参数
 
 函数原型`void vTaskDelay(const TickType_t xTicksToDelay);` **参数是Tick 数，不是毫秒**。比如`vTaskDelay(1000);` 并不一定是 1000 ms。取决于`configTICK_RATE_HZ`
 
@@ -1085,7 +1516,7 @@ vTaskDelay(pdMS_TO_TICKS(1000));
 比如`configTICK_RATE_HZ = 100`，那么`1 tick = 10 ms`，`pdMS_TO_TICKS(1000)` 会转换成大约`100 ticks`
 
 
-#### 5.4.1.3 Task  delay 时的状态
+#### 6.4.1.3 Task  delay 时的状态
 
 FreeRTOS Task 常见状态：
 
@@ -1122,7 +1553,7 @@ delay结束
 
 不是`delay结束→ 马上运行`
 
-#### 5.4.1.4 与 Scheduler 的关系
+#### 6.4.1.4 与 Scheduler 的关系
 
 假设：
 
@@ -1163,7 +1594,7 @@ Idle Task运行
 
 以后如果启用低功耗，Idle 阶段还可以进一步省电。
 
-#### 5.4.1.5 `vTaskDelay()` 适应场景
+#### 6.4.1.5 `vTaskDelay()` 适应场景
 
 例如：
 
@@ -1189,7 +1620,7 @@ void LedTask(void *arg)
 
 但有一个重要问题`vTaskDelay()` 不适合要求非常严格周期的任务。这就会引出`vTaskDelayUntil()`
 
-#### 5.4.1.6 `vTaskDelay()` 的周期会漂移
+#### 6.4.1.6 `vTaskDelay()` 的周期会漂移
 
 ```c
 while (1)
@@ -1208,7 +1639,7 @@ delay用了1000ms
 
 那么实际周期是`100ms + 1000ms = 1100ms` ，下一次再来又`1100ms` 所以时间会慢慢偏。
 
-#### 5.4.1.7 `vTaskDelayUntil()` 
+#### 6.4.1.7 `vTaskDelayUntil()` 
 
 如果要求每隔 1000ms 精确执行一次。就更适合`vTaskDelayUntil()`,典型：
 
@@ -1240,7 +1671,7 @@ while (1)
 更适合固定周期任务。
 
 
-### 5.4.2 TaskSuspended
+### 6.4.2 TaskSuspended
 
 ```c
 vTaskSuspend(TaskHandle_t xTask);
@@ -1289,7 +1720,7 @@ Task2 = Ready
 
 Scheduler 只能运行 Task2。
 
-#### 5.4.2.1 使用句柄的原因
+#### 6.4.2.1 使用句柄的原因
 
 不使用函数名，而是使用函数句柄是**因为函数名代表的是放在 Flash 里的“死指令代码（一间样板房）”；而句柄代表的是动态躺在 RAM 里的“活任务实体（根据样板房盖好的真实大楼和它的遥控器）”。**
 
@@ -1368,7 +1799,7 @@ void send_task1(void *pvParameters)
 
 想向房子里搬家具（挂起、改变运行状态），不能对着设计图纸（函数名）使劲，必须拿着具体的门牌号（句柄），去 RAM 里找到那栋属于它的真实大楼！
 
-### 5.4.3 TaskResume
+### 6.4.3 TaskResume
 
 ```c
 vTaskResume(TaskHandle_t xTask);
@@ -1444,7 +1875,7 @@ Suspended → Ready
 
 可以直接记 **`Blocked` 是“等东西”，`Suspended` 是“被人为暂停”**。
 
-### 5.4.4 TaskYIELD
+### 6.4.4 TaskYIELD
 
 ```c
 taskYIELD();
@@ -1539,438 +1970,7 @@ taskYIELD()
 
 只是Running → Ready → Scheduler，重新选如果它依然是最高优先级又可能马上 Running
 
-## 5.5 主动任务切换
-
-# 6 Scheduler
-
-FreeRTOS 的 Scheduler 本质就是**从所有“现在可以运行”的任务里，选一个优先级最高的，让它占 CPU。** 所以 Scheduler 最关心的不是“这个任务是谁”，而是：
-
-```text
-这个任务现在是什么状态？
-它优先级多少？
-```
-
-把四个状态彻底区分开。
-
-```text
-Running
-正在CPU上执行
-
-Ready
-有资格运行，但现在CPU给了别人
-
-Blocked
-暂时没资格竞争CPU，正在等时间或事件
-
-Suspended
-被人为挂起，除非显式恢复，否则不参与调度
-```
-
-最关键的是 `Ready` 和 `Blocked`。
-
-- `Ready` 是**现在就能跑，但是CPU可能暂时给了更高优先级任务**
-- `Blocked` 是**现在先不跑，要等一个条件**
-
-比如`vTaskDelay(pdMS_TO_TICKS(500));` 意思不是“CPU原地等500ms”。而是：
-
-```text
-当前Task:
-Running
-↓
-调用 vTaskDelay()
-↓
-进入 Blocked
-↓
-调度器去运行其他 Ready Task
-```
-
-这就是 RTOS 和普通裸机 `delay()` 最大的区别之一。普通阻塞延时大概是CPU自己在那空等，而 FreeRTOS 的 `vTaskDelay()` 是当前任务让出CPU，CPU去干别的
-
-假设：
-
-```c
-Task1 priority = 2
-Task2 priority = 1
-```
-
-一开始，假设 Task1 被调度：
-
-```c
-Task1 = Running
-Task2 = Ready
-```
-
-Task1 执行`vTaskDelay(pdMS_TO_TICKS(500));`，于是：
-
-```text
-Task1:
-Running → Blocked
-```
-
-调度器再看剩下的任务：
-
-```text
-Task1 = Blocked
-Task2 = Ready
-```
-
-所以 Task2 运行。
-
-即使`Task1优先级更高`也没用，因为 **Blocked 的任务根本不参与竞争**。可以把 Scheduler 想象成：
-
-```text
-所有任务
-↓
-先筛选 Ready
-↓
-在 Ready 里找最高优先级
-↓
-让它 Running
-```
-
-## 6.1 Tick
-
-FreeRTOS 里有一个**周期性时钟中断**，一般叫 Tick interrupt。假设`configTICK_RATE_HZ = 1000`，那么：
-
-```text
-1秒1000次Tick
-1 Tick = 1 ms
-```
-
-所以`vTaskDelay(pdMS_TO_TICKS(500));`本质上就是这个任务需要等500个Tick。FreeRTOS 会记住：
-
-```text
-Task1现在进入Blocked
-它应该在哪个Tick醒来
-```
-
-然后每次 Tick 中断发生，系统会更新 tick count。比如：
-
-```text
-当前Tick = 1000
-Task1 delay 500
-```
-
-那么大概可以理解成`Task1 wake tick = 1500`，当 tick count 到 1500：
-
-```text
-Task1:
-Blocked → Ready
-```
-
-注意，**这时候它只是先变成 Ready，不一定立刻运行**。然后 Scheduler 再判断：
-
-```text
-现在有哪些 Ready Task？
-谁优先级最高？
-```
-
-如果 Task1 优先级比当前 Running Task 高，那么就可能发生抢占。
-
-## 6.2 Preemption
-
-Preemption，**抢占式调度**。比如当前：
-
-```text
-Task2 priority = 1
-Task2 Running
-```
-
-然后 Tick 到了：
-
-```text
-Task1 Blocked → Ready
-Task1 priority = 2
-```
-
-Scheduler 一看Task1优先级更高，于是 Task1 会抢占 Task2。状态变成：
-
-```text
-Task2:
-Running → Ready
-
-Task1:
-Ready → Running
-```
-
-这就是**抢占**。所以可以记**更高优先级任务一旦变成 Ready，就可能立刻抢占当前低优先级任务**。
-
-### 6.2.1 抢占、同优先级轮转与 taskYIELD
-
-调度时要分成 **“不同优先级”和“同优先级”** 两种情况。
-
-#### 6.2.1.1 不同优先级的 Preemption
-
-假设：
-
-```text
-Task_Low   priority = 1   Running
-Task_High  priority = 3   Blocked
-```
-
-某个事件让高优先级任务：
-
-```text
-Task_High: Blocked → Ready
-```
-
-如果 `configUSE_PREEMPTION = 1`，那么高优先级任务可以立即抢占低优先级任务：
-
-```text
-Task_Low:  Running → Ready
-Task_High: Ready   → Running
-```
-
-这里最重要的是**被抢占的低优先级任务不会进入 Blocked，而是回到 Ready**。因为它并没有在等时间或事件，只是暂时失去了 CPU。
-
-等高优先级任务以后进入 Blocked、Suspended，或者不再占用 CPU 时，LowTask 仍然是 Ready；如果此时它成为最高优先级的 Ready Task，就会：
-
-```text
-Ready → Running
-```
-
-并**从之前被打断的位置继续执行**。
-
-#### 6.2.1.2 同优先级使用 Time Slicing
-
-假设：
-
-```c
-TaskA priority = 2
-TaskB priority = 2
-```
-
-两个任务都 Ready，并且 `configUSE_TIME_SLICING = 1`。那么即使 TaskA 不主动 Block、也不调用 `taskYIELD()`，Tick 到来时，同优先级任务之间也可以进行时间片轮转：
-
-```text
-TaskA Running
-TaskB Ready
-↓ Tick
-TaskA Ready
-TaskB Running
-```
-
-所以：
-
-```text
-configUSE_PREEMPTION
-→ 主要决定高优先级 Ready 后能不能抢占低优先级 Running
-
-configUSE_TIME_SLICING
-→ 主要决定同优先级 Ready Task 是否按 Tick 轮转
-```
-
-如果关闭时间片：
-
-```c
-configUSE_TIME_SLICING = 0
-```
-
-同优先级任务不会因为 Tick 自动轮转。此时通常要等当前任务主动 Block，或者调用 `taskYIELD()`，其他同优先级任务才有机会运行。
-
-#### 6.2.1.3 `taskYIELD()`
-
-`taskYIELD()` 的本质是**当前 Task 主动请求 Scheduler 重新调度**。它不会进入 Blocked，也不会进入 Suspended。可以理解成：
-
-```
-Running → Ready → Scheduler重新选择
-```
-
-如果存在同优先级 Ready Task，对方就可能获得 CPU；如果当前任务仍然是最高优先级，它也可能很快再次 Running。
-
-### 6.2.2 被抢占以后为什么还能继续执行
-
-例如低优先级任务运行到一半，高优先级任务变成 Ready：
-
-```
-LowTask Running
-↓
-保存 LowTask 上下文
-↓
-LowTask → Ready
-↓
-HighTask → Running
-```
-
-保存的上下文包括 PC、LR、通用寄存器、xPSR、栈相关信息等。上下文主要保存在 LowTask 自己的 Task Stack 中，TCB 通过 pxTopOfStack 等成员记录任务栈的位置。
-
-以后 LowTask 再次被调度：
-
-```
-Scheduler 选中 LowTask
-↓
-通过 TCB 找到 pxTopOfStack
-↓
-从 LowTask Stack 恢复上下文
-↓
-恢复 PC
-↓
-继续从之前被抢占的位置执行
-```
-
-一句话：
-
-> 任务切换不是“重新运行函数”，而是“保存现场 → 切走 → 恢复现场”。
-
-## 6.3 `Ready List` 和 `Blocked List`。
-
-FreeRTOS 内部不会只放几个变量说“Task1是Ready”。它会**用链表管理任务**。可以简化理解成：
-
-```text
-Ready List
-├── priority 0 的 Ready Task
-├── priority 1 的 Ready Task
-├── priority 2 的 Ready Task
-└── ...
-
-Blocked List
-├── 等到 Tick = 1500 的 Task
-├── 等到 Tick = 1800 的 Task
-└── ...
-```
-
-所以一个任务调用`vTaskDelay(...)`，内部大致做的就是：
-
-```text
-从 Ready List 移走
-↓
-放进 Blocked/Delayed List
-↓
-记录唤醒时间
-↓
-触发重新调度
-```
-
-等时间到了：
-
-```text
-从 Blocked List 移走
-↓
-放回对应优先级的 Ready List
-```
-
-然后 Scheduler 再从 Ready List 里选最高优先级任务。可以画成这样：
-
-```text
-          xTaskCreate()
-               ↓
-             Ready
-               ↓
-          Scheduler选中
-               ↓
-            Running
-          /    |     \
-         /     |      \
-vTaskDelay   被抢占   vTaskSuspend
-   ↓          ↓          ↓
-Blocked      Ready     Suspended
-   ↓
-时间/事件满足
-   ↓
- Ready
-```
-
-这个图很重要。
-
-## 6.4 PendSV
-
-Scheduler 逻辑上**决定现在该换任务了**。但“真的把 CPU 从 Task1 切到 Task2”需要做很多事情：
-
-```text
-保存 Task1 的 CPU 上下文
-↓
-找到 Task2 的栈
-↓
-恢复 Task2 的 CPU 上下文
-↓
-CPU继续从 Task2 上次停的位置执行
-```
-
-这个真正的“上下文切换”在 Cortex-M 上通常主要靠`PendSV`来完成。可以先记：
-
-```text
-Scheduler
-= 决定“换成谁”
-
-PendSV
-= 真正执行“任务切换”
-```
-
-比如：
-
-```text
-Task1 Running
-↓
-Task1调用 vTaskDelay()
-↓
-Scheduler发现Task2该运行
-↓
-触发PendSV
-↓
-保存Task1现场
-↓
-恢复Task2现场
-↓
-Task2继续执行
-```
-
-所谓“现场”大概就是：
-
-```text
-寄存器
-栈指针
-返回地址
-程序执行位置
-```
-
-这也是为什么**每个 Task 必须有自己的栈**。因为任务切换时：
-
-```text
-Task1的现场
-存在Task1自己的栈
-
-Task2的现场
-存在Task2自己的栈
-```
-
-所以 `xTaskCreate()` 里面那个`128`不是随便给的。它决定了这个任务有多少栈空间可以保存：
-
-```text
-局部变量
-函数调用
-寄存器现场
-中断上下文相关内容
-```
-
-把 `SysTick / Tick / Scheduler / PendSV` 串一起。可以记成：
-
-```
-SysTick
-
-周期性产生Tick中断
-↓
-FreeRTOS更新Tick Count
-↓
-检查有没有Blocked任务到时间
-↓
-Blocked → Ready
-↓
-Scheduler判断是否需要换任务
-↓
-如果需要
-↓
-PendSV执行上下文切换
-↓
-新Task Running
-```
-
-- Blocked = 暂时退出CPU竞争
-- Ready = 有资格运行但还没拿到CPU
-- Running = 当前正在CPU执行
-- Scheduler = 从Ready任务里挑最高优先级
-- Tick = 提供系统时间基准
-- PendSV = 真正执行上下文切换
-
+## 6.5 主动任务切换
 
 # 7 Queue
 
@@ -3639,9 +3639,9 @@ Task Notification
 Queue
 ```
 
-# ISR
+# 9 ISR
 
-# 9 Hook 函数
+# 10 Hook 函数
 
 Hook 可以理解为 **FreeRTOS 预留给用户的“回调入口”** 。当 FreeRTOS 内部发生某些特定事件时，内核会主动调用用户自己实现的 Hook 函数。 基本流程：
 
