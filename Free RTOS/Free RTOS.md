@@ -1029,7 +1029,7 @@ PendSV执行上下文切换
 - Tick = 提供系统时间基准
 - PendSV = 真正执行上下文切换
 
-## PSP
+## 5.5 PSP
 
 PSP 是 **Process Stack Pointer**，翻译成“进程栈指针”或者 $\boxed{\text{PSP = 当前任务自己的栈指针}}$
 
@@ -1183,11 +1183,11 @@ $\boxed{\text{PSP 就是“当前 RTOS 任务的栈顶指针”}}$
 
 而任务切换本质上就是 $\boxed{\text{保存旧 PSP → 取出新任务 PSP → 恢复新任务现场}}$
 
-## 5.5 任务切换
+## 5.6 任务切换
 
 每个 FreeRTOS 任务都有独立任务栈和对应 TCB。任务被切出时，Cortex-M 异常机制会自动保存一部分寄存器，FreeRTOS 的 PendSV 再保存剩余寄存器到该任务自己的栈中，然后把当前 PSP 保存到 TCB 的 `pxTopOfStack`。调度器选出下一个任务后，从新的 TCB 取出 `pxTopOfStack` 恢复 PSP，再依次恢复寄存器，最后通过异常返回恢复 PC，使新任务从上次中断的位置继续执行。
 
-### 5.5.1 每个任务都有独立栈
+### 5.6.1 每个任务都有独立栈
 
 比如有三个任务：
 
@@ -1231,7 +1231,7 @@ TCB_C
 
 所以$\boxed{\text{任务 = TCB + 独立任务栈}}$
 
-### 5.5.2 压栈
+### 5.6.2 压栈
 
 假设 CPU 当前正在运行 Task A。这时候 CPU 内部寄存器里可能是：
 
@@ -1314,7 +1314,7 @@ R4-R11
 
 这样才能保证$\boxed{\text{恢复后任务能像“从没被打断一样”继续执行}}$
 
-### 5.5.3 任务切换的完整过程
+### 5.6.3 任务切换的完整过程
 
 假设现在 CPU 正在运行 Task A，然后 SysTick 到了，内核发现 Task B 应该运行。通常不是直接在 SysTick 里完成完整切换，而是：
 
@@ -1475,7 +1475,7 @@ Task B 从上次停下的位置继续
 
 这就是$\boxed{\text{Context Switch}}$
 
-### 5.5.4 完整流图
+### 5.6.4 完整流图
 
 把它记成：
 
@@ -1564,7 +1564,7 @@ TCB
 CPU继续执行 Task Function
 ```
 
-### 5.5.5 TCB 只保存 SP 
+### 5.6.5 TCB 只保存 SP 
 
 因为只要知道 SP 在哪，就等于知道**这次任务切换前保存的所有寄存器在哪里**。比如：
 
@@ -1593,7 +1593,7 @@ xPSR
 因此$\boxed{\text{TCB 中最核心的上下文信息就是 pxTopOfStack}}$
 
 
-### 新任务第一次运行
+### 5.6.6 新任务第一次运行
 
 假设刚：
 
@@ -4304,8 +4304,8 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask,
 - MallocFailedHook   = 内存申请失败报警器
 - AssertHook         = 内核异常断点
 
-# Thread Safety
-## Race Condition
+# 11 Thread Safety
+## 11.1 Race Condition
 
 Race Condition 就是**竞争条件**。它在 RTOS、多线程、中断和共享资源里非常常见。最核心的一句话$\boxed{\text{多个执行单元同时访问共享数据，而且结果依赖执行先后顺序}}$ 这时就出现 Race Condition。
 
@@ -4661,7 +4661,7 @@ count++;
 
 这就是 RTOS 工程思维开始形成的标志。
 
-## thread safety
+## 11.2 thread safety
 
 线程安全（thread safety）可以理解成$\boxed{\text{多个线程/任务同时调用同一段代码或访问同一资源时，结果仍然正确、可预测}}$
 
@@ -4793,9 +4793,7 @@ Task B Stack
 → result
 ```
 
-所以\boxed{\text{普通局部变量通常属于任务自己的栈，不共享}}
-
-而危险的通常是：
+所以 $\boxed{\text{普通局部变量通常属于任务自己的栈，不共享}}$ 而危险的通常是：
 
 ```
 global
@@ -4805,7 +4803,7 @@ static
 heap allocator内部状态
 ```
 
-这也是为什么你刚学的“每个任务有自己的 Stack”非常重要。
+这也是为什么“每个任务有自己的 Stack”非常重要。
 
 再讲一个很容易混淆的概念：
 
