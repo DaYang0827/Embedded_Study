@@ -1,5 +1,816 @@
 （❌）
 
+# Task 复习题
+
+1
+
+解释：
+
+```
+xTaskCreate(
+    task1,
+    "TASK1",
+    128,
+    NULL,
+    2,
+    &task1_handle
+);
+```
+
+六个参数分别是什么？
+
+重点解释：
+
+```
+task1
+128
+NULL
+2
+&task1_handle
+```
+
+
+
+---
+
+  2
+
+为什么：
+
+```
+task1
+```
+
+和：
+
+```
+task1_handle
+```
+
+完全不是一个概念？
+
+回答：
+
+```
+task1是什么？
+task1_handle是什么？
+为什么同一个task函数可以创建多个任务？
+```
+
+---
+
+  3
+
+`xTaskCreate()` 创建一个 Task 时，通常需要准备哪两块主要 RAM 内容？
+
+是不是：
+
+```
+两个Stack？
+```
+
+如果不是，分别是什么？
+
+---
+
+  4
+
+解释关系：
+
+```
+TaskHandle_t
+TCB
+Task Stack
+pxTopOfStack
+```
+
+要求自己画：
+
+```
+Handle
+ ↓
+???
+ ↓
+???
+```
+
+---
+
+  5
+
+解释四个状态：
+
+```
+Running
+Ready
+Blocked
+Suspended
+```
+
+特别回答：
+
+> Ready 和 Blocked 到底差在哪里？
+
+---
+
+  6
+
+当前：
+
+```
+LowTask
+priority = 1
+Running
+
+HighTask
+priority = 3
+Blocked
+```
+
+突然 HighTask：
+
+```
+Blocked → Ready
+```
+
+开启抢占调度后：
+
+```
+LowTask变什么状态？
+HighTask变什么状态？
+```
+
+为什么 LowTask 不是 Blocked？
+
+---
+
+  7
+
+下面两个 Task：
+
+```
+TaskA priority = 2
+TaskB priority = 2
+```
+
+两个都永远 Ready。
+
+如果：
+
+```
+configUSE_TIME_SLICING = 1
+```
+
+TaskA 不调用：
+
+```
+taskYIELD();
+vTaskDelay();
+```
+
+TaskB 有没有机会运行？
+
+为什么？
+
+---
+
+  8
+
+解释：
+
+```
+taskYIELD();
+```
+
+执行以后当前任务：
+
+```
+Running → ?
+```
+
+它会进入 Blocked 吗？
+
+假设：
+
+```
+TaskA priority = 3
+TaskB priority = 1
+```
+
+TaskA 调用 `taskYIELD()` 后，TaskB 一定运行吗？
+
+---
+
+  9
+
+解释：
+
+```
+vTaskDelay(pdMS_TO_TICKS(500));
+```
+
+从：
+
+```
+Running
+```
+
+开始，把整个状态转换写出来。
+
+500 ms 到以后是否：
+
+```
+Blocked → Running
+```
+
+直接发生？
+
+---
+
+  10
+
+比较：
+
+```
+vTaskDelay()
+```
+
+和：
+
+```
+vTaskDelayUntil()
+```
+
+为什么：
+
+```
+读取传感器，每1000ms严格执行一次
+```
+
+通常更适合 `vTaskDelayUntil()`？
+
+---
+
+  11
+
+任务被抢占以后，为什么下次能够从原位置继续？
+
+要求把：
+
+```
+TCB
+Task Stack
+寄存器
+PC
+pxTopOfStack
+```
+
+串起来。
+
+---
+
+  12
+
+解释：
+
+```
+Scheduler
+SysTick
+PendSV
+```
+
+三者分别做什么？
+
+重点：
+
+> Scheduler 和 PendSV 是不是一回事？
+
+---
+
+# Queue 复习题
+
+Queue 部分你的笔记核心已经是：`xQueueSend()` 复制数据进去，`xQueueReceive()` 复制一个 item 出来；Queue 还能让任务在空/满时进入 Blocked。 粘贴的文本 (1)
+
+  13
+
+```
+QueueHandle_t q;
+
+q = xQueueCreate(
+    5,
+    sizeof(uint32_t)
+);
+```
+
+解释：
+
+```
+5是什么？
+sizeof(uint32_t)是什么？
+一次Send几个item？
+一次Receive几个item？
+```
+
+---
+
+  14
+
+现在 Queue：
+
+```
+[10][20][30][ ][ ]
+```
+
+执行：
+
+```
+uint32_t value;
+
+xQueueReceive(q, &value, 0);
+```
+
+回答：
+
+```
+value是多少？
+Queue剩什么？
+一次是不是把10、20、30全拿走？
+```
+
+---
+
+  15
+
+为什么：
+
+```
+xQueueSend(q, &data, 0);
+```
+
+传：
+
+```
+&data
+```
+
+而不是：
+
+```
+data
+```
+
+但是 Queue 保存的却通常不是 `&data`？
+
+---
+
+  16
+
+```
+uint32_t data = 100;
+
+xQueueSend(q, &data, 0);
+
+data = 200;
+```
+
+Queue 里原来的值是多少？
+
+为什么？
+
+---
+
+  17
+
+解释：
+
+```
+xQueueReceive(
+    q,
+    &value,
+    portMAX_DELAY
+);
+```
+
+如果 Queue 是空：
+
+```
+当前Task什么状态？
+```
+
+另外一个 Task Send 数据以后：
+
+```
+Receive Task发生什么状态变化？
+```
+
+---
+
+  18
+
+如果：
+
+```
+Receiver priority = 3
+Producer priority = 1
+```
+
+Queue 里面已经积压：
+
+```
+[A][B][C][D]
+```
+
+Receiver：
+
+```
+while (1)
+{
+    xQueueReceive(
+        q,
+        &data,
+        portMAX_DELAY
+    );
+
+    process(data);
+}
+```
+
+Receiver 有没有可能连续：
+
+```
+A → B → C → D
+```
+
+都处理完以后 Producer 才获得 CPU？
+
+为什么？
+
+---
+
+  19
+
+创建：
+
+```
+q = xQueueCreate(
+    5,
+    sizeof(Message_t)
+);
+```
+
+然后：
+
+```
+Message_t msg;
+
+xQueueSend(q, &msg, 0);
+```
+
+一次发送：
+
+```
+一个成员？
+还是一个完整Message_t？
+```
+
+为什么？
+
+---
+
+  20
+
+改成：
+
+```
+q = xQueueCreate(
+    5,
+    sizeof(Message_t *)
+);
+```
+
+然后：
+
+```
+Message_t *p = &msg;
+
+xQueueSend(q, &p, 0);
+```
+
+现在 Queue 保存的是：
+
+```
+msg的内容？
+还是指针值？
+```
+
+这种设计最大的生命周期风险是什么？
+
+---
+
+# Semaphore 复习题
+
+  21
+
+一句话分别解释：
+
+```
+Binary Semaphore
+Counting Semaphore
+```
+
+它们最核心的区别是什么？
+
+---
+
+  22
+
+Binary Semaphore：
+
+```
+当前count = 0
+```
+
+执行：
+
+```
+xSemaphoreTake(
+    sem,
+    portMAX_DELAY
+);
+```
+
+当前 Task 会怎样？
+
+另一个 Task：
+
+```
+xSemaphoreGive(sem);
+```
+
+以后又会怎样？
+
+---
+
+  23
+
+Binary Semaphore 当前已经是：
+
+```
+1
+```
+
+连续：
+
+```
+Give
+Give
+Give
+```
+
+能不能累计成 4？
+
+为什么？
+
+---
+
+  24
+
+```
+count_sem =
+    xSemaphoreCreateCounting(
+        10,
+        0
+    );
+```
+
+两个参数分别是什么？
+
+连续：
+
+```
+Give
+Give
+Give
+```
+
+以后 count 是多少？
+
+然后：
+
+```
+Take
+Take
+```
+
+以后呢？
+
+---
+
+  25
+
+如果 Counting Semaphore 用来表示：
+
+```
+当前还有3个Buffer可以使用
+```
+
+应该创建成：
+
+```
+xSemaphoreCreateCounting(?, ?);
+```
+
+为什么初始值不是 0？
+
+---
+
+  26
+
+下面两个需求分别更适合 Binary 还是 Counting Semaphore：
+
+```
+A：通知“数据处理完成了”
+B：记录“发生了5次事件”
+C：表示“还有4个Buffer可用”
+D：通知“按键被按下，需要处理”
+```
+
+解释原因。
+
+---
+
+# Mutex 复习题
+
+  27
+
+为什么下面这种情况需要 Mutex？
+
+```
+TaskA → USART
+TaskB → USART
+```
+
+如果完全不保护，可能发生什么？
+
+---
+
+  28
+
+写出最基本的：
+
+```
+创建Mutex
+
+Take Mutex
+
+访问共享资源
+
+Give Mutex
+```
+
+四步代码。
+
+---
+
+  29
+
+假设：
+
+```
+TaskA Take Mutex
+```
+
+还没 Give。
+
+TaskB：
+
+```
+xSemaphoreTake(
+    mutex,
+    portMAX_DELAY
+);
+```
+
+TaskB 会进入什么状态？
+
+TaskA Give 后，TaskB 一定立刻 Running 吗？
+
+---
+
+  30
+
+为什么 Mutex 和 Binary Semaphore 虽然都使用：
+
+```
+xSemaphoreTake()
+xSemaphoreGive()
+```
+
+却不能认为是一个东西？
+
+从：
+
+```
+用途
+Owner
+Priority Inheritance
+```
+
+三个方面回答。
+
+---
+
+  31
+
+解释这个场景：
+
+```
+High priority = 3
+Mid  priority = 2
+Low  priority = 1
+```
+
+Low 拿了 Mutex。
+
+High 想拿同一个 Mutex。
+
+High 会怎样？
+
+如果没有特殊机制：
+
+```
+Mid为什么可能导致问题？
+```
+
+这是什么问题？
+
+---
+
+  32
+
+Mutex 的：
+
+```
+Priority Inheritance
+```
+
+到底干了什么？
+
+回答：
+
+```
+谁临时提高优先级？
+提高到什么程度？
+什么时候恢复？
+```
+
+---
+
+  33
+
+为什么下面代码非常不好？
+
+```
+xSemaphoreTake(
+    mutex,
+    portMAX_DELAY
+);
+
+vTaskDelay(
+    pdMS_TO_TICKS(5000)
+);
+
+xSemaphoreGive(mutex);
+```
+
+---
+
+  34
+
+选择：
+
+```
+Binary Semaphore
+Counting Semaphore
+Mutex
+Queue
+```
+
+分别解决：
+
+```
+传传感器数据
+通知某事件发生
+统计事件发生次数
+保护I2C总线
+保护UART
+传Parser解析后的Package_t
+管理3个Buffer资源
+```
+
+这一题一定要做到看到场景就能马上选机制。
+
+
 # DAY 5
 
 Day 5 我就针对你 Day 4 暴露出来的薄弱点来出，重点是：
