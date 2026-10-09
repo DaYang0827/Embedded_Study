@@ -767,7 +767,7 @@ TaskB → USART
 如果完全不保护，可能发生什么？
 
 ```text
-如果
+如果不进行保护      taskA和B可能优先级都一样      会进行轮巡     A发送了一半   B可能会接着发送    之后A又开始发     信息都是混乱的
 ```
 ---
 
@@ -787,7 +787,10 @@ Give Mutex
 
 四步代码。
 ```text
-
+Semaphore_handle mutex_sem;
+mutex_sem = xSemaphoreCreateMutex();
+xSemaphoreTake(mutex_sem, portMAX_DELAY);
+xSemaphoreGive(mutex_sem, portMAX_DELAY);
 ```
 ---
 
@@ -814,7 +817,8 @@ TaskB 会进入什么状态？
 
 TaskA Give 后，TaskB 一定立刻 Running 吗？
 ```text
-
+B会进入blocked状态
+B不会立刻Running      会进入ready状态   等待scheduler的调度
 ```
 ---
 
@@ -839,7 +843,9 @@ Priority Inheritance
 
 三个方面回答。
 ```text
-
+用途    Mutex是防止两个任务同时进行       binary只是通知任务是否可以执行
+Owner    Mutex是有明确的所有者的    是由所有者进行give的     
+Priority Inheritance
 ```
 ---
 
