@@ -113,7 +113,7 @@ Handle
 ```text
 通过任务的handle可以精准的找到创建的任务
 同时在创建的时候   会创建出来TCB和Task Stack
-pxTopOfStack是TCB里面的重要成员
+pxTopOfStack是TCB里面的重要成员里面记录的是当前任务的“栈顶指针(SP)”
 ```
 ---
 
@@ -133,7 +133,10 @@ Suspended
 > Ready 和 Blocked 到底差在哪里？
 
 ```text
-
+Running   代表当前正在跑
+Ready     表示现在已经可以就绪运行任务了      需要等scheduler的调度
+Blocked   表示现在还在阻塞状态    需要一个信号或者队列信息   可以把任务唤醒到ready状态等待调度
+Suspended   表示被手动挂起了     需要手动resume才能运行
 ```
 ---
 
@@ -167,7 +170,9 @@ HighTask变什么状态？
 为什么 LowTask 不是 Blocked？
 
 ```text
-
+LowTask变ready状态
+HighTask变running状态
+因为lowtask
 ```
 ---
 
