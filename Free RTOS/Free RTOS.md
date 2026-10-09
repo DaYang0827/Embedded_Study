@@ -1274,91 +1274,25 @@ TCB_A
 
 ---
 
-第五步：调度器选择 Task B
+第四步：调度器选择 Task B
 
-接下来内核运行调度逻辑：
+接下来内核运行调度逻辑`vTaskSwitchContext();` ，它会从 Ready List 中选出最高优先级的 Ready Task。假设选中Task B，于是`pxCurrentTCB` 从 `TCB_A` 切换成 `TCB_B`
 
-```
-vTaskSwitchContext();
-```
-
-它会从 Ready List 中选出：
-
-```
-最高优先级的 Ready Task
-```
-
-假设选中：
-
-```
-Task B
-```
-
-于是：
-
-```
-pxCurrentTCB
-```
-
-从：
-
-```
-TCB_A
-```
-
-切换成：
-
-```
-TCB_B
-```
-
-概念上：
-
-```
-pxCurrentTCB = &TCB_B;
-```
+概念上`pxCurrentTCB = &TCB_B;`
 
 ---
 
-# 9. 从 Task B 的 TCB 取回栈顶
+第五步：从 Task B 的 TCB 取回栈顶
 
-现在：
+现在`TCB_B->pxTopOfStack`，里面保存的是 Task B 上次被切出去时的栈顶。例如`TCB_B->pxTopOfStack = 0x200020C0`，于是`PSP = 0x200020C0`
 
-```
-TCB_B->pxTopOfStack
-```
-
-里面保存的是 Task B 上次被切出去时的栈顶。
-
-例如：
-
-```
-TCB_B->pxTopOfStack = 0x200020C0
-```
-
-于是：
-
-```
-PSP = 0x200020C0
-```
-
-这一步等于告诉 CPU：
-
-> “接下来你要从 Task B 的栈恢复。”
+这一步等于告诉 CPU“接下来你要从 Task B 的栈恢复。”
 
 ---
 
-# 10. Task B 出栈
+第六步：Task B 出栈
 
-先由软件恢复：
-
-```
-R4-R11
-```
-
-然后 PendSV 退出。
-
-异常返回时，Cortex-M 硬件会自动从 Task B 的栈恢复：
+先由软件恢复R4-R11，然后 PendSV 退出。异常返回时，Cortex-M 硬件会自动从 Task B 的栈恢复：
 
 ```
 R0-R3
@@ -1368,17 +1302,9 @@ PC
 xPSR
 ```
 
-其中最关键的是：
+其中最关键的是 PC，因为 PC 恢复后，CPU 就会继续从 Task B 上次停下的位置运行。所以最终效果就是：
 
-```
-PC
-```
-
-因为 PC 恢复后，CPU 就会继续从 Task B 上次停下的位置运行。
-
-所以最终效果就是：
-
-```
+```text
 Task A 执行到一半
 ↓
 保存现场
@@ -1390,13 +1316,9 @@ Task A 执行到一半
 Task B 从上次停下的位置继续
 ```
 
-这就是：
+这就是$\boxed{\text{Context Switch}}$
 
-\[ \boxed{\text{Context Switch}} \]
-
----
-
-# 11. 整个过程画成一张图
+### 11. 整个过程画成一张图
 
 你可以把它记成：
 
