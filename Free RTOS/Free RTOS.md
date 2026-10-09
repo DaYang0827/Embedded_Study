@@ -4377,20 +4377,14 @@ read count = 10         |
                         write count= 11
   |<-----切换-----------|
 +1
-write count=1
+write count = 11
 ```
 
-最终：
-
-\[ \boxed{1} \]
-
-而不是 2。
-
-这就是“结果依赖调度顺序”。
+最终 $\boxed{11}$ 而不是 12。这就是“结果依赖调度顺序”。
 
 ---
 
-你可以把 Race Condition 的产生条件记成三个：
+可以把 Race Condition 的产生条件记成三个：
 
 ```
 1. 有共享资源
@@ -4667,31 +4661,23 @@ count++;
 
 这就是 RTOS 工程思维开始形成的标志。
 
-给我线程安全的相关讲解
+## thread safety
 
-线程安全（thread safety）可以理解成：
+线程安全（thread safety）可以理解成$\boxed{\text{多个线程/任务同时调用同一段代码或访问同一资源时，结果仍然正确、可预测}}$
 
-\[ \boxed{\text{多个线程/任务同时调用同一段代码或访问同一资源时，结果仍然正确、可预测}} \]
-
-你刚学完 Race Condition，线程安全正好接着理解。Race Condition 是“出了问题”，线程安全是“代码设计得不会出这种问题”。
+Race Condition 是“出了问题”，线程安全是“代码设计得不会出这种问题”。
 
 比如有一个全局变量：
 
-```
+```c
 int count = 0;
 ```
 
-两个任务都执行：
-
-```
-count++;
-```
-
-这段代码通常不是线程安全的，因为 `count++` 可能被拆成“读 → 加1 → 写”，两个任务可能互相覆盖结果。
+两个任务都执行 `count++;` 这段代码通常不是线程安全的，因为 `count++` 可能被拆成“读 → 加1 → 写”，两个任务可能互相覆盖结果。
 
 如果加 Mutex：
 
-```
+```c
 xSemaphoreTake(mutex, portMAX_DELAY);
 
 count++;
@@ -4701,15 +4687,13 @@ xSemaphoreGive(mutex);
 
 这时同一时刻只有一个任务能修改 `count`，这段操作就具备线程安全性。
 
-所以可以记成：
+所以 $\boxed{\text{线程安全 = 并发情况下仍然保持数据一致性}}$
 
-\[ \boxed{\text{线程安全 = 并发情况下仍然保持数据一致性}} \]
-
-线程安全不只是“多个线程不会崩”，还包括几种典型要求：共享数据不会被破坏；函数输出不会因为并发调用变得随机；资源不会被多个任务同时错误操作；内部状态不会因为任务切换而失效。
+线程安全不只是“多个线程不会崩”，还包括几种典型要求：**共享数据不会被破坏**；**函数输出不会因为并发调用变得随机**；**资源不会被多个任务同时错误操作**；**内部状态不会因为任务切换而失效**。
 
 比如下面这个函数：
 
-```
+```c
 int get_next_id(void)
 {
     static int id = 0;
@@ -4722,7 +4706,7 @@ int get_next_id(void)
 
 单线程调用没问题：
 
-```
+```text
 1
 2
 3
@@ -4731,26 +4715,18 @@ int get_next_id(void)
 
 但两个 Task 同时调用时：
 
-```
+```text
 Task A 读取 id = 5
 Task B 读取 id = 5
 Task A 写 6
 Task B 写 6
 ```
 
-两个任务可能都拿到：
+两个任务可能都拿到 6 ，所以 $\boxed{\text{含有可修改 static/global 状态的函数，要特别注意线程安全}}$
 
-```
-6
-```
+再比如做 STM32 时常用的串口发送函数：
 
-所以：
-
-\[ \boxed{\text{含有可修改 static/global 状态的函数，要特别注意线程安全}} \]
-
-再比如你做 STM32 时常用的串口发送函数：
-
-```
+```c
 void USART_SendString(char *str)
 {
     ...
@@ -4759,27 +4735,19 @@ void USART_SendString(char *str)
 
 如果 Task A：
 
-```
+```c
 USART_SendString("ABC");
 ```
 
 Task B：
 
-```
+```c
 USART_SendString("123");
 ```
 
-同时调用，如果 USART 是共享硬件资源，可能输出：
+同时调用，如果 USART 是共享硬件资源，可能输出 `A1B2C3`，那么这个发送接口就不是线程安全的。解决方式可以在函数内部加锁：
 
-```
-A1B2C3
-```
-
-那么这个发送接口就不是线程安全的。
-
-解决方式可以在函数内部加锁：
-
-```
+```c
 void USART_SendString(char *str)
 {
     xSemaphoreTake(uartMutex, portMAX_DELAY);
@@ -4790,21 +4758,13 @@ void USART_SendString(char *str)
 }
 ```
 
-这样调用者不用自己管锁：
+这样调用者不用自己管锁 `USART_SendString("ABC");` 这个接口本身就更接近 $\boxed{\text{Thread-Safe API}}$
 
-```
-USART_SendString("ABC");
-```
-
-这个接口本身就更接近：
-
-\[ \boxed{\text{Thread-Safe API}} \]
-
-还有一种情况很重要：**局部变量通常天然更安全**。
+还有一种情况很重要**局部变量通常天然更安全**。
 
 比如：
 
-```
+```c
 int add(int a, int b)
 {
     int result = a + b;
@@ -4814,14 +4774,14 @@ int add(int a, int b)
 
 两个任务同时调用：
 
-```
+```c
 add(1, 2);
 add(10, 20);
 ```
 
 通常不会互相影响，因为每个 Task 有自己的独立栈：
 
-```
+```c
 Task A Stack
 → a
 → b
@@ -4833,9 +4793,7 @@ Task B Stack
 → result
 ```
 
-所以：
-
-\[ \boxed{\text{普通局部变量通常属于任务自己的栈，不共享}} \]
+所以\boxed{\text{普通局部变量通常属于任务自己的栈，不共享}}
 
 而危险的通常是：
 
