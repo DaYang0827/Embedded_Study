@@ -728,7 +728,8 @@ xSemaphoreCreateCounting(?, ?);
 为什么初始值不是 0？
 
 ```text
-
+应该创建成xSemaphoreCreateCounting(5, 3);
+因为在创立的初始的时候就已经有3个buffer可以直接使用     不需要give之后再使用
 ```
 ---
 
@@ -745,7 +746,10 @@ D：通知“按键被按下，需要处理”
 
 解释原因。
 ```text
-
+A  binary   因为只是数据是否完成     不需要多次记录
+B  counting    需要记录多个时间
+C  counting    需要知道还有多少个buffer可以使用
+D  binary    也是只需要知道是否需要处理
 ```
 ---
 
@@ -761,8 +765,9 @@ TaskB → USART
 ```
 
 如果完全不保护，可能发生什么？
-```text
 
+```text
+如果
 ```
 ---
 

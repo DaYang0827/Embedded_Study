@@ -2,7 +2,7 @@
 
 先从最核心的硬件模型开始。可以把一个 MCU GPIO 引脚简化成这样：
 
-```
+```text
                         VDD
                          |
                     [内部上拉]
@@ -22,7 +22,7 @@
                         VDD         GND
 ```
 
-软件实际上是在控制这些硬件开关。最重要的第一层概念就是$\boxed{\text{GPIO 不是简单的“0和1”，而是一套可配置的输入/输出电路}}$
+软件实际上是在控制这些硬件开关。最重要的第一层概念就是 $$\boxed{\text{GPIO 不是简单的“0和1”，而是一套可配置的输入/输出电路}}$$
 
 # 2 输入模式
 
@@ -41,7 +41,7 @@ if (GPIOA->IDR & (1 << 0))
 }
 ```
 
-这里有个关键点：**输入模式下，MCU 不主动把引脚拉高或拉低**。所以如果这个引脚什么都没接，就会出现$\boxed{\text{Floating Input，浮空输入}}$  
+这里有个关键点**输入模式下，MCU 不主动把引脚拉高或拉低**。所以如果这个引脚什么都没接，就会出现 $\boxed{\text{Floating Input，浮空输入}}$  
 
 浮空就是**引脚电压没有被可靠地固定在高或低**。此时它可能受到周围电磁噪声影响，读出来：
 
@@ -54,7 +54,7 @@ if (GPIOA->IDR & (1 << 0))
 0
 ```
 
-乱跳。所以输入脚经常需要$\boxed{\text{上拉或下拉}}$ 例如按键：
+乱跳。所以输入脚经常需要 $\boxed{\text{上拉或下拉}}$ 例如按键：
 
 ```
 VDD
@@ -68,7 +68,7 @@ VDD
 GND
 ```
 
-没按`GPIO = 1` 按下`GPIO = 0`  这叫$\boxed{\text{Active Low}}$ 也就是“低电平有效”。
+没按`GPIO = 1` 按下`GPIO = 0`  这叫 $\boxed{\text{Active Low}}$ 也就是“低电平有效”。
 
 ## GPIOPuPd_TypeDef
 
@@ -123,7 +123,7 @@ typedef enum
 
 上拉就是通过一个电阻把引脚“偏向高电平”。
 
-```
+```text
 VDD
  |
 [R]
@@ -133,7 +133,7 @@ GPIO
 
 下拉则相反：
 
-```
+```text
 GPIO
  |
 [R]
@@ -141,21 +141,21 @@ GPIO
 GND
 ```
 
-所以可以记$\boxed{\text{Pull-up：默认 1}}$ $\boxed{\text{Pull-down：默认 0}}$ STM32 内部通常有弱上拉/弱下拉，通过 `PUPDR` 控制。
+所以可以记 $\boxed{\text{Pull-up：默认 1}}$ $\boxed{\text{Pull-down：默认 0}}$ STM32 内部通常有弱上拉/弱下拉，通过 `PUPDR` 控制。
 
 为什么一定要有电阻，而不是直接接 VDD？
 
-因为如果直接`GPIO ---- VDD`然后外部某个器件又把它拉到GND `VDD ----- GND`相当于短路。加电阻以后$I=\frac{V}{R}$ 电流被限制住。这就是硬件里一个非常重要的思想$\boxed{\text{电阻不仅是“改电压”，更经常用来限制电流和定义状态}}$
+因为如果直接`GPIO ---- VDD`然后外部某个器件又把它拉到GND `VDD ----- GND`相当于短路。加电阻以后$I=\frac{V}{R}$ 电流被限制住。这就是硬件里一个非常重要的思想$$\boxed{\text{电阻不仅是“改电压”，更经常用来限制电流和定义状态}}$$
 
 # 3 输出模式
 
-输出时 MCU 主动控制引脚。典型有两种$\boxed{\text{Push-Pull}}$ 和$\boxed{\text{Open-Drain}}$这是 GPIO 面试里非常高频的知识。
+输出时 MCU 主动控制引脚。典型有两种 $\boxed{\text{Push-Pull}}$ 和 $\boxed{\text{Open-Drain}}$这是 GPIO 面试里非常高频的知识。
 
 ## 3.1 推挽输出
 
 推挽结构可以简化成：
 
-```
+```text
      VDD
       |
     PMOS
@@ -169,23 +169,23 @@ GPIO PIN
 
 输出高：
 
-```
+```text
 PMOS ON
 NMOS OFF
 ```
 
 引脚主动连接到 VDD。所以$V_{OUT}\approx VDD$ 输出低：
 
-```
+```text
 PMOS OFF
 NMOS ON
 ```
 
 引脚主动连接 GND。所以$V_{OUT}\approx 0V$
 
-因此推挽$\boxed{\text{既可以主动拉高，也可以主动拉低}}$ 优点就是**速度快、驱动能力强**。比如：
+因此推挽 $\boxed{\text{既可以主动拉高，也可以主动拉低}}$ 优点就是**速度快、驱动能力强**。比如：
 
-```
+```text
 LED
 SPI Clock
 普通数字控制线
@@ -208,7 +208,7 @@ GPIO PIN
 
 注意没有上面的 PMOS。所以它只能：
 
-```
+```text
 NMOS ON
 → 主动输出低
 
@@ -217,7 +217,7 @@ NMOS OFF
 → 高阻态
 ```
 
-因此$\boxed{\text{开漏不能主动输出高电平}}$ 它的高电平一般靠外部上拉：
+因此 $\boxed{\text{开漏不能主动输出高电平}}$ 它的高电平一般靠外部上拉：
 
 ```text
 VDD
@@ -233,7 +233,7 @@ GND
 
 当 NMOS 关闭：
 
-```
+```text
 VDD
  |
 R
@@ -241,7 +241,7 @@ R
 GPIO
 ```
 
-所以 GPIO 被电阻拉高。当 NMOS 导通`GPIO → GND`于是变成低电平。所以$\boxed{ Open\ Drain= \text{LOW 或 Hi-Z} }$ 不是$\text{LOW 或 HIGH}$ 这个区别特别重要。
+所以 GPIO 被电阻拉高。当 NMOS 导通 `GPIO → GND`于是变成低电平。所以$\boxed{ Open\ Drain= \text{LOW 或 Hi-Z} }$ 不是$\text{LOW 或 HIGH}$ 这个区别特别重要。
 
 ### 3.2.1 I²C 使用开漏
 
@@ -259,7 +259,7 @@ I2C 是一根总线上挂载**多个设备**（一个主设备，多个从设备
 
 而开漏则不一样。设备只能：
 
-```
+```text
 拉低
 或者
 松开
