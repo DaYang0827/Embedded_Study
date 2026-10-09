@@ -342,7 +342,9 @@ PendSV
 > Scheduler 和 PendSV 是不是一回事？
 
 ```text
-scheduler是进行任务调度分配的   他决定哪个任务可以从ready态进入
+scheduler是进行任务调度分配的   他决定哪个任务可以从ready态进入running态
+而具体的任务切换是由PendSV完成的
+systick是时钟节拍     所有的操作都在节拍上进行
 ```
 ---
 
@@ -371,7 +373,10 @@ sizeof(uint32_t)是什么？
 ```
 
 ```text
-
+5代表这个队列有五个元素
+sizeof(uint32_t)是每个元素的大小    都是uint32大小的
+一次send发一个item
+一次receive也是一个item
 ```
 ---
 
@@ -400,7 +405,9 @@ Queue剩什么？
 ```
 
 ```text
-
+value是把队列中的信息保存到value这个变量中
+queue剩下[20][30][ ][ ][ ]
+不是全部拿走   每次receive都是拿走一个元素
 ```
 ---
 
@@ -427,7 +434,7 @@ data
 但是 Queue 保存的却通常不是 `&data`？
 
 ```text
-
+传的是data的地址   因为不确定队列中元素的大小      所以直接通过指针的方式   把队列的元素发送到data的地址中    可以确保不管什么类型的信息都能接收
 ```
 ---
 
@@ -445,7 +452,8 @@ Queue 里原来的值是多少？
 
 为什么？
 ```text
-
+原来的值是100
+因为data的值是在send之后改写
 ```
 ---
 
