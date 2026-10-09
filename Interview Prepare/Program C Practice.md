@@ -1,4 +1,622 @@
 （❌）
+
+# DAY 5
+Day 5 我就针对你 Day 4 暴露出来的薄弱点来出，重点是：
+
+**数组退化 + 二级指针 + void* + 生命周期 + RMW/临界区 + FreeRTOS 参数传递。**
+
+1. 数组退化与 `sizeof`
+
+```
+void func(uint32_t arr[10])
+{
+    printf("%u\n", sizeof(arr));
+}
+
+int main(void)
+{
+    uint32_t data[10];
+
+    printf("%u\n", sizeof(data));
+
+    func(data);
+}
+```
+
+在 STM32F4 这种 32 位环境下，分别打印多少？
+
+重点解释：
+
+```
+为什么 main 里的 data 是数组
+而 func 里的 arr 已经不是完整数组了？
+```
+
+---
+
+2. 数组指针
+
+```
+uint32_t arr[4] = {10, 20, 30, 40};
+
+uint32_t (*p)[4] = &arr;
+```
+
+回答：
+
+```
+p 是什么类型？
+*p 是什么？
+(*p)[0] 是多少？
+(*p)[2] 是多少？
+p + 1 会移动多少 Byte？
+```
+
+再解释：
+
+```
+uint32_t *p
+```
+
+和：
+
+```
+uint32_t (*p)[4]
+```
+
+有什么本质区别？
+
+---
+
+3. `arr`、`&arr[0]`、`&arr`
+
+```
+uint32_t arr[4];
+```
+
+回答三者的类型：
+
+```
+arr
+&arr[0]
+&arr
+```
+
+然后解释：
+
+```
+为什么它们打印出来的数值地址可能一样，
+但指针运算结果不同？
+```
+
+---
+
+4. 二级指针基础
+
+```
+uint32_t value = 100;
+
+uint32_t *p = &value;
+
+uint32_t **pp = &p;
+```
+
+回答：
+
+```
+p
+*p
+pp
+*pp
+**pp
+```
+
+分别表示什么。
+
+然后回答：
+
+```
+**pp = 200;
+```
+
+最后：
+
+```
+value = ?
+```
+
+为什么？
+
+---
+
+5. 二级指针修改调用者指针
+
+看：
+
+```
+void set_pointer(uint32_t **pp)
+{
+    static uint32_t value = 123;
+
+    *pp = &value;
+}
+
+int main(void)
+{
+    uint32_t *p = NULL;
+
+    set_pointer(&p);
+
+    printf("%u\n", *p);
+}
+```
+
+回答：
+
+```
+为什么 set_pointer 的参数必须是 uint32_t **？
+为什么传的是 &p？
+*pp = &value 到底修改了谁？
+```
+
+---
+
+6. 如果不用二级指针会怎样
+
+```
+void set_pointer(uint32_t *p)
+{
+    static uint32_t value = 123;
+
+    p = &value;
+}
+
+int main(void)
+{
+    uint32_t *p = NULL;
+
+    set_pointer(p);
+
+    printf("%u\n", *p);
+}
+```
+
+这段代码有什么问题？
+
+重点解释：
+
+```
+C 函数参数是值传递
+```
+
+在这里到底是什么意思。
+
+---
+
+7. `void *` 基础
+
+```
+void print_value(void *arg)
+{
+    uint32_t *p = (uint32_t *)arg;
+
+    printf("%u\n", *p);
+}
+
+int main(void)
+{
+    uint32_t value = 100;
+
+    print_value(&value);
+}
+```
+
+回答：
+
+```
+arg 里面保存的是什么？
+为什么不能直接写 *arg？
+为什么要先转成 uint32_t *？
+```
+
+---
+
+8. `void *` 和结构体
+
+```
+typedef struct
+{
+    uint32_t id;
+    uint32_t period;
+} TaskConfig_t;
+
+void task(void *pvParameters)
+{
+    TaskConfig_t *cfg =
+        (TaskConfig_t *)pvParameters;
+
+    printf("%u\n", cfg->id);
+    printf("%u\n", cfg->period);
+}
+```
+
+回答：
+
+```
+pvParameters 里面保存的是整个 TaskConfig_t 吗？
+还是地址？
+
+cfg 是什么？
+cfg->id 本质等价于什么表达式？
+```
+
+---
+
+9. FreeRTOS 参数生命周期
+
+```
+void create_task(void)
+{
+    TaskConfig_t config;
+
+    config.id = 1;
+    config.period = 1000;
+
+    xTaskCreate(
+        task,
+        "TASK",
+        128,
+        &config,
+        1,
+        NULL
+    );
+}
+```
+
+假设：
+
+```
+create_task() 很快返回
+Task 以后才真正运行
+```
+
+回答：
+
+```
+pvParameters 还安全吗？
+为什么？
+问题和 task 最后有没有 vTaskDelete() 有关系吗？
+```
+
+然后至少给出两种安全修改方案。
+
+---
+
+10. `static` 修复生命周期
+
+```
+void create_task(void)
+{
+    static TaskConfig_t config;
+
+    config.id = 1;
+    config.period = 1000;
+
+    xTaskCreate(
+        task,
+        "TASK",
+        128,
+        &config,
+        1,
+        NULL
+    );
+}
+```
+
+回答：
+
+```
+现在 config 的生命周期多久？
+它通常位于哪里？
+作用域在哪里？
+这种写法有没有新的潜在问题？
+```
+
+提示：
+
+```
+如果 create_task() 被调用两次呢？
+```
+
+---
+
+11. Queue 传结构体
+
+```
+typedef struct
+{
+    uint32_t id;
+    uint32_t value;
+} Message_t;
+
+QueueHandle_t q;
+
+q = xQueueCreate(5, sizeof(Message_t));
+```
+
+然后：
+
+```
+Message_t msg = {1, 100};
+
+xQueueSend(q, &msg, 0);
+```
+
+回答：
+
+```
+Queue 里面保存的是 msg 的地址，
+还是 msg 的副本？
+
+一次 Send 复制多少 Byte？
+
+如果发送后：
+msg.value = 200;
+
+Queue 里之前那个值会不会变？
+```
+
+---
+
+12. Queue 传指针
+
+改成：
+
+```
+q = xQueueCreate(5, sizeof(Message_t *));
+```
+
+然后：
+
+```
+Message_t msg = {1, 100};
+
+Message_t *p = &msg;
+
+xQueueSend(q, &p, 0);
+```
+
+回答：
+
+```
+Queue 里面现在保存的是什么？
+一次复制多少 Byte？
+为什么这里传的是 &p，而不是 p？
+```
+
+然后回答：
+
+> 如果 `msg` 是局部变量，发送完成后函数返回，会有什么风险？
+
+---
+
+13. RMW 进一步分析
+
+```
+volatile uint32_t reg = 0;
+```
+
+Task：
+
+```
+reg |= (1U << 3);
+```
+
+ISR：
+
+```
+reg |= (1U << 5);
+```
+
+回答：
+
+```
+volatile 能不能防止修改丢失？
+为什么？
+```
+
+请把：
+
+```
+reg |= mask;
+```
+
+拆成三个步骤：
+
+```
+读取
+修改
+写回
+```
+
+然后说明为什么即使加了 `volatile`，RMW 仍然可能被打断。
+
+---
+
+14. 临界区
+
+假设要保护：
+
+```
+shared_counter++;
+```
+
+两个 Task 都可能修改。
+
+写出：
+
+```
+taskENTER_CRITICAL();
+```
+
+和：
+
+```
+taskEXIT_CRITICAL();
+```
+
+的使用代码。
+
+然后回答：
+
+```
+进入临界区后发生了什么？
+它和 Mutex 有什么区别？
+为什么临界区不能写得太长？
+```
+
+---
+
+15. Mutex 和临界区怎么选
+
+下面场景分别更适合：
+
+```
+Mutex
+还是
+Critical Section
+```
+
+A：
+
+```
+两个 Task 共用 UART，发送一次可能需要几毫秒
+```
+
+B：
+
+```
+两个 Task 都要执行 shared_counter++
+```
+
+C：
+
+```
+修改一个非常短的链表指针操作
+```
+
+D：
+
+```
+保护 I2C 总线，一次传输可能比较慢
+```
+
+每个都解释理由。
+
+---
+
+16. `volatile` + Mutex
+
+假设：
+
+```
+volatile uint32_t shared_data;
+```
+
+两个 Task 同时访问。
+
+回答：
+
+```
+volatile 能代替 Mutex 吗？
+如果不能，它到底解决什么问题？
+Mutex 又解决什么问题？
+```
+
+要求你把这两个概念彻底分开。
+
+---
+
+17. FreeRTOS 综合题
+
+假设：
+
+```
+typedef struct
+{
+    uint32_t cmd;
+    uint32_t value;
+} Cmd_t;
+
+QueueHandle_t cmd_queue;
+SemaphoreHandle_t uart_mutex;
+```
+
+Parser Task：
+
+```
+void parser_task(void *arg)
+{
+    Cmd_t cmd;
+
+    while (1)
+    {
+        // 假设这里已经解析出完整命令
+        cmd.cmd = 1;
+        cmd.value = 100;
+
+        xQueueSend(
+            cmd_queue,
+            &cmd,
+            portMAX_DELAY
+        );
+    }
+}
+```
+
+CMD Task：
+
+```
+void cmd_task(void *arg)
+{
+    Cmd_t cmd;
+
+    while (1)
+    {
+        if (xQueueReceive(
+                cmd_queue,
+                &cmd,
+                portMAX_DELAY
+            ) == pdTRUE)
+        {
+            xSemaphoreTake(
+                uart_mutex,
+                portMAX_DELAY
+            );
+
+            uart_send(cmd);
+
+            xSemaphoreGive(
+                uart_mutex
+            );
+        }
+    }
+}
+```
+
+回答完整流程：
+
+```
+Parser Task 为什么可以直接使用局部 cmd？
+Queue 为什么不会因为下一轮循环修改 cmd 而出问题？
+
+CMD Task 没有数据时是什么状态？
+Queue 有数据后发生什么？
+
+为什么 uart_send() 前后需要 Mutex？
+为什么这里不能只靠 volatile？
+```
+
 # DAY 4
 
 **Day 4：整数类型 + 数组/指针 + 生命周期 + 宏 + volatile + 嵌入式综合**。这些正好是你现在 C 基础里还需要补的部分。**先不给答案，你做完我再逐题批。**
