@@ -1194,7 +1194,7 @@ xPSR
 
 假设原来`PSP = 0x20001000`，压完后`PSP = 0x20000FE0` 只是示意地址。于是 Task A 的栈大概：
 
-```
+```text
 高地址
 0x20001000
     ...
@@ -1214,19 +1214,11 @@ xPSR
 
 ---
 
-## 第二步：FreeRTOS 手动压 R4-R11
+第二步：FreeRTOS 手动压 R4-R11
 
-PendSV_Handler 里面继续：
+`PendSV_Handler` 里面继续 R4-R11 压栈。于是栈继续往下长：
 
-```
-R4-R11
-```
-
-压栈。
-
-于是栈继续往下长：
-
-```
+```text
 高地址
 ----------------
 xPSR
@@ -1252,53 +1244,25 @@ R4
 低地址
 ```
 
-这时：
-
-\[ \boxed{\text{Task A 的完整 CPU 上下文已经在 Stack A 里了}} \]
+这时$\boxed{\text{Task A 的完整 CPU 上下文已经在 Stack A 里了}}$
 
 ---
 
-# 7. 这时候 TCB 出场了
+ 第三步：TCB 出场
 
-现在最关键的一步：
+现在最关键的一步FreeRTOS 会把当前 PSP 保存到 Task A 的 TCB 中。也就是`pxCurrentTCB->pxTopOfStack = PSP;` 概念上就是`Task A 当前栈顶 = 0x20000FC0`，于是：
 
-FreeRTOS 会把当前 PSP 保存到 Task A 的 TCB 中。
-
-也就是：
-
-```
-pxCurrentTCB->pxTopOfStack = PSP;
-```
-
-概念上就是：
-
-```
-Task A 当前栈顶 = 0x20000FC0
-```
-
-于是：
-
-```
+```text
 TCB_A
  |
  └── pxTopOfStack = 0x20000FC0
 ```
 
-这句话特别关键：
+这句话特别关键$\boxed{\text{TCB 不保存全部寄存器值；寄存器值主要在栈里，TCB 只要记住栈顶在哪}}$
 
-\[ \boxed{\text{TCB 不保存全部寄存器值；寄存器值主要在栈里，TCB 只要记住栈顶在哪}} \]
+很多初学者会误以为TCB 里面保存 R0、R1、PC、LR……通常不是这么做的。而是：
 
-这是你一定要理解的。
-
-很多初学者会误以为：
-
-> TCB 里面保存 R0、R1、PC、LR……
-
-通常不是这么做的。
-
-而是：
-
-```
+```text
 寄存器现场
 → 栈
 
@@ -1306,13 +1270,11 @@ TCB_A
 → TCB
 ```
 
-所以：
-
-\[ \boxed{\text{TCB 是“索引”，栈是真正的现场存储区}} \]
+所以$\boxed{\text{TCB 是“索引”，栈是真正的现场存储区}}$
 
 ---
 
-# 8. 然后调度器选择 Task B
+第五步：调度器选择 Task B
 
 接下来内核运行调度逻辑：
 
