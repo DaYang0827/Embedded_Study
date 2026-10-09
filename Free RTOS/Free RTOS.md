@@ -3359,7 +3359,7 @@ Give释放
 
 ### 8.4.4 Priority Inheritance
 
-RTOS**不会对每个任务都上锁**
+RTOS **不会对每个任务都上锁**
 
 实时操作系统（RTOS）的核心灵魂是**实时响应**（高优先级的紧急任务一旦醒来，必须在几微秒内得到执行）。如果，“只要任务拿了锁，就能自动锁住所有人（包括比它优先级高的任务）”，那就会发生下面这种恐怖的场景：
 
@@ -3406,7 +3406,7 @@ Low 原 priority = 1
 High priority = 3
 ```
 
-FreeRTOS 会临时把 Low 的优先级提高`Low 临时 priority = 3`，于是 Mid `priority = 2` 就不能一直压着 Low。Low 很快运行：
+FreeRTOS 会临时把 Low 的优先级提高 `Low 临时 priority = 3`，于是 Mid `priority = 2` 就不能一直压着 Low。Low 很快运行：
 
 ```text
 完成共享资源操作
@@ -3435,6 +3435,8 @@ Low恢复原优先级
 ```
 
 这就是 Mutex 和普通 Binary Semaphore 最大的区别之一。
+
+**当高优先级任务等待一个被低优先级任务持有的 Mutex 时，FreeRTOS 会临时提升低优先级持锁任务的优先级，使其尽快运行并释放 Mutex；释放后恢复原优先级**。
 
 
 ### 8.4.5 典型例子
