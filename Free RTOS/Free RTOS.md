@@ -1030,7 +1030,549 @@ PendSV执行上下文切换
 - PendSV = 真正执行上下文切换
 
 ## 任务切换
+### 每个任务都有独立栈
 
+比如有三个任务：
+
+```text
+Task A
+Task B
+Task C
+```
+
+那么不是三个任务共享一个普通栈，而是：
+
+```text
+Task A → Stack A
+Task B → Stack B
+Task C → Stack C
+```
+
+同时：
+
+```text
+TCB_A → 记录 Stack A 的栈顶
+TCB_B → 记录 Stack B 的栈顶
+TCB_C → 记录 Stack C 的栈顶
+```
+
+可以画成：
+
+```text
+TCB_A
+  |
+  └── pxTopOfStack ─────→ Stack A
+
+TCB_B
+  |
+  └── pxTopOfStack ─────→ Stack B
+
+TCB_C
+  |
+  └── pxTopOfStack ─────→ Stack C
+```
+
+所以$\boxed{\text{任务 = TCB + 独立任务栈}}$
+
+### 压栈
+
+假设 CPU 当前正在运行 Task A。这时候 CPU 内部寄存器里可能是：
+
+```text
+R0 = 10
+R1 = 20
+R2 = ...
+R4 = ...
+R5 = ...
+SP = ...
+LR = ...
+PC = TaskA 当前执行位置
+xPSR = ...
+```
+
+现在 RTOS 决定切换到 Task B。问题来了如果直接把 CPU 寄存器改成 Task B 的值，那 Task A 原来的寄存器内容不就丢了吗？
+
+所以切换前**必须保存 Task A 的 CPU 上下文** 也就是$\boxed{\text{Context Save}}$
+
+最常见的方法就是把寄存器压到 Task A 自己的栈里。在 Cortex-M 进入异常时，**硬件会自动压一部分寄存器**。
+
+典型自动压栈：
+
+```text
+R0
+R1
+R2
+R3
+R12
+LR
+PC
+xPSR
+```
+
+也就是 8 个寄存器。
+
+所以发生 PendSV 异常时，硬件已经先帮你保存：
+
+```
+R0-R3
+R12
+LR
+PC
+xPSR
+```
+
+但是还有：
+
+```
+R4-R11
+```
+
+没有自动保存。
+
+所以 FreeRTOS 的 PendSV_Handler 会再手动保存：
+
+```
+R4-R11
+```
+
+因此一个完整任务现场大致是：
+
+```
+软件保存：
+R4-R11
+
+硬件自动保存：
+R0-R3
+R12
+LR
+PC
+xPSR
+```
+
+你可以这样理解：
+
+```
+任务切换现场
+=
+软件保存的一部分
++
+硬件自动保存的一部分
+```
+
+---
+
+## 5. 为什么 R4-R11 要软件保存
+
+这是 ARM 调用约定和异常机制共同决定的。
+
+你现在不用死抠 ABI 细节，只记：
+
+```
+硬件异常入栈：
+R0-R3, R12, LR, PC, xPSR
+
+FreeRTOS额外保存：
+R4-R11
+```
+
+这样才能保证：
+
+\[ \boxed{\text{恢复后任务能像“从没被打断一样”继续执行}} \]
+
+---
+
+# 6. 任务 A 被切出去的完整过程
+
+假设现在 CPU 正在运行：
+
+```
+Task A
+```
+
+然后 SysTick 到了，内核发现 Task B 应该运行。
+
+通常不是直接在 SysTick 里完成完整切换，而是：
+
+```
+SysTick
+↓
+决定需要切任务
+↓
+触发 PendSV
+↓
+PendSV 完成真正上下文切换
+```
+
+这是 Cortex-M FreeRTOS 很经典的设计。
+
+---
+
+## 第一步：发生 PendSV 异常
+
+CPU 进入异常。
+
+硬件自动把：
+
+```
+R0
+R1
+R2
+R3
+R12
+LR
+PC
+xPSR
+```
+
+压到当前 Task A 的栈里。
+
+假设原来：
+
+```
+PSP = 0x20001000
+```
+
+压完后：
+
+```
+PSP = 0x20000FE0
+```
+
+只是示意地址。
+
+于是 Task A 的栈大概：
+
+```
+高地址
+0x20001000
+    ...
+    xPSR
+    PC
+    LR
+    R12
+    R3
+    R2
+    R1
+    R0
+0x20000FE0 ← PSP
+低地址
+```
+
+注意 Cortex-M 栈一般向低地址增长。
+
+---
+
+## 第二步：FreeRTOS 手动压 R4-R11
+
+PendSV_Handler 里面继续：
+
+```
+R4-R11
+```
+
+压栈。
+
+于是栈继续往下长：
+
+```
+高地址
+----------------
+xPSR
+PC
+LR
+R12
+R3
+R2
+R1
+R0
+----------------
+R11
+R10
+R9
+R8
+R7
+R6
+R5
+R4
+----------------
+↑
+新的 PSP
+低地址
+```
+
+这时：
+
+\[ \boxed{\text{Task A 的完整 CPU 上下文已经在 Stack A 里了}} \]
+
+---
+
+# 7. 这时候 TCB 出场了
+
+现在最关键的一步：
+
+FreeRTOS 会把当前 PSP 保存到 Task A 的 TCB 中。
+
+也就是：
+
+```
+pxCurrentTCB->pxTopOfStack = PSP;
+```
+
+概念上就是：
+
+```
+Task A 当前栈顶 = 0x20000FC0
+```
+
+于是：
+
+```
+TCB_A
+ |
+ └── pxTopOfStack = 0x20000FC0
+```
+
+这句话特别关键：
+
+\[ \boxed{\text{TCB 不保存全部寄存器值；寄存器值主要在栈里，TCB 只要记住栈顶在哪}} \]
+
+这是你一定要理解的。
+
+很多初学者会误以为：
+
+> TCB 里面保存 R0、R1、PC、LR……
+
+通常不是这么做的。
+
+而是：
+
+```
+寄存器现场
+→ 栈
+
+栈顶位置
+→ TCB
+```
+
+所以：
+
+\[ \boxed{\text{TCB 是“索引”，栈是真正的现场存储区}} \]
+
+---
+
+# 8. 然后调度器选择 Task B
+
+接下来内核运行调度逻辑：
+
+```
+vTaskSwitchContext();
+```
+
+它会从 Ready List 中选出：
+
+```
+最高优先级的 Ready Task
+```
+
+假设选中：
+
+```
+Task B
+```
+
+于是：
+
+```
+pxCurrentTCB
+```
+
+从：
+
+```
+TCB_A
+```
+
+切换成：
+
+```
+TCB_B
+```
+
+概念上：
+
+```
+pxCurrentTCB = &TCB_B;
+```
+
+---
+
+# 9. 从 Task B 的 TCB 取回栈顶
+
+现在：
+
+```
+TCB_B->pxTopOfStack
+```
+
+里面保存的是 Task B 上次被切出去时的栈顶。
+
+例如：
+
+```
+TCB_B->pxTopOfStack = 0x200020C0
+```
+
+于是：
+
+```
+PSP = 0x200020C0
+```
+
+这一步等于告诉 CPU：
+
+> “接下来你要从 Task B 的栈恢复。”
+
+---
+
+# 10. Task B 出栈
+
+先由软件恢复：
+
+```
+R4-R11
+```
+
+然后 PendSV 退出。
+
+异常返回时，Cortex-M 硬件会自动从 Task B 的栈恢复：
+
+```
+R0-R3
+R12
+LR
+PC
+xPSR
+```
+
+其中最关键的是：
+
+```
+PC
+```
+
+因为 PC 恢复后，CPU 就会继续从 Task B 上次停下的位置运行。
+
+所以最终效果就是：
+
+```
+Task A 执行到一半
+↓
+保存现场
+↓
+切换 TCB
+↓
+恢复 Task B 现场
+↓
+Task B 从上次停下的位置继续
+```
+
+这就是：
+
+\[ \boxed{\text{Context Switch}} \]
+
+---
+
+# 11. 整个过程画成一张图
+
+你可以把它记成：
+
+```
+           CPU 正在运行 Task A
+                  |
+                  ↓
+             PendSV发生
+                  |
+        ----------------------
+        |                    |
+        ↓                    ↓
+硬件压栈               软件压栈
+R0-R3                  R4-R11
+R12
+LR
+PC
+xPSR
+        \                    /
+         \                  /
+          ↓                ↓
+            Stack A 保存完整现场
+                  |
+                  ↓
+      PSP 保存到 TCB_A->pxTopOfStack
+                  |
+                  ↓
+          调度器选择 Task B
+                  |
+                  ↓
+        pxCurrentTCB = TCB_B
+                  |
+                  ↓
+     PSP = TCB_B->pxTopOfStack
+                  |
+                  ↓
+         从 Stack B 恢复 R4-R11
+                  |
+                  ↓
+      异常返回自动恢复其余寄存器
+                  |
+                  ↓
+            Task B 继续运行
+```
+
+---
+
+# 12. 为什么 TCB 只要保存 SP 就够了
+
+这是最值得你深入理解的地方。
+
+因为只要知道：
+
+```
+SP 在哪
+```
+
+就等于知道：
+
+```
+这次任务切换前保存的所有寄存器在哪里
+```
+
+比如：
+
+```
+SP
+↓
+R4
+R5
+R6
+...
+PC
+xPSR
+```
+
+所有东西都按照固定格式排列在栈上。
+
+所以恢复时只需要：
+
+```
+1. 拿到 SP
+2. 按固定顺序 pop
+```
+
+就可以恢复整个现场。
+
+因此：
+
+\[ \boxed{\text{TCB 中最核心的上下文信息就是 pxTopOfStack}} \]
 
 # 6 Task/Thread
 ## 6.1 TaskCreat
