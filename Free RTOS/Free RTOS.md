@@ -1089,12 +1089,9 @@ PendSV
 SysTick
 ```
 
-PSPProcess Stack Pointer
-```
+PSP（Process Stack Pointer），通常用于：
 
-通常用于：
-
-```
+```text
 普通任务
 线程模式
 FreeRTOS Task
@@ -1110,9 +1107,7 @@ Task运行
 → MSP
 ```
 
-这样有个好处：任务自己的栈和中断处理栈分开，不容易互相干扰。
-
-你可以画成：
+这样有个好处，**任务自己的栈和中断处理栈分开，不容易互相干扰**。可以画成：
 
 ```
                 CPU
@@ -1126,11 +1121,9 @@ Task运行
    Task A/B/C       IRQ/HardFault
 ```
 
-还有一个很重要的点：`PSP` 不是某个普通变量，而是 Cortex-M CPU 内部的特殊寄存器。
+还有一个很重要的点 `PSP` 不是某个普通变量，而是 Cortex-M CPU 内部的特殊寄存器。可以通过 CMSIS 接口：
 
-可以通过 CMSIS 接口：
-
-```
+```c
 __get_PSP();
 __set_PSP();
 ```
@@ -1139,49 +1132,27 @@ __set_PSP();
 
 比如：
 
-```
+```c
 uint32_t psp = __get_PSP();
 ```
 
 就是读当前 PSP。
 
-而：
+而`__set_PSP(value);` 就是设置 PSP。
 
-```
-__set_PSP(value);
-```
-
-就是设置 PSP。
-
----
-
-你以后在 FreeRTOS 的 PendSV 汇编里会看到类似：
+在 FreeRTOS 的 PendSV 汇编里会看到类似：
 
 ```
 mrs r0, psp
 ```
 
-意思是：
-
-```
-把 PSP 读到 R0
-```
-
-然后：
+意思是把 PSP 读到 R0，然后：
 
 ```
 stmdb r0!, {r4-r11}
 ```
 
-把：
-
-```
-R4-R11
-```
-
-压入当前任务栈。
-
-再把新的 `r0` 保存到 TCB。
+把 R4-R11 压入当前任务栈。再把新的 `r0` 保存到 TCB。
 
 恢复另一个任务时：
 
@@ -1198,7 +1169,7 @@ msr psp, r0
 更新 PSP
 ```
 
-所以你以后看到：
+以后看到：
 
 ```
 mrs
@@ -1208,13 +1179,9 @@ psp
 
 就知道是在做任务上下文切换。
 
-最后你可以把 PSP 记成一句：
+$\boxed{\text{PSP 就是“当前 RTOS 任务的栈顶指针”}}$ 
 
-\[ \boxed{\text{PSP 就是“当前 RTOS 任务的栈顶指针”}} \]
-
-而任务切换本质上就是：
-
-\[ \boxed{\text{保存旧 PSP → 取出新任务 PSP → 恢复新任务现场}} \]
+而任务切换本质上就是 $\boxed{\text{保存旧 PSP → 取出新任务 PSP → 恢复新任务现场}}$
 
 ## 5.5 任务切换
 
