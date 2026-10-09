@@ -4303,3 +4303,704 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask,
 - StackOverflowHook = 栈溢出报警器
 - MallocFailedHook   = 内存申请失败报警器
 - AssertHook         = 内核异常断点
+
+# Thread Safety
+## Race Condition
+
+Race Condition 就是**竞争条件**。它在 RTOS、多线程、中断和共享资源里非常常见。最核心的一句话$\boxed{\text{多个执行单元同时访问共享数据，而且结果依赖执行先后顺序}}$ 这时就出现 Race Condition。
+
+比如两个任务同时操作一个全局变量 `int count = 0;`，Task A `count++;`，Task B `count++;`，实际count不一定是2。因为 `count++;` 并不是一条绝对原子的操作，它可能被拆成：
+
+```
+1. 从内存读取 count
+2. +1
+3. 写回内存
+```
+
+假设：
+
+```
+初始 count = 0
+```
+
+Task A：
+
+```
+读取 count = 0
+```
+
+然后这时发生任务切换。
+
+Task B：
+
+```
+读取 count = 0
++1
+写回 1
+```
+
+然后切回 Task A。
+
+Task A 继续：
+
+```
+刚才自己拿到的是 0
++1
+写回 1
+```
+
+最后：
+
+```
+count = 1
+```
+
+而不是：
+
+```
+count = 2
+```
+
+这就是典型 Race Condition。
+
+可以画成：
+
+```
+Task A                Task B
+  |                     |
+read count=0            |
+  |                     |
+  |------切换---------->|
+                        read count=0
+                        +1
+                        write count=1
+  |<-----切换-----------|
++1
+write count=1
+```
+
+最终：
+
+\[ \boxed{1} \]
+
+而不是 2。
+
+这就是“结果依赖调度顺序”。
+
+---
+
+你可以把 Race Condition 的产生条件记成三个：
+
+```
+1. 有共享资源
+2. 有多个并发执行者
+3. 至少一个会修改共享资源
+```
+
+比如：
+
+```
+Task A
+Task B
+ISR
+DMA
+```
+
+都可能形成并发访问。
+
+共享资源可能是：
+
+```
+全局变量
+数组
+RingBuffer
+UART
+SPI
+文件
+外设寄存器
+链表
+Queue 外部数据结构
+```
+
+---
+
+在你现在学 STM32 + FreeRTOS 里，很常见的例子是串口。
+
+假设两个任务都调用：
+
+```
+USART_SendString();
+```
+
+Task A：
+
+```
+USART_SendString("Hello");
+```
+
+Task B：
+
+```
+USART_SendString("World");
+```
+
+如果函数内部没有保护，就可能输出：
+
+```
+HeWlolrold
+```
+
+因为 Task A 发到一半，被 Task B 抢占。
+
+这也是 Race Condition。
+
+---
+
+再比如 RingBuffer。
+
+Task A：
+
+```
+写 head
+```
+
+ISR：
+
+```
+也写 head
+```
+
+如果同时访问：
+
+```
+head
+tail
+buffer
+```
+
+又没有同步保护，就可能出现：
+
+```
+覆盖数据
+读错位置
+buffer 状态损坏
+```
+
+这也是 Race Condition。
+
+---
+
+那怎么解决？
+
+最常见的是：
+
+```
+Mutex
+Critical Section
+Semaphore
+Atomic operation
+Queue
+Task Notification
+```
+
+比如 Mutex：
+
+```
+xSemaphoreTake(mutex, portMAX_DELAY);
+
+count++;
+
+xSemaphoreGive(mutex);
+```
+
+这样就变成：
+
+```
+Task A 先拿锁
+Task B 必须等
+Task A 修改结束
+释放锁
+Task B 才能继续
+```
+
+于是同一时间只有一个任务修改：
+
+```
+count
+```
+
+这叫：
+
+\[ \boxed{\text{Mutual Exclusion}} \]
+
+也就是互斥。
+
+---
+
+Critical Section 也很常见。
+
+比如：
+
+```
+taskENTER_CRITICAL();
+
+count++;
+
+taskEXIT_CRITICAL();
+```
+
+这段期间不允许普通任务切换/相关中断打断关键操作。
+
+但 Critical Section 要尽量短。
+
+因为：
+
+```
+关中断太久
+↓
+系统实时性变差
+```
+
+所以：
+
+\[ \boxed{\text{Critical Section 保护很短的关键操作}} \]
+
+Mutex 更适合：
+
+```
+Task 和 Task 之间保护共享资源
+```
+
+---
+
+还有一个概念你要区分：
+
+Race Condition 和 Deadlock 不一样。
+
+Race Condition：
+
+```
+大家抢同一个资源
+结果不确定
+```
+
+Deadlock：
+
+```
+大家互相等
+谁都走不了
+```
+
+比如：
+
+```
+Task A拿Mutex1
+等待Mutex2
+
+Task B拿Mutex2
+等待Mutex1
+```
+
+就是 Deadlock。
+
+所以：
+
+\[ \boxed{\text{Race Condition = 抢乱了}} \]\[ \boxed{\text{Deadlock = 卡死了}} \]
+
+---
+
+还有一个很重要的点：
+
+`volatile` 不能解决 Race Condition。
+
+比如：
+
+```
+volatile int count;
+```
+
+然后两个任务：
+
+```
+count++;
+```
+
+依然可能竞争。
+
+`volatile` 只是告诉编译器：
+
+> 这个变量可能随时变化，不要随便优化掉读写。
+
+它并不保证：
+
+```
+原子性
+互斥
+同步
+```
+
+所以：
+
+\[ \boxed{\text{volatile ≠ thread safe}} \]
+
+这个是面试很喜欢问的。
+
+---
+
+你现在可以把 Race Condition 记成一句：
+
+\[ \boxed{\text{共享资源 + 并发访问 + 缺少同步 = Race Condition}} \]
+
+对于 FreeRTOS，你以后看到：
+
+```
+多个 Task
+多个 ISR
+共享变量
+共享外设
+```
+
+第一反应就应该是：
+
+> “这里会不会有 Race Condition？”
+
+这就是 RTOS 工程思维开始形成的标志。
+
+给我线程安全的相关讲解
+
+线程安全（thread safety）可以理解成：
+
+\[ \boxed{\text{多个线程/任务同时调用同一段代码或访问同一资源时，结果仍然正确、可预测}} \]
+
+你刚学完 Race Condition，线程安全正好接着理解。Race Condition 是“出了问题”，线程安全是“代码设计得不会出这种问题”。
+
+比如有一个全局变量：
+
+```
+int count = 0;
+```
+
+两个任务都执行：
+
+```
+count++;
+```
+
+这段代码通常不是线程安全的，因为 `count++` 可能被拆成“读 → 加1 → 写”，两个任务可能互相覆盖结果。
+
+如果加 Mutex：
+
+```
+xSemaphoreTake(mutex, portMAX_DELAY);
+
+count++;
+
+xSemaphoreGive(mutex);
+```
+
+这时同一时刻只有一个任务能修改 `count`，这段操作就具备线程安全性。
+
+所以可以记成：
+
+\[ \boxed{\text{线程安全 = 并发情况下仍然保持数据一致性}} \]
+
+线程安全不只是“多个线程不会崩”，还包括几种典型要求：共享数据不会被破坏；函数输出不会因为并发调用变得随机；资源不会被多个任务同时错误操作；内部状态不会因为任务切换而失效。
+
+比如下面这个函数：
+
+```
+int get_next_id(void)
+{
+    static int id = 0;
+
+    id++;
+
+    return id;
+}
+```
+
+单线程调用没问题：
+
+```
+1
+2
+3
+4
+```
+
+但两个 Task 同时调用时：
+
+```
+Task A 读取 id = 5
+Task B 读取 id = 5
+Task A 写 6
+Task B 写 6
+```
+
+两个任务可能都拿到：
+
+```
+6
+```
+
+所以：
+
+\[ \boxed{\text{含有可修改 static/global 状态的函数，要特别注意线程安全}} \]
+
+再比如你做 STM32 时常用的串口发送函数：
+
+```
+void USART_SendString(char *str)
+{
+    ...
+}
+```
+
+如果 Task A：
+
+```
+USART_SendString("ABC");
+```
+
+Task B：
+
+```
+USART_SendString("123");
+```
+
+同时调用，如果 USART 是共享硬件资源，可能输出：
+
+```
+A1B2C3
+```
+
+那么这个发送接口就不是线程安全的。
+
+解决方式可以在函数内部加锁：
+
+```
+void USART_SendString(char *str)
+{
+    xSemaphoreTake(uartMutex, portMAX_DELAY);
+
+    // UART发送
+
+    xSemaphoreGive(uartMutex);
+}
+```
+
+这样调用者不用自己管锁：
+
+```
+USART_SendString("ABC");
+```
+
+这个接口本身就更接近：
+
+\[ \boxed{\text{Thread-Safe API}} \]
+
+还有一种情况很重要：**局部变量通常天然更安全**。
+
+比如：
+
+```
+int add(int a, int b)
+{
+    int result = a + b;
+    return result;
+}
+```
+
+两个任务同时调用：
+
+```
+add(1, 2);
+add(10, 20);
+```
+
+通常不会互相影响，因为每个 Task 有自己的独立栈：
+
+```
+Task A Stack
+→ a
+→ b
+→ result
+
+Task B Stack
+→ a
+→ b
+→ result
+```
+
+所以：
+
+\[ \boxed{\text{普通局部变量通常属于任务自己的栈，不共享}} \]
+
+而危险的通常是：
+
+```
+global
+static
+共享buffer
+共享外设
+heap allocator内部状态
+```
+
+这也是为什么你刚学的“每个任务有自己的 Stack”非常重要。
+
+再讲一个很容易混淆的概念：
+
+\[ \boxed{\text{可重入 reentrant} \neq \text{线程安全 thread-safe}} \]
+
+可重入通常指函数在被打断后，又再次进入调用，仍然可以正确工作。
+
+例如：
+
+```
+int square(int x)
+{
+    return x * x;
+}
+```
+
+没有 global/static 状态，通常是可重入的。
+
+但：
+
+```
+char *my_format(int value)
+{
+    static char buffer[32];
+
+    ...
+    return buffer;
+}
+```
+
+这里用了静态共享 buffer。
+
+Task A 调一次：
+
+```
+buffer = "123"
+```
+
+还没用完，Task B 又调用：
+
+```
+buffer = "999"
+```
+
+Task A 的数据就被覆盖了。
+
+所以这种函数：
+
+```
+不是线程安全
+也通常不是可重入
+```
+
+你以后还会看到标准库里类似的问题，例如一些返回内部静态缓冲区的 API，就要注意并发调用。
+
+线程安全常见实现方法主要有这些：
+
+- **Mutex**：最常见，用于多个 Task 保护共享资源。
+- **Critical Section**：保护很短的关键代码，避免任务/中断打断。
+- **Atomic Operation**：如果 CPU 支持原子操作，可以避免完整加锁。
+- **Queue / Message Passing**：不共享数据，改成传消息，天然减少竞争。
+- **只读数据**：多个任务同时读通常没问题，只要没人修改。
+- **每任务独立数据**：把 global/static 改成 task-local 或局部变量。
+
+你可以理解成，最好的线程安全设计不一定是“到处加 Mutex”。
+
+比如：
+
+```
+Task A
+Task B
+Task C
+  ↓
+都直接操作 UART
+```
+
+可以改成：
+
+```
+Task A ─┐
+Task B ─┼→ Queue → UART Task → USART
+Task C ─┘
+```
+
+这样：
+
+\[ \boxed{\text{UART只有一个Task真正访问}} \]
+
+其它任务只是发消息。
+
+这种架构甚至比多个 Task 抢 Mutex 更清晰。
+
+这就是嵌入式 RTOS 里很重要的思想：
+
+\[ \boxed{\text{减少共享，比保护共享更好}} \]
+
+还有一个面试高频点：
+
+```
+volatile int flag;
+```
+
+并不意味着线程安全。
+
+`volatile` 只能保证：
+
+> 编译器不要随便缓存/优化这个变量的访问。
+
+它不能保证：
+
+```
+原子性
+互斥
+顺序同步
+```
+
+所以：
+
+\[ \boxed{\text{volatile ≠ thread-safe}} \]
+
+比如：
+
+```
+volatile int count = 0;
+```
+
+两个 Task：
+
+```
+count++;
+```
+
+仍然有 Race Condition。
+
+最后你可以把线程安全整理成这个模型：
+
+```
+线程安全
+│
+├── 数据不被并发破坏
+├── 结果与调度顺序无关
+├── 共享资源受到正确保护
+└── 多任务同时调用仍然正确
+```
+
+而判断一段代码是否线程安全，可以问自己四个问题：
+
+1. 有没有共享数据？
+2. 有没有多个 Task/ISR 可能同时访问？
+3. 有没有写操作？
+4. 有没有 Mutex、Critical Section、Atomic、Queue 等同步机制？
+
+如果前三个答案都是“有”，第四个答案是“没有”，那就非常可能不是线程安全的。
+
+对你现在学 FreeRTOS 来说，最重要的三个关系可以一起记：
+
+\[ \boxed{\text{Race Condition = 问题}} \]\[ \boxed{\text{Mutex/Critical Section = 手段}} \]\[ \boxed{\text{Thread Safety = 目标}} \]
