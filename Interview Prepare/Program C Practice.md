@@ -844,8 +844,8 @@ Priority Inheritance
 三个方面回答。
 ```text
 用途    Mutex是防止两个任务同时进行       binary只是通知任务是否可以执行
-Owner    Mutex是有明确的所有者的    是由所有者进行give的     
-Priority Inheritance
+Owner    Mutex是有明确的所有者的    是由所有者进行give的     binary是没有owner的   谁都可以give
+Priority Inheritance    Mutex是会发生Priority Inheritance    binary不会有这种情况
 ```
 ---
 
@@ -873,7 +873,8 @@ Mid为什么可能导致问题？
 
 这是什么问题？
 ```text
-
+high会让low进行优先级反转      把low的优先级暂时提升到和high的级别一样     然后让low去give Mutex让high去执行     之后low的优先级再改回去
+mid的优先级比low的高     如果mid长时间不进入阻塞状态    low一直就得不到进行     high也就无法进行
 ```
 ---
 
@@ -896,7 +897,9 @@ Priority Inheritance
 ```
 
 ```text
-
+low会临时提高优先级
+提高到与high的优先级一样的等级
+等到low的Mutexgive之后   让high执行    low的优先级就改回去了
 ```
 ---
 
@@ -918,7 +921,7 @@ xSemaphoreGive(mutex);
 ```
 
 ```text
-
+在拿到Mutex里面又进行了阻塞     会让高优先级在这个时间段都拿不到Mutex   都无法进行优先级的反转
 ```
 ---
 
