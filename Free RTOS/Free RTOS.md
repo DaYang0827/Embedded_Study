@@ -3160,7 +3160,7 @@ Give
 
 而 Consumer 还没来得及处理。Counting Semaphore 可以记住 count = 3。Consumer 后面：
 
-```
+```text
 Take
 → 3 → 2
 
@@ -3194,7 +3194,7 @@ Give
 ## 8.4 Mutex
 ### 8.4.1 概念
 
- **Mutex = 互斥锁，用来保护共享资源，保证同一时间只有一个 Task 能进入临界区。** 而 Binary Semaphore 更偏**事件同步 / 通知。**
+ **Mutex = 互斥锁，用来保护共享资源，保证同一时间只有一个 Task 能进入临界区。** 而 Binary Semaphore 更偏 **事件同步 / 通知。**
 
 假设两个 Task 都要用同一个 USART：
 
@@ -3220,7 +3220,41 @@ TaskB
 只能等TaskA释放
 ```
 
----
+一定要区分 Mutex 和 Binary Semaphore：
+
+```text
+Binary Semaphore
+→ “事情发生了”
+→ 同步
+→ 通常没有所有者概念
+	→ 可以 ISR Give
+
+Mutex
+→ “这个资源现在只能一个Task用”
+→ 互斥
+→ 有所有者概念
+→ 有优先级继承
+→ 不用于 ISR
+```
+
+比如：
+
+```text
+DMA接收完成
+→ Binary Semaphore
+
+USART只能一个Task发送
+→ Mutex
+
+I2C总线多个Task共用
+→ Mutex
+
+SPI多个设备Task共用
+→ Mutex
+
+中断通知Task处理数据
+→ Binary Semaphore / Notification
+```
 
 ### 8.4.2 CreateMutex
 
@@ -3438,6 +3472,16 @@ Low恢复原优先级
 
 **当高优先级任务等待一个被低优先级任务持有的 Mutex 时，FreeRTOS 会临时提升低优先级持锁任务的优先级，使其尽快运行并释放 Mutex；释放后恢复原优先级**。
 
+```text
+Priority Inversion：
+高优先级任务等待低优先级任务持有的共享资源，
+导致高优先级任务无法运行。
+
+Priority Inheritance：
+当高优先级任务等待低优先级任务持有的 Mutex 时，
+临时提高低优先级持锁任务的优先级，
+让它尽快释放资源。
+```
 
 ### 8.4.5 典型例子
 
@@ -3593,43 +3637,6 @@ Mutex 也不能在 ISR 里面用。
 Binary Semaphore
 Task Notification
 Queue
-```
-
-
-一定要区分 Mutex 和 Binary Semaphore：
-
-```text
-Binary Semaphore
-→ “事情发生了”
-→ 同步
-→ 通常没有所有者概念
-→ 可以 ISR Give
-
-Mutex
-→ “这个资源现在只能一个Task用”
-→ 互斥
-→ 有所有者概念
-→ 有优先级继承
-→ 不用于 ISR
-```
-
-比如：
-
-```text
-DMA接收完成
-→ Binary Semaphore
-
-USART只能一个Task发送
-→ Mutex
-
-I2C总线多个Task共用
-→ Mutex
-
-SPI多个设备Task共用
-→ Mutex
-
-中断通知Task处理数据
-→ Binary Semaphore / Notification
 ```
 
 # ISR
