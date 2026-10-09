@@ -185,7 +185,80 @@ arr + 1    对应的是2    即数组第二个元素
 
 ```
  
- `&arr` 这个非常重要。类型不是 `int *`，而是：`int (*)[5]`读作： 指向“5 个 int 数组”的指针。
+ `&arr` 这个非常重要。类型不是 `int *`，而是`int (*)[5]`读作： 指向“5 个 int 数组”的指针。
+
+## 数组作为函数参数
+
+```
+void func(uint32_t arr[])
+{
+    printf("%u\n", sizeof(arr));
+}
+
+int main(void)
+{
+    uint32_t data[10];
+
+    func(data);
+}
+```
+
+你认为函数里面：
+
+```
+sizeof(arr)
+```
+
+得到：
+
+```
+40
+还是
+4
+```
+
+为什么？
+
+在函数参数这里，本质等价于`void func(uint32_t *arr)`，所以函数里面`sizeof(arr)`。实际上是：
+
+```
+sizeof(uint32_t *)
+```
+
+STM32F4 32 位：
+
+```
+= 4 Byte
+```
+
+注意这个巨大区别：
+
+```
+int main(void)
+{
+    uint32_t data[10];
+
+    sizeof(data);
+}
+```
+
+这里是 40 ，但是：
+
+```c
+void func(uint32_t arr[])
+{
+    sizeof(arr);
+}
+```
+
+这里是 4，所以**数组作为函数参数时，函数并不知道原始数组到底有几个元素。** 这也是为什么 C 接口常写：
+
+```
+void func(uint32_t *arr, size_t len);
+```
+
+数组指针 + 长度必须一起传。
+
  
 
 # 2 链表与二级指针
