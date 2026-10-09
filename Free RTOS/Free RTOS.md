@@ -870,7 +870,7 @@ Scheduler 选中 LowTask
 
 > 任务切换不是“重新运行函数”，而是“保存现场 → 切走 → 恢复现场”。
 
-## 5.3 `Ready List` 和 `Blocked List`。
+## 5.3 `Ready List` 和 `Blocked List`
 
 FreeRTOS 内部不会只放几个变量说“Task1是Ready”。它会**用链表管理任务**。可以简化理解成：
 
@@ -1028,6 +1028,193 @@ PendSV执行上下文切换
 - Scheduler = 从Ready任务里挑最高优先级
 - Tick = 提供系统时间基准
 - PendSV = 真正执行上下文切换
+
+## PSP
+
+PSP 是 **Process Stack Pointer**，翻译成“进程栈指针”或者 $\boxed{\text{PSP = 当前任务自己的栈指针}}$
+
+在 Cortex-M 里，CPU 实际上有两个栈指针：
+
+```text
+MSP = Main Stack Pointer
+PSP = Process Stack Pointer
+```
+
+$\boxed{\text{裸机/异常处理常用 MSP，RTOS 任务通常用 PSP}}$
+
+为什么需要两个栈指针？因为 RTOS 里每个 Task 都有自己的独立栈。
+
+比如：
+
+```text
+Task A → Stack A
+Task B → Stack B
+Task C → Stack C
+```
+
+当 Task A 正在运行时 `PSP → Stack A 当前栈顶`，切换到 Task B `PSP → Stack B 当前栈顶`。所以任务切换非常核心的一步就是 $\boxed{\text{把 PSP 从一个任务的栈切到另一个任务的栈}}$
+
+例如现在：
+
+```text
+Task A 正在运行
+
+PSP = 0x20001000
+```
+
+这意味着当前任务的栈顶在 `0x20001000` 附近。发生任务切换时，CPU/FreeRTOS 会把寄存器压入 Task A 的栈，PSP 可能变成`PSP = 0x20000FC0`，然后 FreeRTOS 保存`TCB_A->pxTopOfStack = PSP;`，接下来切到 Task B `PSP = TCB_B->pxTopOfStack;` 于是 CPU 后面就会从 Task B 的栈恢复上下文。
+
+可以理解为：
+
+```
+PSP
+↓
+指向当前 Task 的 Stack
+↓
+决定当前任务现场存在哪里
+```
+
+---
+
+MSP 和 PSP 的区别也很关键。
+
+MSP（Main Stack Pointer），通常用于：
+
+```text
+Reset
+中断
+异常
+HardFault
+PendSV
+SysTick
+```
+
+PSPProcess Stack Pointer
+```
+
+通常用于：
+
+```
+普通任务
+线程模式
+FreeRTOS Task
+```
+
+所以典型 FreeRTOS：
+
+```
+Task运行
+→ PSP
+
+发生中断
+→ MSP
+```
+
+这样有个好处：任务自己的栈和中断处理栈分开，不容易互相干扰。
+
+你可以画成：
+
+```
+                CPU
+                 |
+          +------+------+
+          |             |
+         PSP           MSP
+          |             |
+      Task Stack     Exception Stack
+          |             |
+   Task A/B/C       IRQ/HardFault
+```
+
+还有一个很重要的点：`PSP` 不是某个普通变量，而是 Cortex-M CPU 内部的特殊寄存器。
+
+可以通过 CMSIS 接口：
+
+```
+__get_PSP();
+__set_PSP();
+```
+
+访问。
+
+比如：
+
+```
+uint32_t psp = __get_PSP();
+```
+
+就是读当前 PSP。
+
+而：
+
+```
+__set_PSP(value);
+```
+
+就是设置 PSP。
+
+---
+
+你以后在 FreeRTOS 的 PendSV 汇编里会看到类似：
+
+```
+mrs r0, psp
+```
+
+意思是：
+
+```
+把 PSP 读到 R0
+```
+
+然后：
+
+```
+stmdb r0!, {r4-r11}
+```
+
+把：
+
+```
+R4-R11
+```
+
+压入当前任务栈。
+
+再把新的 `r0` 保存到 TCB。
+
+恢复另一个任务时：
+
+```
+ldmia r0!, {r4-r11}
+msr psp, r0
+```
+
+意思是：
+
+```
+从新任务栈恢复寄存器
+↓
+更新 PSP
+```
+
+所以你以后看到：
+
+```
+mrs
+msr
+psp
+```
+
+就知道是在做任务上下文切换。
+
+最后你可以把 PSP 记成一句：
+
+\[ \boxed{\text{PSP 就是“当前 RTOS 任务的栈顶指针”}} \]
+
+而任务切换本质上就是：
+
+\[ \boxed{\text{保存旧 PSP → 取出新任务 PSP → 恢复新任务现场}} \]
 
 ## 5.5 任务切换
 
