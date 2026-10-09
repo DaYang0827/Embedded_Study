@@ -237,6 +237,7 @@ TaskA 调用 `taskYIELD()` 后，TaskB 一定运行吗？
 
 ```text
 不会进入block     只会进入ready列表等待scheduler的重新分配
+如果A的优先级是3    虽然yield进入了ready状态    但是优先级比B的高    也会瞬间进入A的任务
 ```
 ---
 
@@ -263,8 +264,10 @@ Blocked → Running
 ```
 
 直接发生？
-```text
 
+```text
+这个代表任务在运行的时候     遇到了delay
+当前的任务进入阻塞状态     等500ms之后   当前任务进入ready状态等待scheduler的调度
 ```
 ---
 
@@ -289,8 +292,11 @@ vTaskDelayUntil()
 ```
 
 通常更适合 `vTaskDelayUntil()`？
-```text
 
+```text
+因为需要定时1000ms都执行      taskdelayunitl可以做到严格的定时
+如果只使用delay   会有时间偏差
+比如当前的任务需要100ms执行再delay1000ms    整个时间就变成了1100ms    会慢慢出现很大的时间
 ```
 ---
 
