@@ -111,7 +111,9 @@ Handle
 ```
 
 ```text
-通过任务的handle可以
+通过任务的handle可以精准的找到创建的任务
+同时在创建的时候   会创建出来TCB和Task Stack
+
 ```
 ---
 

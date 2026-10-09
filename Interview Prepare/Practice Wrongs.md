@@ -1504,3 +1504,6 @@ USART1->CR1 |= USART_CR1_RXNEIE;
 
 所以调试应该是 **程序执行 → 寄存器配置 → 硬件条件** 一层一层排。
 
+# FreeRTOS
+
+
