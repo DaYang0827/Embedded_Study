@@ -950,7 +950,13 @@ Queue
 
 这一题一定要做到看到场景就能马上选机制。
 ```text
-
+传传感器数据       queue
+通知某事件发生      binary
+统计事件发生次数    count
+保护I2C总线        Mutex
+保护UART           Mutex
+传Parser解析后的Package_t    queue
+管理3个Buffer资源    count
 ```
 
 # DAY 5
