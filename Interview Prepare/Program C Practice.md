@@ -111,9 +111,17 @@ Handle
 ```
 
 ```text
-通过任务的handle可以精准的找到创建的任务
-同时在创建的时候   会创建出来TCB和Task Stack
-pxTopOfStack是TCB里面的重要成员里面记录的是当前任务的“栈顶指针(SP)”
+TaskHandle_t变量
+      ↓
+引用/找到对应Task/TCB
+      ↓
+TCB
+      ↓
+TCB->pxTopOfStack
+      ↓
+找到这个Task当前保存现场的栈顶位置
+      ↓
+Task Stack
 ```
 ---
 
@@ -315,13 +323,78 @@ pxTopOfStack
 ```
 
 串起来。
-```text
-因为任务在跳转的时候      本身的R0这些寄存器会通过硬件压栈
-而发生任务抢占的时候   PendSV会进入    把R4-R11这几个寄存器进行软件压栈
-都是压到了task stack里面
-在TCB中会保存当前任务的起始栈顶地址以及下一个任务栈的首地址
-PC会通过TCB的调度    转到下一个任务
-从而完成切换任务    而保存之前的信息
+
+更准确过程是：
+
+```
+TaskA Running
+↓
+需要上下文切换
+↓
+进入 PendSV 异常
+```
+
+Cortex-M 硬件自动把：
+
+```
+R0-R3
+R12
+LR
+PC
+xPSR
+```
+
+压入 **TaskA自己的 Task Stack**。
+
+FreeRTOS PendSV 再保存：
+
+```
+R4-R11
+```
+
+然后：
+
+```
+当前PSP
+↓
+保存到
+TaskA TCB->pxTopOfStack
+```
+
+接下来 Scheduler / 内核切换：
+
+```
+pxCurrentTCB
+TaskA TCB
+↓
+切换成
+TaskB TCB
+```
+
+然后：
+
+```
+TaskB TCB->pxTopOfStack
+↓
+恢复PSP
+↓
+恢复R4-R11
+↓
+异常返回
+↓
+硬件自动恢复
+R0-R3、R12、LR、PC、xPSR
+```
+
+最终 PC 恢复后：
+
+> **TaskB 从上次停下的位置继续执行。**
+
+所以最好记：
+
+```
+上下文主要存在 Task Stack
+TCB通过 pxTopOfStack 记住“现场在哪里”
 ```
 ---
 

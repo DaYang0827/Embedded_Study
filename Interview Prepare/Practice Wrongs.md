@@ -1506,4 +1506,114 @@ USART1->CR1 |= USART_CR1_RXNEIE;
 
 # FreeRTOS
 
+## 关系理解
+
+解释关系：
+
+```
+TaskHandle_t
+TCB
+Task Stack
+pxTopOfStack
+```
+
+要求自己画：
+
+```
+Handle
+ ↓
+???
+ ↓
+???
+```
+
+```text
+TaskHandle_t变量
+      ↓
+引用/找到对应Task/TCB
+      ↓
+TCB
+      ↓
+TCB->pxTopOfStack
+      ↓
+找到这个Task当前保存现场的栈顶位置
+      ↓
+Task Stack
+```
+
+## 任务切换流程
+
+任务被抢占以后，为什么下次能够从原位置继续？
+
+要求把：
+
+```
+TCB
+Task Stack
+寄存器
+PC
+pxTopOfStack
+```
+
+串起来。
+
+准确过程是：
+
+```text
+TaskA Running
+↓
+需要上下文切换
+↓
+进入 PendSV 异常
+```
+
+Cortex-M 硬件自动把：
+
+```text
+R0-R3
+R12
+LR
+PC
+xPSR
+```
+
+压入 **TaskA自己的 Task Stack**。FreeRTOS PendSV 再保存`R4-R11`。然后：
+
+```text
+当前PSP
+↓
+保存到
+TaskA TCB->pxTopOfStack
+```
+
+接下来 Scheduler / 内核切换：
+
+```text
+pxCurrentTCB
+TaskA TCB
+↓
+切换成
+TaskB TCB
+```
+
+然后：
+
+```text
+TaskB TCB->pxTopOfStack
+↓
+恢复PSP
+↓
+恢复R4-R11
+↓
+异常返回
+↓
+硬件自动恢复
+R0-R3、R12、LR、PC、xPSR
+```
+
+最终 PC 恢复后**TaskB 从上次停下的位置继续执行。** 所以最好记：
+
+```text
+上下文主要存在 Task Stack
+TCB通过 pxTopOfStack 记住“现场在哪里”
 
