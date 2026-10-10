@@ -4618,13 +4618,11 @@ Task继续
 
 如果 ISR 期间没有引起更高优先级 Task 调度，那么原 Task 会继续运行。
 
----
-
-## 10.2 ISR 和 Task 最大区别
+## 10.2 ISR 和 Task 的区别
 
 Task 是被 Scheduler 调度的：
 
-```
+```text
 Ready
 ↓
 Scheduler选择
@@ -4632,9 +4630,7 @@ Scheduler选择
 Running
 ```
 
-而 ISR 不是通过 Scheduler 运行的。
-
-ISR 是：
+而 **ISR 不是通过 Scheduler 运行的**。ISR 是：
 
 ```
 硬件事件
@@ -4644,120 +4640,13 @@ NVIC
 CPU直接进入中断
 ```
 
-所以：
+所以**ISR 优先级和 Task 优先级是两套体系。**
 
-> **ISR 优先级和 Task 优先级是两套体系。**
-
-例如：
-
-```
-Task priority = 3
-```
-
-不能直接和：
-
-```
-USART IRQ priority = 5
-```
-
-这样比较谁“更高”。
-
-它们不是一个优先级系统。
+例如 `Task priority = 3` ，不能直接和`USART IRQ priority = 5` 这样比较谁“更高”。它们不是一个优先级系统。
 
 ---
 
-## 10.3 ISR 为什么要“快进快出”
-
-因为 ISR 会打断正常任务执行。
-
-如果 ISR 里面写：
-
-```
-void USART1_IRQHandler(void)
-{
-    delay_ms(1000);
-
-    parse_protocol();
-
-    flash_write();
-
-    printf(...);
-}
-```
-
-这是很差的设计。
-
-因为 ISR 一直不退出：
-
-```
-普通Task不能继续
-其他较低优先级中断也可能被延迟
-系统实时性变差
-```
-
-所以 ISR 核心原则：
-
-> **只做最必要的事情，然后马上退出。**
-
-典型做法：
-
-```
-ISR
-↓
-读取状态
-↓
-搬一点必要数据 / 清中断标志
-↓
-通知Task
-↓
-退出
-```
-
-复杂处理交给 Task。
-
----
-
-## 10.4 你 USART/DMA 项目里 ISR 应该干什么
-
-比如 USART IDLE：
-
-```
-USART RX
-↓
-DMA搬数据到RAM
-↓
-USART IDLE中断
-↓
-ISR判断收到多少新数据
-↓
-更新RingBuffer
-↓
-通知ParserTask
-↓
-退出
-```
-
-而不是：
-
-```
-ISR
-↓
-完整跑Parser状态机
-↓
-执行Bootloader命令
-↓
-擦Flash
-↓
-CRC
-↓
-跳APP
-```
-
-后面这些都应该放 Task。
-
----
-
-## 10.5 ISR 里为什么不能 Block
+## 10.5 ISR 里不能 Block
 
 普通 Task 可以：
 
