@@ -65,7 +65,7 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 |  `p`  |                           指针                            |
 | `uc`  |                `uint8_t`，`unsigned char`                |
 | `pc`  |                        `char`指针                         |
-### `BaseType_t`
+### 3.2.1 `BaseType_t`
 
 `BaseType_t` 是指“根据当前芯片架构（架构位数）**定制出的最自然、最高效的基础数据类型**”
 
@@ -4588,6 +4588,931 @@ Task Notification
 如果想直接把`cmd、value、Package_t`传过去，那 Queue 更合适。
 
 # 10 ISR
+
+**ISR = Interrupt Service Routine，中断服务程序。** 它不是普通 Task，而是 CPU 响应硬件/系统异常后，临时打断当前代码去执行的一段处理函数。
+
+
+## 10.1 ISR 的发生
+
+假设 CPU 正在运行 `LowTask Running`，这时候 USART 收到数据，触发中断：
+
+```text
+USART硬件事件
+↓
+NVIC检测到中断
+↓
+CPU暂停当前Task
+↓
+进入 USART1_IRQHandler()
+```
+
+所以：
+
+```text
+Task
+↓ 被打断
+ISR
+↓ 处理完成
+Task继续
+```
+
+如果 ISR 期间没有引起更高优先级 Task 调度，那么原 Task 会继续运行。
+
+---
+
+## 10.2 ISR 和 Task 最大区别
+
+Task 是被 Scheduler 调度的：
+
+```
+Ready
+↓
+Scheduler选择
+↓
+Running
+```
+
+而 ISR 不是通过 Scheduler 运行的。
+
+ISR 是：
+
+```
+硬件事件
+↓
+NVIC
+↓
+CPU直接进入中断
+```
+
+所以：
+
+> **ISR 优先级和 Task 优先级是两套体系。**
+
+例如：
+
+```
+Task priority = 3
+```
+
+不能直接和：
+
+```
+USART IRQ priority = 5
+```
+
+这样比较谁“更高”。
+
+它们不是一个优先级系统。
+
+---
+
+## 10.3 ISR 为什么要“快进快出”
+
+因为 ISR 会打断正常任务执行。
+
+如果 ISR 里面写：
+
+```
+void USART1_IRQHandler(void)
+{
+    delay_ms(1000);
+
+    parse_protocol();
+
+    flash_write();
+
+    printf(...);
+}
+```
+
+这是很差的设计。
+
+因为 ISR 一直不退出：
+
+```
+普通Task不能继续
+其他较低优先级中断也可能被延迟
+系统实时性变差
+```
+
+所以 ISR 核心原则：
+
+> **只做最必要的事情，然后马上退出。**
+
+典型做法：
+
+```
+ISR
+↓
+读取状态
+↓
+搬一点必要数据 / 清中断标志
+↓
+通知Task
+↓
+退出
+```
+
+复杂处理交给 Task。
+
+---
+
+## 10.4 你 USART/DMA 项目里 ISR 应该干什么
+
+比如 USART IDLE：
+
+```
+USART RX
+↓
+DMA搬数据到RAM
+↓
+USART IDLE中断
+↓
+ISR判断收到多少新数据
+↓
+更新RingBuffer
+↓
+通知ParserTask
+↓
+退出
+```
+
+而不是：
+
+```
+ISR
+↓
+完整跑Parser状态机
+↓
+执行Bootloader命令
+↓
+擦Flash
+↓
+CRC
+↓
+跳APP
+```
+
+后面这些都应该放 Task。
+
+---
+
+## 10.5 ISR 里为什么不能 Block
+
+普通 Task 可以：
+
+```
+xQueueReceive(q, &data, portMAX_DELAY);
+```
+
+没数据时：
+
+```
+Task
+Running → Blocked
+```
+
+然后 Scheduler 运行别的 Task。
+
+但是 ISR 不是 Task。
+
+它没有：
+
+```
+Running
+Ready
+Blocked
+```
+
+这种 Task 状态。
+
+所以 ISR 不能说：
+
+> “我等 500ms 再继续。”
+
+这就是为什么 ISR 不能调用可能阻塞的普通 API。
+
+---
+
+## 10.6 为什么 FreeRTOS 有 `FromISR` API
+
+例如普通 Task 中：
+
+```
+xQueueSend(...)
+xSemaphoreGive(...)
+xTaskNotifyGive(...)
+```
+
+ISR 中要用：
+
+```
+xQueueSendFromISR(...)
+xSemaphoreGiveFromISR(...)
+vTaskNotifyGiveFromISR(...)
+```
+
+原因不是单纯名字不同。
+
+而是 ISR 环境要求：
+
+```
+不能阻塞
+不能做普通Task调度逻辑
+需要专门处理“是否唤醒更高优先级Task”
+```
+
+---
+
+## 10.7 最典型的 ISR → Task 模型
+
+比如 ParserTask：
+
+```
+void parser_task(void *arg)
+{
+    while (1)
+    {
+        ulTaskNotifyTake(
+            pdTRUE,
+            portMAX_DELAY
+        );
+
+        protocol_process();
+    }
+}
+```
+
+没有数据：
+
+```
+ParserTask
+↓
+Blocked
+```
+
+USART ISR：
+
+```
+void USART1_IRQHandler(void)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    // 清中断标志
+    // 搬运/记录数据
+
+    vTaskNotifyGiveFromISR(
+        parser_task_handle,
+        &xHigherPriorityTaskWoken
+    );
+
+    portYIELD_FROM_ISR(
+        xHigherPriorityTaskWoken
+    );
+}
+```
+
+流程：
+
+```
+USART事件
+↓
+进入ISR
+↓
+Notify ParserTask
+↓
+ParserTask Blocked → Ready
+↓
+如果它比当前Task优先级高
+↓
+xHigherPriorityTaskWoken = pdTRUE
+↓
+请求PendSV
+↓
+ISR退出
+↓
+PendSV执行上下文切换
+↓
+ParserTask Running
+```
+
+这就是最标准的 RTOS ISR 设计。
+
+---
+
+## 10.8 `xHigherPriorityTaskWoken` 到底是什么
+
+这个变量经常让人迷糊。
+
+先看：
+
+```
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+```
+
+它的意思不是：
+
+> “当前是不是高优先级 Task。”
+
+它表示：
+
+> **这次 ISR 操作有没有唤醒一个比当前被中断 Task 更高优先级的 Task。**
+
+比如：
+
+```
+LowTask priority = 1
+Running
+```
+
+ParserTask：
+
+```
+priority = 3
+Blocked
+```
+
+ISR：
+
+```
+vTaskNotifyGiveFromISR(...)
+```
+
+导致：
+
+```
+ParserTask
+Blocked → Ready
+```
+
+因为：
+
+```
+3 > 1
+```
+
+所以：
+
+```
+xHigherPriorityTaskWoken = pdTRUE
+```
+
+---
+
+## 10.9 `portYIELD_FROM_ISR()` 做什么
+
+```
+portYIELD_FROM_ISR(
+    xHigherPriorityTaskWoken
+);
+```
+
+如果是：
+
+```
+pdFALSE
+```
+
+通常没必要切换。
+
+如果是：
+
+```
+pdTRUE
+```
+
+就告诉 FreeRTOS：
+
+> ISR 退出后赶紧重新调度，因为有更高优先级 Task 已经 Ready。
+
+然后一般通过：
+
+```
+PendSV
+```
+
+真正完成 Context Switch。
+
+---
+
+## 10.10 为什么不直接在 ISR 里切 Task
+
+因为 Cortex-M/FreeRTOS 通常设计成：
+
+```
+ISR
+↓
+只做中断处理
+↓
+如果需要切Task
+↓
+pend PendSV
+↓
+先退出当前ISR
+↓
+PendSV再做上下文切换
+```
+
+这样：
+
+> **所有真正的 Task Context Switch 统一交给 PendSV。**
+
+系统更清晰。
+
+---
+
+## 10.11 ISR 进入时 CPU 自动做什么
+
+Cortex-M 发生中断/异常时，硬件会自动压一部分寄存器。
+
+典型包括：
+
+```
+R0
+R1
+R2
+R3
+R12
+LR
+PC
+xPSR
+```
+
+保存到当前使用的 Stack。
+
+所以：
+
+```
+Task执行到某处
+↓
+ISR发生
+↓
+硬件保存必要现场
+↓
+执行ISR
+```
+
+ISR 返回时：
+
+```
+恢复这些寄存器
+↓
+继续之前代码
+```
+
+这就是为什么普通中断返回后 Task 可以继续。
+
+---
+
+## 10.12 ISR 和 PendSV 的关系
+
+普通外设 ISR：
+
+```
+USART IRQ
+DMA IRQ
+EXTI IRQ
+Timer IRQ
+```
+
+负责：
+
+```
+处理硬件事件
+```
+
+PendSV：
+
+```
+专门用于Task Context Switch
+```
+
+所以：
+
+```
+USART ISR
+≠ Task切换本身
+
+USART ISR
+可以触发
+↓
+PendSV
+↓
+Task切换
+```
+
+---
+
+## 10.13 ISR 和 SysTick 的关系
+
+SysTick 本身也是一种系统异常。
+
+FreeRTOS 用它产生 Tick：
+
+```
+SysTick
+↓
+xTickCount++
+↓
+检查延时Task是否到期
+↓
+Blocked → Ready
+↓
+判断是否需要调度
+↓
+必要时PendSV
+```
+
+所以：
+
+```
+SysTick
+→ 时间管理
+
+PendSV
+→ 任务切换
+```
+
+不要混。
+
+---
+
+## 10.14 ISR 里可以做什么
+
+适合：
+
+```
+读硬件状态寄存器
+清中断标志
+读取少量数据
+更新简单计数
+写RingBuffer
+Give Semaphore FromISR
+Send Queue FromISR
+Notify Task FromISR
+```
+
+不适合：
+
+```
+长时间for循环
+delay
+复杂协议解析
+printf大量输出
+Flash擦写
+动态内存分配
+长时间阻塞操作
+等待Mutex
+```
+
+---
+
+## 10.15 ISR 里不能用 Mutex
+
+这是重点。
+
+为什么？
+
+Mutex 有：
+
+```
+Owner
+Priority Inheritance
+Blocked等待
+```
+
+这些都是 Task 语义。
+
+ISR 不是 Task，所以：
+
+```
+ISR不能拥有Mutex
+ISR不能阻塞等待Mutex
+```
+
+因此：
+
+> **不要在 ISR 里 Take/Give Mutex。**
+
+如果 ISR 要和 Task 同步：
+
+```
+Notification
+Binary Semaphore
+Queue
+```
+
+更合适。
+
+---
+
+## 10.16 ISR 可以访问共享变量吗
+
+可以，但要注意并发。
+
+比如：
+
+```
+volatile uint32_t count;
+```
+
+main：
+
+```
+count++;
+```
+
+ISR：
+
+```
+count++;
+```
+
+即使：
+
+```
+volatile
+```
+
+仍然可能发生 RMW 竞争。
+
+因为：
+
+```
+count++
+=
+read
+modify
+write
+```
+
+不是原子操作。
+
+所以：
+
+> ISR 和 Task 共享数据，要考虑临界区、原子操作、队列等同步方式。
+
+---
+
+## 10.17 `volatile` 在 ISR 场景里的作用
+
+比如：
+
+```
+volatile uint8_t rx_done;
+```
+
+ISR：
+
+```
+rx_done = 1;
+```
+
+Task：
+
+```
+while (!rx_done)
+{
+}
+```
+
+`volatile` 作用：
+
+> 防止编译器假设这个变量不会异步变化。
+
+但：
+
+```
+volatile ≠ synchronization
+volatile ≠ atomic
+volatile ≠ thread safe
+```
+
+这点你之前已经学过。
+
+---
+
+## 10.18 中断优先级也很重要
+
+Cortex-M 有 NVIC Interrupt Priority。
+
+不同 ISR 之间：
+
+```
+高优先级ISR
+可以抢占
+低优先级ISR
+```
+
+例如：
+
+```
+UART IRQ
+priority = 5
+
+Timer IRQ
+priority = 3
+```
+
+在 Cortex-M 常见配置中，数字越小通常硬件优先级越高。
+
+所以：
+
+```
+priority 3
+可以抢占
+priority 5
+```
+
+这里注意：
+
+> FreeRTOS Task priority 通常数字越大越高。
+
+而 NVIC：
+
+> 通常数字越小越高。
+
+两套正好容易搞反。
+
+---
+
+## 10.19 FreeRTOS 对 ISR 优先级还有限制
+
+这是你后面一定会碰到的：
+
+```
+configMAX_SYSCALL_INTERRUPT_PRIORITY
+```
+
+或：
+
+```
+configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+```
+
+核心意思：
+
+> **不是所有中断都可以调用 FreeRTOS 的 FromISR API。**
+
+有些非常高优先级的 ISR：
+
+```
+可以打断FreeRTOS内核临界区
+```
+
+所以不能安全调用内核 API。
+
+这块你第一遍先知道：
+
+> 调用 `xxxFromISR()` 的中断优先级必须符合 FreeRTOS 配置要求。
+
+先别急着背具体数值。
+
+---
+
+## 10.20 一个完整例子：USART ISR → Notification → Task
+
+定义：
+
+```
+TaskHandle_t parser_handle;
+```
+
+Task：
+
+```
+void parser_task(void *arg)
+{
+    while (1)
+    {
+        ulTaskNotifyTake(
+            pdTRUE,
+            portMAX_DELAY
+        );
+
+        parser_process();
+    }
+}
+```
+
+ISR：
+
+```
+void USART1_IRQHandler(void)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    if (USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
+    {
+        volatile uint32_t tmp;
+
+        tmp = USART1->SR;
+        tmp = USART1->DR;
+
+        // 处理DMA位置
+        // 数据写入RingBuffer
+
+        vTaskNotifyGiveFromISR(
+            parser_handle,
+            &xHigherPriorityTaskWoken
+        );
+
+        portYIELD_FROM_ISR(
+            xHigherPriorityTaskWoken
+        );
+    }
+}
+```
+
+完整架构：
+
+```
+USART硬件
+↓
+DMA
+↓
+RAM Buffer
+↓
+USART IDLE ISR
+↓
+更新RingBuffer
+↓
+Notify ParserTask
+↓
+ISR退出
+↓
+必要时PendSV
+↓
+ParserTask运行
+↓
+解析协议
+```
+
+这个就很适合你之前的 USART + DMA + RingBuffer 项目。
+
+---
+
+## 10.21 ISR、Task、PendSV 最终关系
+
+你可以把整个系统记成：
+
+```
+硬件事件
+↓
+ISR
+↓
+快速处理
+↓
+通知Task
+↓
+Task Blocked → Ready
+↓
+判断优先级
+↓
+如果需要抢占
+↓
+PendSV
+↓
+保存当前Task现场
+↓
+恢复目标Task现场
+↓
+新Task Running
+```
+
+---
+
+## 10.22 你现在必须分清的几个概念
+
+```
+ISR
+→ 响应硬件/异常事件
+
+Task
+→ Scheduler调度的执行单元
+
+Scheduler
+→ 决定哪个Ready Task运行
+
+SysTick
+→ 提供系统时间基准
+
+PendSV
+→ 真正完成Task上下文切换
+
+FromISR API
+→ ISR中安全调用的FreeRTOS接口
+
+xHigherPriorityTaskWoken
+→ ISR是否唤醒更高优先级Task
+
+portYIELD_FROM_ISR
+→ 请求ISR退出后尽快调度
+```
+
+最后压缩成一句：
+
+> **ISR 的职责是“快速响应硬件事件并把复杂工作交给 Task”；如果 ISR 唤醒了更高优先级 Task，就通过 `portYIELD_FROM_ISR()` 请求 PendSV，在 ISR 退出后完成任务切换。**
 
 # 11 Hook 函数
 
