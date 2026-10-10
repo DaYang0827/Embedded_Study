@@ -4409,7 +4409,7 @@ TaskHandle_t worker_handle = NULL;
 
 创建 Task：
 
-```
+```c
 xTaskCreate(
     worker_task,
     "WORKER",
@@ -4422,7 +4422,7 @@ xTaskCreate(
 
 Worker Task：
 
-```
+```c
 void worker_task(void *arg)
 {
     while (1)
@@ -4439,7 +4439,7 @@ void worker_task(void *arg)
 
 另一个 Task：
 
-```
+```c
 void sender_task(void *arg)
 {
     while (1)
@@ -4453,7 +4453,7 @@ void sender_task(void *arg)
 
 流程：
 
-```
+```text
 WorkerTask
 ↓
 ulTaskNotifyTake()
@@ -4465,7 +4465,7 @@ Blocked
 
 Sender：
 
-```
+```text
 xTaskNotifyGive(worker_handle)
 ↓
 notification 0 → 1
@@ -4475,7 +4475,7 @@ WorkerTask Blocked → Ready
 
 之后 Worker 被调度：
 
-```
+```text
 Take notification
 ↓
 do_work()
@@ -4483,57 +4483,28 @@ do_work()
 再次等待
 ```
 
----
-
-# 8. 和 Binary Semaphore 对比
+### 对比
+1. 与Binary Semaphore
 
 Binary Semaphore：
 
-```
+```c
 SemaphoreHandle_t sem;
 
 sem = xSemaphoreCreateBinary();
 ```
 
-Task：
+Task `xSemaphoreTake(sem, portMAX_DELAY);` ，另一个地方`xSemaphoreGive(sem);`。
 
-```
-xSemaphoreTake(
-    sem,
-    portMAX_DELAY
-);
-```
+Notification `TaskHandle_t worker_handle;`
 
-另一个地方：
+Task `ulTaskNotifyTake(pdTRUE, portMAX_DELAY);`
 
-```
-xSemaphoreGive(sem);
-```
-
-Notification：
-
-```
-TaskHandle_t worker_handle;
-```
-
-Task：
-
-```
-ulTaskNotifyTake(
-    pdTRUE,
-    portMAX_DELAY
-);
-```
-
-另一个地方：
-
-```
-xTaskNotifyGive(worker_handle);
-```
+另一个地方 `xTaskNotifyGive(worker_handle);`
 
 所以：
 
-```
+```text
 Binary Semaphore
 → 需要独立Semaphore对象
 
@@ -4541,46 +4512,7 @@ Task Notification
 → 直接通知指定Task
 ```
 
----
-
-# 9. Notification 最大限制
-
-它虽然很好用，但有一个核心限制：
-
-> **Notification 是绑定到某个 Task 的。**
-
-也就是说它更适合：
-
-```
-“我就是要通知这个Task”
-```
-
-比如：
-
-```
-DMA完成
-→ 唤醒ParserTask
-```
-
-非常适合。
-
-但如果你想：
-
-```
-多个Task共同等待一个资源
-```
-
-或者：
-
-```
-一个对象要被多个Task共享
-```
-
-那 Semaphore / Queue / Event Group 可能更合适。
-
----
-
-# 10. 和 Queue 的区别
+2. Queue
 
 Queue：
 
@@ -4643,6 +4575,47 @@ Queue
 ```
 
 更合适。
+
+---
+
+# 9. Notification 最大限制
+
+它虽然很好用，但有一个核心限制：
+
+> **Notification 是绑定到某个 Task 的。**
+
+也就是说它更适合：
+
+```
+“我就是要通知这个Task”
+```
+
+比如：
+
+```
+DMA完成
+→ 唤醒ParserTask
+```
+
+非常适合。
+
+但如果你想：
+
+```
+多个Task共同等待一个资源
+```
+
+或者：
+
+```
+一个对象要被多个Task共享
+```
+
+那 Semaphore / Queue / Event Group 可能更合适。
+
+
+
+
 
 ---
 
