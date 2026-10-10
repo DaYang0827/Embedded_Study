@@ -4485,6 +4485,7 @@ do_work()
 ```
 
 ## 9.3 对比
+
 1. 与Binary Semaphore
 
 Binary Semaphore：
@@ -4495,7 +4496,7 @@ SemaphoreHandle_t sem;
 sem = xSemaphoreCreateBinary();
 ```
 
-Task `xSemaphoreTake(sem, portMAX_DELAY);` ，另一个地方`xSemaphoreGive(sem);`。
+Task `xSemaphoreTake(sem, portMAX_DELAY);` ，另一个地方`xSemaphoreGive(sem);`
 
 Notification `TaskHandle_t worker_handle;`
 
@@ -4520,7 +4521,7 @@ Task Notification
 
 例如，UART收到完整一帧，如果数据已经在 RingBuffer，只需要通知“有数据了，去处理”。这时候`Task Notification` 非常合适。因为真正数据已经在`RingBuffer` Notification 只是敲门。
 
-如果想直接把cmd、value、Package_t传过去，那 Queue 更合适。
+如果想直接把`cmd、value、Package_t`传过去，那 Queue 更合适。
 
 # 10 ISR
 
