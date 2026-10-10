@@ -4367,32 +4367,18 @@ Running → Blocked
 
 一旦 `xTaskNotifyGive(task_handle);` 通知值增加 0 → 1，等待中的 Task `Blocked → Ready`和 Semaphore 特别像？
 
-### 9.2.3 `pdTRUE` 和 `pdFALSE`
+### 9.2.3 输入参数
 
-第一个参数 `xClearCountOnExit` 决定成功 Take 后通知计数怎么变化。如果 `ulTaskNotifyTake(pdTRUE, ...);` 意思**成功后把通知值直接清零**。
+第一个参数 `xClearCountOnExit` 决定成功 Take 后通知计数怎么变化。
 
-例如：`notification = 5` Take 后  5 → 0
-
-
-如果 `ulTaskNotifyTake(pdFALSE, ...);` 
-
-意思成功后只减 1。
-
-例如：
-
-```
-notification = 5
-```
-
-Take 后：
-
-```
-5 → 4
-```
+- 如果 `ulTaskNotifyTake(pdTRUE, ...);` 意思**成功后把通知值直接清零**。
+  例如`notification = 5` Take 后  5 → 0
+- 如果 `ulTaskNotifyTake(pdFALSE, ...);` 意思成功后只减 1。
+  例如 `notification = 5` Take 后 5 → 4
 
 所以：
 
-```
+```text
 pdTRUE
 → 类似 Binary Semaphore / 清空积累
 
