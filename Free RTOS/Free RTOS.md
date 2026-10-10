@@ -4365,31 +4365,15 @@ Running → Blocked
 
 ### `pdTRUE` 和 `pdFALSE`
 
-第一个参数 `xClearCountOnExit` 决定成功 Take 后通知计数怎么变化。如果 `ulTaskNotifyTake(pdTRUE, ...);` 意思成功后把通知值直接清零。
+第一个参数 `xClearCountOnExit` 决定成功 Take 后通知计数怎么变化。如果 `ulTaskNotifyTake(pdTRUE, ...);` 意思**成功后把通知值直接清零**。
 
-例如：
-
-```
-notification = 5
-```
-
-Take 后：
-
-```
-5 → 0
-```
+例如：`notification = 5` Take 后  5 → 0
 
 ---
 
-如果：
+如果 `ulTaskNotifyTake(pdFALSE, ...);` 
 
-```
-ulTaskNotifyTake(pdFALSE, ...);
-```
-
-意思：
-
-> 成功后只减 1。
+意思成功后只减 1。
 
 例如：
 
