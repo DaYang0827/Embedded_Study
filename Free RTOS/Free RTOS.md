@@ -4283,7 +4283,7 @@ Task等待自己的通知
 
 Notification 是“Task 自己身上的状态”每个 Task 的 TCB 里，FreeRTOS 会维护和通知有关的信息。可以理解成：
 
-```
+```text
 Task TCB
 ├── priority
 ├── pxTopOfStack
@@ -4291,32 +4291,18 @@ Task TCB
 └── notification value
 ```
 
-所以：
+所以 `Task Notification` 不是一个独立对象。不像：
 
-```
-Task Notification
-```
-
-不是一个独立对象。
-
-不像：
-
-```
+```c
 QueueHandle_t q;
 SemaphoreHandle_t sem;
 ```
 
-还要单独创建。
+还要单独创建。它直接属于某个 Task。
 
-它直接属于某个 Task。
+## API
 
----
-
-# 3. 最常用的一组 API
-
-你第一遍先学这几个：
-
-```
+```c
 xTaskNotifyGive()
 ulTaskNotifyTake()
 
@@ -4336,65 +4322,30 @@ ulTaskNotifyTake()
 
 因为最像 Counting Semaphore。
 
----
+###  `xTaskNotifyGive()`
 
-# 4. `xTaskNotifyGive()`
-
-原型概念：
-
-```
-BaseType_t xTaskNotifyGive(
-    TaskHandle_t xTaskToNotify
-);
+```c
+BaseType_t xTaskNotifyGive(TaskHandle_t xTaskToNotify);
 ```
 
-意思：
+意思给指定 Task 的通知计数加 1。例如 `xTaskNotifyGive(parser_task_handle);` 可以理解成：
 
-> 给指定 Task 的通知计数加 1。
-
-例如：
-
-```
-xTaskNotifyGive(parser_task_handle);
-```
-
-可以理解成：
-
-```
+```text
 ParserTask notification count
 0 → 1
 ```
 
-再 Give：
+再 Give 1 → 2，所以它很像`Counting Semaphore`
 
-```
-1 → 2
-```
+### `ulTaskNotifyTake()`
 
-所以它很像：
-
-```
-Counting Semaphore
+```c
+uint32_t ulTaskNotifyTake(BaseType_t xClearCountOnExit, TickType_t xTicksToWait);
 ```
 
----
+它是 Task 端等待通知。比如：
 
-# 5. `ulTaskNotifyTake()`
-
-常见：
-
-```
-uint32_t ulTaskNotifyTake(
-    BaseType_t xClearCountOnExit,
-    TickType_t xTicksToWait
-);
-```
-
-它是 Task 端等待通知。
-
-比如：
-
-```
+```c
 ulTaskNotifyTake(
     pdTRUE,
     portMAX_DELAY
@@ -4403,36 +4354,16 @@ ulTaskNotifyTake(
 
 如果当前通知值是 0：
 
-```
+```text
 当前 Task
 Running → Blocked
 ```
 
 等别人通知它。
 
-一旦：
+一旦 `xTaskNotifyGive(task_handle);` 通知值增加 0 → 1，等待中的 Task `Blocked → Ready`和 Semaphore 特别像？
 
-```
-xTaskNotifyGive(task_handle);
-```
-
-通知值增加：
-
-```
-0 → 1
-```
-
-等待中的 Task：
-
-```
-Blocked → Ready
-```
-
-这是不是和 Semaphore 特别像？
-
----
-
-# 6. `pdTRUE` 和 `pdFALSE` 很重要
+### 6. `pdTRUE` 和 `pdFALSE` 很重要
 
 第一个参数：
 
