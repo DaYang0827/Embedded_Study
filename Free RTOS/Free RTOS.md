@@ -4399,11 +4399,11 @@ pdFALSE
 
 ---
 
-# 7. 一个最简单例子
+### 经典例子
 
 先定义句柄：
 
-```
+```c
 TaskHandle_t worker_handle = NULL;
 ```
 
