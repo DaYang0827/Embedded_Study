@@ -4277,7 +4277,7 @@ ISR
 Task等待自己的通知
 ```
 
-中间不用额外创建 Semaphore 对象。所以它通常**更快、更省RAM、API更直接**
+**中间不用额外创建 Semaphore 对象**。所以它通常**更快、更省RAM、API更直接**
 
 ---
 
@@ -4303,6 +4303,18 @@ SemaphoreHandle_t sem;
 它虽然很好用，但有一个核心限制 **Notification 是绑定到某个 Task 的。** 也就是说它更适合“就是要通知这个Task”。比如DMA完成 → 唤醒ParserTask非常适合。
 
 但如果想多个Task共同等待一个资源，或者一个对象要被多个Task共享那 Semaphore / Queue / Event Group 可能更合适。
+
+如果TaskA通知TaskB，A 必须知道 `TaskB Handle`。比如 `TaskHandle_t parser_task_handle;` 然后`xTaskNotifyGive(parser_task_handle);`
+
+这里：
+
+```
+Handle
+↓
+精准找到目标Task
+↓
+修改它的Notification状态
+```
 
 ## 9.2 API
 
