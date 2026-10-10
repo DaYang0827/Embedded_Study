@@ -450,7 +450,7 @@ Options for Target
 → IROM1
 ```
 
-把`Start: 0x08000000`，改成`Start: 0x08010000`。Size 则改成你给 APP 剩下的 Flash 大小。
+把 `Start: 0x08000000`，改成 `Start: 0x08010000`。Size 则改成你给 APP 剩下的 Flash 大小。
 <img width="782" height="587" alt="image" src="https://github.com/user-attachments/assets/085585a3-c487-4f14-88fe-91998add0ad0" 
 例如 STM32F407 1 MB Flash，APP 从 `0x08010000` 开始，那么 APP 可用区域大致是`0x08010000 ~ 0x080FFFFF`。这样链接器就会把:
 
@@ -465,13 +465,12 @@ Reset_Handler
 全部按照 `0x08010000` 这个地址重新安排。注意**Reset_Handler 的代码通常不用自己改。** 因为 startup 文件里是DCD Reset_Handler 链接器看到 APP 被链接到新地址后，会自动把 `Reset_Handler` 的实际地址写进 APP 向量表的第二项。所以最终看到的可能是：
 
 ```c
-0x08010000 -> 0x200xxxxx     MSP
-0x08010004 -> 0x08010xxx     Reset_Handler
-```
+0x08010000 -> `0x200xxxxx`     `MSP`
+`0x08010004 -> 0x08010xxx`     `Reset_Handler`
 
-这就是正常的。然后还需要处理向量表重定位。Cortex-M 默认中断向量表基地址通常是`0x08000000`但APP 在`0x08010000`所以 APP 启动后要把`SCB->VTOR`改成 APP 的向量表地址`SCB->VTOR = 0x08010000;`
+这就是正常的。然后还需要处理向量表重定位。Cortex-M 默认中断向量表基地址通常是`0x08000000`但APP 在 `0x08010000` 所以 APP 启动后要把 `SCB->VTOR`改成 APP 的向量表地址`SCB->VTOR = 0x08010000;`
 
-很多 STM32 工程是在SystemInit();里面处理这个事情。例如可能会看到`#define VECT_TAB_OFFSET  0x00010000U`然后`SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET;`因为`FLASH_BASE = 0x08000000`。所以：
+很多 STM32 工程是在 `SystemInit();`里面处理这个事情。例如可能会看到 `#define VECT_TAB_OFFSET  0x00010000U` 然后 `SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET;` 因为 `FLASH_BASE = 0x08000000`。所以：
 
 ```c
 0x08000000 + 0x00010000 = 0x08010000

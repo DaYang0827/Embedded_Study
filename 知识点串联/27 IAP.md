@@ -25,7 +25,7 @@ USART/DMA -> 数据帧/CRC -> Flash写入 -> APP跳转
 
 ## 回看原笔记
 
-- [[Bootloader#1.3 IAP 模式|Bootloader - IAP]]
+- [[BootLoader#1.3 IAP 模式|Bootloader - IAP]]
 
 ## 入口
 
