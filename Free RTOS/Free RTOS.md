@@ -65,6 +65,63 @@ FreeRTOS的设计小巧且简易，整个核心代码只有3到4个C文件，为
 |  `p`  |                           指针                            |
 | `uc`  |                `uint8_t`，`unsigned char`                |
 | `pc`  |                        `char`指针                         |
+### `BaseType_t`
+
+`BaseType_t` 是指“根据当前芯片架构（架构位数）**定制出的最自然、最高效的基础数据类型**”
+
+1. 在不同的硬件芯片下，内核会在后台（通常在 `portmacro.h` 文件中）通过 `typedef` 把 `BaseType_t` 自动映射成最适合该芯片的类型：
+
+- **在 32 位单片机中（如 STM32、Cortex-M 全系列）**：  
+    `BaseType_t` 会被自动定义为 **`long`** 或者 **`int`**（即 **32 位有符号整数**） 。因为对于 32 位 CPU 来说，处理 32 位的数字速度最快、最天然，不需要额外的指令去对齐。
+- **在 16 位单片机中**：  
+    `BaseType_t` 会被自动定义为 **`short`**（即 **16 位有符号整数**）。
+- **在 8 位单片机中（如 51 单片机、AVR）**：  
+    `BaseType_t` 会被自动定义为 **`char`**（即 **8 位有符号整数**）。
+
+---
+
+2. 它在代码里通常代表什么？
+
+在写 FreeRTOS 代码时，会高频地看到 `BaseType_t` 作为函数的**返回值类型**出现。它在 90% 的情况下，都用来传递以下两种核心状态：
+
+🟢 状态一：通关标志（成功 / 失败）
+
+比如队列和信号量函数：
+
+```c
+BaseType_t result;
+result = xQueueSend(data_queue, &data, 0);
+```
+
+这时候 `result` 里面存的实际上就是系统定义的标准答案：
+
+- **`pdPASS`**（成功，数值通常就是 `1`） 
+- **`pdFALSE`**（失败，数值通常就是 `0`） 
+
+🟢 状态二：任务切换标志（是否需要发起上下文切换）
+
+特别是在**中断服务函数（ISR）**中，你经常需要定义一个变量来接收中断安全版 API 的反馈，比如：
+
+c
+
+```
+BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 初始化为假
+
+// 在串口中断里释放信号量，并让 xHigherPriorityTaskWoken 记录有没有唤醒更高优先级的任务
+xSemaphoreGiveFromISR(xSemaphore, &xHigherPriorityTaskWoken);
+
+if(xHigherPriorityTaskWoken == pdTRUE) {
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // 如果唤醒了，手动触发 PendSV 异常切换任务！
+}
+```
+
+请谨慎使用此类代码。
+
+---
+
+🧲 总结
+
+`BaseType_t` 的存在是为了**跨平台移植** [5]。你以后在写 FreeRTOS 代码时，只要遇到**不需要精确指定是 8 位、16 位还是 32 位，而只是单纯用来做逻辑判断（if/else）、存储真假值或者承接系统 API 返回值**的变量，一律顺着操作系统的意思，将它们声明为 **`BaseType_t`** 即可，这样写出的代码最专业、移植性也最好。
 
 ## 3.3 函数名
 
