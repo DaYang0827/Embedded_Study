@@ -4245,6 +4245,573 @@ Queue
 ```
 
 # Task Notification
+## 概念
+
+**Task Notification = FreeRTOS 直接给某个 Task 自带的一块“通知状态”，别的 Task 或 ISR 可以直接通知它。** 可以把它理解成`Binary Semaphore` / `Counting Semaphore` 的“轻量版、直接挂在Task身上”。但它不只是 Semaphore，它还能传通知、计数、bit位、一个32位值
+
+假设现在有：
+
+```text
+ISR
+↓
+通知 ParserTask
+```
+
+可以用`Binary Semaphore`流程：
+
+```text
+创建 Semaphore 对象
+↓
+ISR Give
+↓
+Task Take
+```
+
+而 Task Notification 可以直接：
+
+```text
+ISR
+↓
+通知某个 Task
+↓
+Task等待自己的通知
+```
+
+中间不用额外创建 Semaphore 对象。所以它通常**更快、更省RAM、API更直接**
+
+---
+
+Notification 是“Task 自己身上的状态”每个 Task 的 TCB 里，FreeRTOS 会维护和通知有关的信息。可以理解成：
+
+```
+Task TCB
+├── priority
+├── pxTopOfStack
+├── ...
+└── notification value
+```
+
+所以：
+
+```
+Task Notification
+```
+
+不是一个独立对象。
+
+不像：
+
+```
+QueueHandle_t q;
+SemaphoreHandle_t sem;
+```
+
+还要单独创建。
+
+它直接属于某个 Task。
+
+---
+
+# 3. 最常用的一组 API
+
+你第一遍先学这几个：
+
+```
+xTaskNotifyGive()
+ulTaskNotifyTake()
+
+xTaskNotifyFromISR()
+vTaskNotifyGiveFromISR()
+
+xTaskNotify()
+xTaskNotifyWait()
+```
+
+但第一阶段你先重点掌握：
+
+```
+xTaskNotifyGive()
+ulTaskNotifyTake()
+```
+
+因为最像 Counting Semaphore。
+
+---
+
+# 4. `xTaskNotifyGive()`
+
+原型概念：
+
+```
+BaseType_t xTaskNotifyGive(
+    TaskHandle_t xTaskToNotify
+);
+```
+
+意思：
+
+> 给指定 Task 的通知计数加 1。
+
+例如：
+
+```
+xTaskNotifyGive(parser_task_handle);
+```
+
+可以理解成：
+
+```
+ParserTask notification count
+0 → 1
+```
+
+再 Give：
+
+```
+1 → 2
+```
+
+所以它很像：
+
+```
+Counting Semaphore
+```
+
+---
+
+# 5. `ulTaskNotifyTake()`
+
+常见：
+
+```
+uint32_t ulTaskNotifyTake(
+    BaseType_t xClearCountOnExit,
+    TickType_t xTicksToWait
+);
+```
+
+它是 Task 端等待通知。
+
+比如：
+
+```
+ulTaskNotifyTake(
+    pdTRUE,
+    portMAX_DELAY
+);
+```
+
+如果当前通知值是 0：
+
+```
+当前 Task
+Running → Blocked
+```
+
+等别人通知它。
+
+一旦：
+
+```
+xTaskNotifyGive(task_handle);
+```
+
+通知值增加：
+
+```
+0 → 1
+```
+
+等待中的 Task：
+
+```
+Blocked → Ready
+```
+
+这是不是和 Semaphore 特别像？
+
+---
+
+# 6. `pdTRUE` 和 `pdFALSE` 很重要
+
+第一个参数：
+
+```
+xClearCountOnExit
+```
+
+决定成功 Take 后通知计数怎么变化。
+
+如果：
+
+```
+ulTaskNotifyTake(pdTRUE, ...);
+```
+
+意思：
+
+> 成功后把通知值直接清零。
+
+例如：
+
+```
+notification = 5
+```
+
+Take 后：
+
+```
+5 → 0
+```
+
+---
+
+如果：
+
+```
+ulTaskNotifyTake(pdFALSE, ...);
+```
+
+意思：
+
+> 成功后只减 1。
+
+例如：
+
+```
+notification = 5
+```
+
+Take 后：
+
+```
+5 → 4
+```
+
+所以：
+
+```
+pdTRUE
+→ 类似 Binary Semaphore / 清空积累
+
+pdFALSE
+→ 类似 Counting Semaphore / 一次消费一个
+```
+
+---
+
+# 7. 一个最简单例子
+
+先定义句柄：
+
+```
+TaskHandle_t worker_handle = NULL;
+```
+
+创建 Task：
+
+```
+xTaskCreate(
+    worker_task,
+    "WORKER",
+    128,
+    NULL,
+    2,
+    &worker_handle
+);
+```
+
+Worker Task：
+
+```
+void worker_task(void *arg)
+{
+    while (1)
+    {
+        ulTaskNotifyTake(
+            pdTRUE,
+            portMAX_DELAY
+        );
+
+        do_work();
+    }
+}
+```
+
+另一个 Task：
+
+```
+void sender_task(void *arg)
+{
+    while (1)
+    {
+        xTaskNotifyGive(worker_handle);
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+```
+
+流程：
+
+```
+WorkerTask
+↓
+ulTaskNotifyTake()
+↓
+notification = 0
+↓
+Blocked
+```
+
+Sender：
+
+```
+xTaskNotifyGive(worker_handle)
+↓
+notification 0 → 1
+↓
+WorkerTask Blocked → Ready
+```
+
+之后 Worker 被调度：
+
+```
+Take notification
+↓
+do_work()
+↓
+再次等待
+```
+
+---
+
+# 8. 和 Binary Semaphore 对比
+
+Binary Semaphore：
+
+```
+SemaphoreHandle_t sem;
+
+sem = xSemaphoreCreateBinary();
+```
+
+Task：
+
+```
+xSemaphoreTake(
+    sem,
+    portMAX_DELAY
+);
+```
+
+另一个地方：
+
+```
+xSemaphoreGive(sem);
+```
+
+Notification：
+
+```
+TaskHandle_t worker_handle;
+```
+
+Task：
+
+```
+ulTaskNotifyTake(
+    pdTRUE,
+    portMAX_DELAY
+);
+```
+
+另一个地方：
+
+```
+xTaskNotifyGive(worker_handle);
+```
+
+所以：
+
+```
+Binary Semaphore
+→ 需要独立Semaphore对象
+
+Task Notification
+→ 直接通知指定Task
+```
+
+---
+
+# 9. Notification 最大限制
+
+它虽然很好用，但有一个核心限制：
+
+> **Notification 是绑定到某个 Task 的。**
+
+也就是说它更适合：
+
+```
+“我就是要通知这个Task”
+```
+
+比如：
+
+```
+DMA完成
+→ 唤醒ParserTask
+```
+
+非常适合。
+
+但如果你想：
+
+```
+多个Task共同等待一个资源
+```
+
+或者：
+
+```
+一个对象要被多个Task共享
+```
+
+那 Semaphore / Queue / Event Group 可能更合适。
+
+---
+
+# 10. 和 Queue 的区别
+
+Queue：
+
+```
+重点：
+传数据
+```
+
+Notification：
+
+```
+重点：
+通知某个Task
+```
+
+例如：
+
+```
+UART收到完整一帧
+```
+
+如果数据已经在 RingBuffer：
+
+你只需要通知：
+
+```
+“有数据了，你去处理”
+```
+
+这时候：
+
+```
+Task Notification
+```
+
+非常合适。
+
+因为真正数据已经在：
+
+```
+RingBuffer
+```
+
+Notification 只是敲门。
+
+---
+
+如果你想直接把：
+
+```
+cmd
+value
+Package_t
+```
+
+传过去，那：
+
+```
+Queue
+```
+
+更合适。
+
+---
+
+# 11. 你现在的 USART/DMA 项目特别适合 Notification
+
+你现在原来的结构：
+
+```
+USART
+↓
+DMA
+↓
+RingBuffer
+↓
+Parser
+```
+
+改成 RTOS：
+
+```
+USART/DMA ISR
+↓
+数据写入/确认RingBuffer有新数据
+↓
+Task Notification
+↓
+ParserTask
+↓
+从RingBuffer取数据
+↓
+protocol_process()
+```
+
+比一直：
+
+```
+while (1)
+{
+    protocol_process();
+}
+```
+
+轮询更好。
+
+ParserTask：
+
+```
+void parser_task(void *arg)
+{
+    while (1)
+    {
+        ulTaskNotifyTake(
+            pdTRUE,
+            portMAX_DELAY
+        );
+
+        protocol_process();
+    }
+}
+```
+
+这样没数据时：
+
+```
+ParserTask = Blocked
+```
+
+有数据时才醒。
 
 # 9 ISR
 
