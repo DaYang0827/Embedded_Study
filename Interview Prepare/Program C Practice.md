@@ -666,10 +666,54 @@ msg的内容？
 ```
 
 这种设计最大的生命周期风险是什么？
-```text
-现在保存的是指针值
-&p代表的是p这个指针自己的地址      对应的大小是uint32的     和sizeof(Message_t *)可能不符合    会发生错误    
+
+这里 **正应该传 `&p`**。
+
+```c
+Message_t *p = &msg;
+
+xQueueSend(q, &p, 0);
 ```
+
+Queue 创建：
+
+```c
+xQueueCreate(
+    5,
+    sizeof(Message_t *)
+);
+```
+
+STM32F4 `sizeof(Message_t *) = 4 Byte` ，而 `p` 是一个指针变量。里面存 `&msg` 这个地址值。`&p` 则是p这个“指针变量”自己的地址
+
+FreeRTOS 从 `&p` 开始复制 `sizeof(Message_t *) = 4 Byte`，也就是**把p里面保存的地址值复制进 Queue**。最终Queue保存 **&msg** 不是 `msg` 内容。
+
+最大的真正风险是：
+
+```c
+void func(void)
+{
+    Message_t msg;
+
+    Message_t *p = &msg;
+
+    xQueueSend(q, &p, 0);
+}
+```
+
+函数返回以后：
+
+```
+msg生命周期结束
+↓
+Queue里虽然还有那个地址
+↓
+但地址已经指向失效对象
+↓
+Dangling Pointer
+```
+
+
 ---
 
 # Semaphore 复习题
