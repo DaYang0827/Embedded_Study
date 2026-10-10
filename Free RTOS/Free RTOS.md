@@ -4363,7 +4363,7 @@ Running → Blocked
 
 一旦 `xTaskNotifyGive(task_handle);` 通知值增加 0 → 1，等待中的 Task `Blocked → Ready`和 Semaphore 特别像？
 
-### 6. `pdTRUE` 和 `pdFALSE` 很重要
+### 返回参数
 
 第一个参数：
 
