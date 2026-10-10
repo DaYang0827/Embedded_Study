@@ -4484,7 +4484,7 @@ do_work()
 再次等待
 ```
 
-### 9.2.5 对比
+## 9.3 对比
 1. 与Binary Semaphore
 
 Binary Semaphore：
