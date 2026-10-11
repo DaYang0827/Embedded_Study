@@ -2922,9 +2922,7 @@ Pending
 
 # 93. 为什么跳转前停止 SysTick？ ★★★★★
 
-如果 Bootloader 开启了 SysTick：
-
-> 即使已经开始跳转 APP，SysTick 仍然可能产生周期异常。
+如果 Bootloader 开启了 SysTick：即使已经开始跳转 APP，SysTick 仍然可能产生周期异常。
 
 这可能在 APP 向量表、时钟或 RTOS 尚未完全建立之前进入异常。
 
