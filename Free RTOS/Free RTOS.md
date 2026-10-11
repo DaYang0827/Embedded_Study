@@ -5233,9 +5233,58 @@ xSemaphoreGiveFromISR(...)
 vTaskNotifyGiveFromISR(...)
 ```
 
-FreeRTOS 会判断 “这次 ISR 操作，有没有让一个比当前被打断 Task 更高优先级的 Task 变成 Ready？”
+FreeRTOS 会判断 “这次 ISR 操作，有没有让一个比当前被打断 Task 更高优先级的 Task 变成 Ready？” 如果有 `pdFALSE → pdTRUE`
 
-如果有 `pdFALSE → pdTRUE`
+在中断服务函数（ISR）中，将 `xHigherPriorityTaskWoken` 显式初始化为 **`pdFALSE` (0)**，是为了配合 FreeRTOS 的内核逻辑，采取 **“严谨的、防御性的保守策略”**。
+
+从以下两个关键维度来解释为什么必须初始为 `pdFALSE`，以及如果写错会发生什么灾难：
+
+1. 它是内核的“只增不减”投票器（底层累加逻辑）
+
+`xHigherPriorityTaskWoken` 这个变量的本质是一个 **“状态记录旗帜”**。
+
+当在中断里调用 `xQueueSendFromISR` 或 `xSemaphoreGiveFromISR` 时，FreeRTOS 内核的底层源码逻辑长这样：
+
+```c
+// 简化版的 FreeRTOS 内核底层源码
+if ( 被唤醒的任务优先级 > 当前正在跑的任务优先级 ) {
+    *pxHigherPriorityTaskWoken = pdTRUE; // 只有满足抢占条件，内核才强行把它改成 pdTRUE
+}
+// ⚠️ 注意：如果优先级不够，内核什么都不做，绝对不会把它改回 pdFALSE！
+```
+
+💡 设想一个场景：中断里连续发了 3 次数据
+
+```c
+BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 刚进来，默认大家都先别抢占
+
+// 第一次发送：没唤醒高优先级任务 ➔ 变量保持 pdFALSE
+xQueueSendFromISR(Queue1, &data1, &xHigherPriorityTaskWoken); 
+
+// 第二次发送：【成功唤醒】了一个高优先级的死等任务 ➔ 变量被内核强行改成 pdTRUE
+xQueueSendFromISR(Queue2, &data2, &xHigherPriorityTaskWoken); 
+
+// 第三次发送：没唤醒高优先级任务 ➔ 变量【由于内核没有清除机制】依然保持 pdTRUE
+xQueueSendFromISR(Queue3, &data3, &xHigherPriorityTaskWoken); 
+
+// 退出中断：一看是 pdTRUE，完美触发任务切换！
+portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+```
+
+内核只负责在满足条件时把值“写成 `pdTRUE`”，它**不负责做清零初始化**。所以必须在上电/刚进中断的头部，主动写上 `= pdFALSE`，给整个执行流提供一个干净的、默认不抢占的零点。
+
+---
+
+2. ⚠️ 如果反过来初始化成 `pdTRUE` 会发生什么灾难？
+
+如果不小心写成了 `BaseType_t xHigherPriorityTaskWoken = pdTRUE;`，系统虽然不会直接当场死机（HardFault），但会引发极为隐蔽的 **“性能灾难”**：
+
+- **毫无意义的任务切换（系统内耗）**：  
+    哪怕这一次中断根本没有唤醒任何新任务，或者唤醒的任务优先级极低（根本不需要插队）。但在退出中断的一瞬间，由于 `portYIELD_FROM_ISR(pdTRUE)` 读到的是 `pdTRUE`，CPU 依然会死板地触发 **PendSV 异常**，强行把当前跑得好好的任务拉下来，去就绪链表里吭哧吭哧比对、重新调度一圈，最后发现谁也不用换，再把原任务放回去。
+- **可怕的恶果**：  
+    单片机的 CPU 时间片会被这种**无意义的频繁任务切换**彻底榨干。如果你的串口中断频率非常高，单片机 80% 的算力都会浪费在“进出 PendSV 调度器”的无用功上，整个系统的实时性瞬间崩溃。
+
+---
 
 例如：
 
