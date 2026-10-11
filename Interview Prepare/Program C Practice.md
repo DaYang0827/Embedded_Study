@@ -1,5 +1,821 @@
 （❌）
 
+# ISR + RTOS 复习题
+
+这次我会重点检查你能不能把：
+
+```
+ISR
+Task
+Blocked/Ready
+FromISR
+xHigherPriorityTaskWoken
+PendSV
+Notification
+Queue
+Semaphore
+```
+
+真正串成一条链。
+
+---
+
+  1. ISR 和 Task
+
+解释：
+
+```
+Task
+```
+
+和：
+
+```
+ISR
+```
+
+分别是怎么获得 CPU 执行权的。
+
+回答：
+
+```
+Task是谁调度的？
+
+ISR是谁触发的？
+
+ISR需要Scheduler选中才能运行吗？
+```
+
+---
+
+  2. ISR 有没有 Task 状态
+
+Task 有：
+
+```
+Running
+Ready
+Blocked
+Suspended
+```
+
+那么 ISR 有没有：
+
+```
+Blocked
+Ready
+```
+
+这种状态？
+
+为什么？
+
+---
+
+  3. 为什么 ISR 不能阻塞
+
+下面为什么不能在 ISR 里：
+
+```
+xQueueReceive(
+    q,
+    &data,
+    portMAX_DELAY
+);
+```
+
+重点解释：
+
+```
+portMAX_DELAY意味着什么？
+
+ISR为什么不能“等”？
+```
+
+---
+
+  4. 普通 API 和 FromISR API
+
+把下面对应起来：
+
+```
+xQueueSend()
+?
+```
+
+```
+xSemaphoreGive()
+?
+```
+
+```
+xTaskNotifyGive()
+?
+```
+
+ISR 中分别应该使用什么？
+
+---
+
+  5. Queue ISR
+
+假设：
+
+```
+void ADC_IRQHandler(void)
+{
+    uint32_t value = ADC1->DR;
+
+    xQueueSendFromISR(
+        adc_queue,
+        &value,
+        ???
+    );
+}
+```
+
+第三个参数应该是什么？
+
+它的作用是什么？
+
+---
+
+  6. `xHigherPriorityTaskWoken`
+
+解释：
+
+```
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+```
+
+这个变量是不是：
+
+> “当前 ISR 是不是高优先级？”
+
+如果不是，它到底表示什么？
+
+---
+
+  7. 完整优先级题
+
+当前：
+
+```
+LowTask
+priority = 1
+Running
+```
+
+另一个：
+
+```
+HighTask
+priority = 3
+Blocked
+```
+
+HighTask 正在等待：
+
+```
+xSemaphoreTake(
+    sem,
+    portMAX_DELAY
+);
+```
+
+这时候发生 ISR：
+
+```
+xSemaphoreGiveFromISR(
+    sem,
+    &xHigherPriorityTaskWoken
+);
+```
+
+回答状态变化：
+
+```
+HighTask:
+Blocked → ?
+
+LowTask:
+当前还是？
+```
+
+此时：
+
+```
+xHigherPriorityTaskWoken
+```
+
+大概率是什么？
+
+---
+
+  8. `portYIELD_FROM_ISR()`
+
+上一题 ISR 末尾执行：
+
+```
+portYIELD_FROM_ISR(
+    xHigherPriorityTaskWoken
+);
+```
+
+它是不是：
+
+> 直接在这行代码里执行 HighTask？
+
+如果不是，后面大致发生什么？
+
+要求出现：
+
+```
+ISR退出
+PendSV
+Context Switch
+HighTask
+```
+
+---
+
+  9. ISR → PendSV
+
+补全流程：
+
+```
+USART硬件事件
+↓
+USART ISR
+↓
+vTaskNotifyGiveFromISR()
+↓
+ParserTask Blocked → Ready
+↓
+???
+↓
+ISR退出
+↓
+???
+↓
+保存LowTask上下文
+↓
+恢复ParserTask上下文
+↓
+ParserTask Running
+```
+
+---
+
+# Notification 部分
+
+  10. Notification 属于谁
+
+Task Notification 是一个独立对象吗？
+
+需不需要像：
+
+```
+xSemaphoreCreateBinary();
+```
+
+这样额外创建？
+
+Notification 的状态大致保存在哪里？
+
+---
+
+  11. `xTaskNotifyGive()`
+
+假设：
+
+```
+WorkerTask Notification Value = 0
+```
+
+连续：
+
+```
+xTaskNotifyGive(worker_handle);
+xTaskNotifyGive(worker_handle);
+xTaskNotifyGive(worker_handle);
+```
+
+之后大致是多少？
+
+---
+
+  12. `ulTaskNotifyTake(pdFALSE, ...)`
+
+当前：
+
+```
+Notification = 3
+```
+
+执行：
+
+```
+ulTaskNotifyTake(
+    pdFALSE,
+    0
+);
+```
+
+之后 Notification 是多少？
+
+为什么？
+
+---
+
+  13. `pdTRUE`
+
+还是：
+
+```
+Notification = 3
+```
+
+执行：
+
+```
+ulTaskNotifyTake(
+    pdTRUE,
+    0
+);
+```
+
+之后呢？
+
+所以：
+
+```
+pdFALSE
+pdTRUE
+```
+
+有什么区别？
+
+---
+
+  14. Notification 的阻塞
+
+```
+ulTaskNotifyTake(
+    pdTRUE,
+    portMAX_DELAY
+);
+```
+
+如果 Notification = 0：
+
+```
+当前Task:
+Running → ?
+```
+
+ISR Notify 后：
+
+```
+? → Ready
+```
+
+---
+
+  15. Notification 和 Binary Semaphore
+
+下面需求：
+
+> DMA 完成以后，仅仅需要唤醒 `ParserTask`。
+
+你会优先选：
+
+```
+Binary Semaphore
+还是
+Task Notification
+```
+
+为什么？
+
+注意不是问“Semaphore 能不能做”，而是：
+
+> 哪个在这种明确的一对一通知里通常更合适？
+
+---
+
+  16. Notification 和 Queue
+
+场景 A：
+
+```
+USART数据已经在RingBuffer
+ISR只需要告诉ParserTask：
+“有新数据了”
+```
+
+用什么？
+
+场景 B：
+
+```
+ParserTask要把完整Package_t传给CmdTask
+```
+
+用什么？
+
+为什么不能把所有场景都用 Notification？
+
+---
+
+# Semaphore + ISR
+
+  17. Binary Semaphore ISR
+
+解释完整流程：
+
+```
+Task:
+xSemaphoreTake(sem, portMAX_DELAY)
+↓
+Blocked
+
+DMA ISR:
+xSemaphoreGiveFromISR(...)
+↓
+???
+```
+
+一直写到 Task Running。
+
+---
+
+  18. 为什么 Mutex 没有这种用法
+
+为什么不能：
+
+```
+ISR
+↓
+Take Mutex
+↓
+操作UART
+↓
+Give Mutex
+```
+
+至少从下面三个角度回答：
+
+```
+ISR能不能Blocked
+Mutex有没有Owner
+Priority Inheritance针对谁
+```
+
+---
+
+# Queue + ISR
+
+  19. Queue 满怎么办
+
+假设 Queue：
+
+```
+[A][B][C]
+```
+
+已经满。
+
+ISR：
+
+```
+xQueueSendFromISR(
+    q,
+    &data,
+    &xHigherPriorityTaskWoken
+);
+```
+
+这时候 ISR 会不会：
+
+```
+Blocked等待Queue空位
+```
+
+？
+
+如果不会，会发生什么？
+
+---
+
+  20. 为什么 FromISR 没有等待时间
+
+普通：
+
+```
+xQueueSend(
+    q,
+    &data,
+    pdMS_TO_TICKS(100)
+);
+```
+
+但是：
+
+```
+xQueueSendFromISR(...)
+```
+
+为什么没有：
+
+```
+xTicksToWait
+```
+
+参数？
+
+---
+
+# ISR 底层
+
+  21. Cortex-M 进入 ISR 时
+
+当前 Task 正在运行。
+
+硬件进入异常时，典型会自动保存哪些寄存器？
+
+不用要求顺序，至少说出：
+
+```
+R0~?
+R12
+LR
+PC
+xPSR
+```
+
+这些通常保存在哪里？
+
+---
+
+  22. ISR 返回为什么能继续原 Task
+
+假设：
+
+```
+foo();
+bar();
+baz();
+```
+
+在 `bar()` 中间 USART ISR 打断。
+
+为什么 ISR 返回后 CPU 能继续执行 `bar()`，而不是重新从：
+
+```
+foo();
+```
+
+开始？
+
+---
+
+  23. ISR 返回和 Task Context Switch 的区别
+
+情况 A：
+
+```
+ISR没有唤醒更高优先级Task
+```
+
+ISR 返回后通常谁继续？
+
+情况 B：
+
+```
+ISR唤醒更高优先级Task
++
+portYIELD_FROM_ISR()
+```
+
+ISR 返回后为什么可能不是原 Task 继续？
+
+---
+
+# 中断优先级
+
+  24. 两套 Priority
+
+FreeRTOS Task：
+
+```
+priority 1
+priority 3
+```
+
+一般哪个更高？
+
+STM32/Cortex-M NVIC：
+
+```
+IRQ priority 1
+IRQ priority 5
+```
+
+通常哪个更高？
+
+为什么这两个概念不能混？
+
+---
+
+  25. 高优先级 ISR
+
+为什么不能简单地认为：
+
+> “中断优先级越高越好。”
+
+一个 ISR 如果执行特别久，可能带来什么问题？
+
+---
+
+  26. FreeRTOS API 的中断优先级限制
+
+解释下面这句话：
+
+> **不是所有 ISR 都能调用 `xxxFromISR()`。**
+
+它和：
+
+```
+configMAX_SYSCALL_INTERRUPT_PRIORITY
+```
+
+有什么关系？
+
+这一题目前你只需要讲思想，不要求背 Cortex-M 的位移计算。
+
+---
+
+# 你的项目综合题
+
+  27. USART + DMA + RingBuffer + Notification
+
+你现在有：
+
+```
+USART1
+DMA Circular
+RingBuffer
+Parser状态机
+FreeRTOS
+```
+
+请自己设计：
+
+```
+USART/DMA ISR
+ParserTask
+CmdTask
+```
+
+之间的数据路径。
+
+要求出现：
+
+```
+DMA
+RingBuffer
+vTaskNotifyGiveFromISR
+ulTaskNotifyTake
+Parser
+Queue
+CmdTask
+```
+
+---
+
+  28. ISR 里面应该放什么
+
+下面这些操作，你判断应该放：
+
+```
+ISR
+还是
+Task
+```
+
+A：
+
+```
+读取USART状态寄存器
+```
+
+B：
+
+```
+清USART IDLE标志
+```
+
+C：
+
+```
+计算RingBuffer新数据区间
+```
+
+D：
+
+```
+完整协议状态机解析几十个Byte
+```
+
+E：
+
+```
+擦除Flash Sector
+```
+
+F：
+
+```
+Bootloader CRC验证
+```
+
+G：
+
+```
+vTaskNotifyGiveFromISR()
+```
+
+H：
+
+```
+执行CMD
+```
+
+---
+
+  29. 一个典型错误
+
+有人写：
+
+```
+void USART1_IRQHandler(void)
+{
+    while (1)
+    {
+        if (uart_has_data())
+        {
+            protocol_process();
+        }
+    }
+}
+```
+
+这段代码为什么是灾难？
+
+至少说三个问题。
+
+---
+
+  30. 最后一道总流程题
+
+当前：
+
+```
+LowTask priority = 1 Running
+ParserTask priority = 3 Blocked
+```
+
+USART 收到一帧：
+
+```
+硬件产生IRQ
+```
+
+请从 IRQ 开始，一直写到：
+
+```
+ParserTask执行protocol_process()
+```
+
+要求至少出现下面这些词：
+
+```
+NVIC
+ISR
+Notification
+xHigherPriorityTaskWoken
+portYIELD_FROM_ISR
+PendSV
+TCB
+Task Stack
+Ready
+Running
+```
+
+这道能完整回答出来，你的 **ISR + RTOS 调度链路基本就算真正打通了**。
+
+
 # Task 复习题
 
 1. 解释：
