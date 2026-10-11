@@ -4617,9 +4617,11 @@ Task继续
 
 如果 ISR 期间没有引起更高优先级 Task 调度，那么原 Task 会继续运行。
 
-## 10.2 ISR 和 Task 的区别
+## 10.2 ISR 与 RTOS的关系
 
-Task 是被 Scheduler 调度的：
+1. ISR与Task的区别
+
+   Task 是被 Scheduler 调度的：
 
 ```text
 Ready
@@ -4643,18 +4645,20 @@ CPU直接进入中断
 
 例如 `Task priority = 3` ，不能直接和 `USART IRQ priority = 5` 这样比较谁“更高”。它们不是一个优先级系统。
 
-## 10.12 ISR 和 PendSV 的关系
+---
+
+2. ISR 和 PendSV 的关系
 
 普通外设 ISR：
 
-```
+```text
 USART IRQ
 DMA IRQ
 EXTI IRQ
 Timer IRQ
 ```
 
-负责处理硬件事件
+负责**处理硬件事件**
 
 PendSV，专门用于Task Context Switch。所以：
 
@@ -4672,13 +4676,11 @@ Task切换
 
 ---
 
-## 10.13 ISR 和 SysTick 的关系
+3.  ISR 和 SysTick 的关系
 
-SysTick 本身也是一种系统异常。
+   SysTick 本身也是一种系统异常。FreeRTOS 用它产生 Tick：
 
-FreeRTOS 用它产生 Tick：
-
-```
+```text
 SysTick
 ↓
 xTickCount++
@@ -4694,7 +4696,7 @@ Blocked → Ready
 
 所以：
 
-```
+```text
 SysTick
 → 时间管理
 
@@ -4702,11 +4704,10 @@ PendSV
 → 任务切换
 ```
 
-不要混。
 
----
+## 10.5 ISR 注意事项
 
-## 10.5 ISR 里不能 Block和切 Task
+1. ISR里不能 Block和切 Task
 
 普通 Task 可以 `xQueueReceive(q, &data, portMAX_DELAY);`，没数据时：
 
@@ -4747,7 +4748,31 @@ PendSV再做上下文切换
 
 ---
 
-## 10.6 FreeRTOS 中的 `FromISR` 
+2.  ISR 里不能用 Mutex
+
+这是重点。因为Mutex 有：
+
+```text
+Owner
+Priority Inheritance
+Blocked等待
+```
+
+这些都是 Task 语义。ISR 不是 Task，所以**ISR不能拥有Mutex，ISR不能阻塞等待Mutex**。因此**不要在 ISR 里 Take/Give Mutex。**
+
+如果 ISR 要和 Task 同步：
+
+```text
+Notification
+Binary Semaphore
+Queue
+```
+
+更合适。
+
+---
+
+## 10.6  `FromISR` 
 
 例如普通 Task 中：
 
@@ -4881,77 +4906,6 @@ portYIELD_FROM_ISR(
 如果是 `pdFALSE` 通常没必要切换。如果是 `pdTRUE` 就告诉 FreeRTOS，ISR 退出后赶紧重新调度，因为有更高优先级 Task 已经 Ready。
 
 然后一般通过 `PendSV` 真正完成 Context Switch。
-
----
-
-## 10.14 ISR 里可以做什么
-
-适合：
-
-```
-读硬件状态寄存器
-清中断标志
-读取少量数据
-更新简单计数
-写RingBuffer
-Give Semaphore FromISR
-Send Queue FromISR
-Notify Task FromISR
-```
-
-不适合：
-
-```
-长时间for循环
-delay
-复杂协议解析
-printf大量输出
-Flash擦写
-动态内存分配
-长时间阻塞操作
-等待Mutex
-```
-
----
-
-## 10.15 ISR 里不能用 Mutex
-
-这是重点。
-
-为什么？
-
-Mutex 有：
-
-```
-Owner
-Priority Inheritance
-Blocked等待
-```
-
-这些都是 Task 语义。
-
-ISR 不是 Task，所以：
-
-```
-ISR不能拥有Mutex
-ISR不能阻塞等待Mutex
-```
-
-因此：
-
-> **不要在 ISR 里 Take/Give Mutex。**
-
-如果 ISR 要和 Task 同步：
-
-```
-Notification
-Binary Semaphore
-Queue
-```
-
-更合适。
-
----
 
 ## 10.16 ISR 可以访问共享变量吗
 
