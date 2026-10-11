@@ -5241,9 +5241,7 @@ FreeRTOS 会判断 “这次 ISR 操作，有没有让一个比当前被打断 T
 
 1. 它是内核的“只增不减”投票器（底层累加逻辑）
 
-`xHigherPriorityTaskWoken` 这个变量的本质是一个 **“状态记录旗帜”**。
-
-当在中断里调用 `xQueueSendFromISR` 或 `xSemaphoreGiveFromISR` 时，FreeRTOS 内核的底层源码逻辑长这样：
+`xHigherPriorityTaskWoken` 这个变量的本质是一个 **“状态记录旗帜”**。当在中断里调用 `xQueueSendFromISR` 或 `xSemaphoreGiveFromISR` 时，FreeRTOS 内核的底层源码逻辑长这样：
 
 ```c
 // 简化版的 FreeRTOS 内核底层源码
@@ -5282,13 +5280,11 @@ portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 - **毫无意义的任务切换（系统内耗）**：  
     哪怕这一次中断根本没有唤醒任何新任务，或者唤醒的任务优先级极低（根本不需要插队）。但在退出中断的一瞬间，由于 `portYIELD_FROM_ISR(pdTRUE)` 读到的是 `pdTRUE`，CPU 依然会死板地触发 **PendSV 异常**，强行把当前跑得好好的任务拉下来，去就绪链表里吭哧吭哧比对、重新调度一圈，最后发现谁也不用换，再把原任务放回去。
 - **可怕的恶果**：  
-    单片机的 CPU 时间片会被这种**无意义的频繁任务切换**彻底榨干。如果你的串口中断频率非常高，单片机 80% 的算力都会浪费在“进出 PendSV 调度器”的无用功上，整个系统的实时性瞬间崩溃。
-
----
+    单片机的 CPU 时间片会被这种**无意义的频繁任务切换**彻底榨干。如果串口中断频率非常高，单片机 80% 的算力都会浪费在“进出 PendSV 调度器”的无用功上，整个系统的实时性瞬间崩溃。
 
 例如：
 
-```
+```text
 LowTask priority = 1
 当前Running
 
@@ -5296,61 +5292,29 @@ HighTask priority = 3
 Blocked
 ```
 
-ISR：
-
-```
-Give / Send / Notify
-```
-
-导致：
-
-```
-HighTask Blocked → Ready
-```
-
-那么：
-
-```
-xHigherPriorityTaskWoken = pdTRUE
-```
-
----
+ISR Give / Send / Notify，导致 `HighTask Blocked → Ready`，那么 `xHigherPriorityTaskWoken = pdTRUE`
 
 ### 10.6.7 `portYIELD_FROM_ISR()`
 
-这个通常放在 ISR 尾部：
-
-```
+```c
 portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 ```
 
-如果：
+通常放在 ISR 尾部，如果：
 
-```
+```c
 xHigherPriorityTaskWoken = pdFALSE
 ```
 
-那通常继续返回原 Task。
+那通常继续返回原 Task。如果 `pdTRUE` 就请求：
 
-如果：
-
-```
-pdTRUE
-```
-
-就请求：
-
-```
+```text
 ISR退出后
 ↓
 尽快切换Task
 ```
 
-通常底层就是触发：
-
-```
-PendSV
-```
+通常底层就是触发 PendSV
 
 ## 10.7 `volatile` 在 ISR 场景里的作用
 
