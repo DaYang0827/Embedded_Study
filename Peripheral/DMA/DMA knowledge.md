@@ -106,6 +106,10 @@ DMA_InitStructure.DMA_Channel = DMA_Channel_4;
 
 这个是 **DMA 通道选择**。`Stream` 是调用 `DMA_Init()` 时选的，`Channel` 是结构体成员。可以理解成`DMA2_Stream2` 决定用哪个 DMA 搬运通道实例。`DMA_Channel_4` 决定**这个 Stream 接收哪个外设的 DMA 请求。** 这个不能随便写，必须查芯片手册里的 **DMA request mapping table**。
 
+<img width="1012" height="441" alt="image" src="https://github.com/user-attachments/assets/e56c1f97-7b9c-4811-bb34-12275e012336" />
+
+<img width="988" height="756" alt="image" src="https://github.com/user-attachments/assets/2bec2b1b-bee8-4500-988f-b21d00951114" />
+
 ## 6.2 `DMA_PeripheralBaseAddr`
 
 这个非常重要。
