@@ -4643,6 +4643,69 @@ CPU直接进入中断
 
 例如 `Task priority = 3` ，不能直接和 `USART IRQ priority = 5` 这样比较谁“更高”。它们不是一个优先级系统。
 
+## 10.12 ISR 和 PendSV 的关系
+
+普通外设 ISR：
+
+```
+USART IRQ
+DMA IRQ
+EXTI IRQ
+Timer IRQ
+```
+
+负责处理硬件事件
+
+PendSV，专门用于Task Context Switch。所以：
+
+```text
+USART ISR
+≠ Task切换本身
+
+USART ISR
+可以触发
+↓
+PendSV
+↓
+Task切换
+```
+
+---
+
+## 10.13 ISR 和 SysTick 的关系
+
+SysTick 本身也是一种系统异常。
+
+FreeRTOS 用它产生 Tick：
+
+```
+SysTick
+↓
+xTickCount++
+↓
+检查延时Task是否到期
+↓
+Blocked → Ready
+↓
+判断是否需要调度
+↓
+必要时PendSV
+```
+
+所以：
+
+```
+SysTick
+→ 时间管理
+
+PendSV
+→ 任务切换
+```
+
+不要混。
+
+---
+
 ## 10.5 ISR 里不能 Block和切 Task
 
 普通 Task 可以 `xQueueReceive(q, &data, portMAX_DELAY);`，没数据时：
@@ -4818,79 +4881,6 @@ portYIELD_FROM_ISR(
 如果是 `pdFALSE` 通常没必要切换。如果是 `pdTRUE` 就告诉 FreeRTOS，ISR 退出后赶紧重新调度，因为有更高优先级 Task 已经 Ready。
 
 然后一般通过 `PendSV` 真正完成 Context Switch。
-
----
-
-## 10.12 ISR 和 PendSV 的关系
-
-普通外设 ISR：
-
-```
-USART IRQ
-DMA IRQ
-EXTI IRQ
-Timer IRQ
-```
-
-负责：
-
-```
-处理硬件事件
-```
-
-PendSV：
-
-```
-专门用于Task Context Switch
-```
-
-所以：
-
-```
-USART ISR
-≠ Task切换本身
-
-USART ISR
-可以触发
-↓
-PendSV
-↓
-Task切换
-```
-
----
-
-## 10.13 ISR 和 SysTick 的关系
-
-SysTick 本身也是一种系统异常。
-
-FreeRTOS 用它产生 Tick：
-
-```
-SysTick
-↓
-xTickCount++
-↓
-检查延时Task是否到期
-↓
-Blocked → Ready
-↓
-判断是否需要调度
-↓
-必要时PendSV
-```
-
-所以：
-
-```
-SysTick
-→ 时间管理
-
-PendSV
-→ 任务切换
-```
-
-不要混。
 
 ---
 
