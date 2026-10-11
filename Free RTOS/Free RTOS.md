@@ -4645,46 +4645,28 @@ CPU直接进入中断
 
 ## 10.5 ISR 里不能 Block
 
-普通 Task 可以：
+普通 Task 可以 `xQueueReceive(q, &data, portMAX_DELAY);`，没数据时：
 
-```
-xQueueReceive(q, &data, portMAX_DELAY);
-```
-
-没数据时：
-
-```
+```text
 Task
 Running → Blocked
 ```
 
-然后 Scheduler 运行别的 Task。
+然后 Scheduler 运行别的 Task。但是**ISR 不是 Task**。它没有：
 
-但是 ISR 不是 Task。
-
-它没有：
-
-```
+```c
 Running
 Ready
 Blocked
 ```
 
-这种 Task 状态。
+这种 Task 状态。所以 ISR 不能说“等 500ms 再继续。”这就是为什么**ISR 不能调用可能阻塞的普通 API**。
 
-所以 ISR 不能说：
-
-> “我等 500ms 再继续。”
-
-这就是为什么 ISR 不能调用可能阻塞的普通 API。
-
----
-
-## 10.6 为什么 FreeRTOS 有 `FromISR` API
+## 10.6 FreeRTOS 中的 `FromISR` 
 
 例如普通 Task 中：
 
-```
+```c
 xQueueSend(...)
 xSemaphoreGive(...)
 xTaskNotifyGive(...)
@@ -4692,29 +4674,23 @@ xTaskNotifyGive(...)
 
 ISR 中要用：
 
-```
+```c
 xQueueSendFromISR(...)
 xSemaphoreGiveFromISR(...)
 vTaskNotifyGiveFromISR(...)
 ```
 
-原因不是单纯名字不同。
+原因不是单纯名字不同。而是 ISR 环境要求：
 
-而是 ISR 环境要求：
-
-```
+```text
 不能阻塞
 不能做普通Task调度逻辑
 需要专门处理“是否唤醒更高优先级Task”
 ```
 
----
-
-## 10.7 最典型的 ISR → Task 模型
-
 比如 ParserTask：
 
-```
+```c
 void parser_task(void *arg)
 {
     while (1)
@@ -4729,17 +4705,9 @@ void parser_task(void *arg)
 }
 ```
 
-没有数据：
+没有数据ParserTask -> Blocked，USART ISR：
 
-```
-ParserTask
-↓
-Blocked
-```
-
-USART ISR：
-
-```
+```c
 void USART1_IRQHandler(void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -4760,7 +4728,7 @@ void USART1_IRQHandler(void)
 
 流程：
 
-```
+```text
 USART事件
 ↓
 进入ISR
