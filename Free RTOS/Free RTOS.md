@@ -4658,7 +4658,7 @@ EXTI IRQ
 Timer IRQ
 ```
 
-负责**处理硬件事件**
+负责**处理硬件事件**。
 
 PendSV，专门用于Task Context Switch。所以：
 
@@ -4705,7 +4705,7 @@ PendSV
 ```
 
 
-## 10.5 ISR 注意事项
+## 10.3 ISR 注意事项
 
 1. ISR里不能 Block和切 Task
 
@@ -4770,9 +4770,7 @@ Queue
 
 更合适。
 
----
-
-## 10.6  `FromISR` 
+## 10.4 `FromISR` 
 
 例如普通 Task 中：
 
@@ -4815,7 +4813,7 @@ void parser_task(void *arg)
 }
 ```
 
-没有数据ParserTask -> Blocked，USART ISR：
+没有数据 ParserTask -> Blocked，USART ISR：
 
 ```c
 void USART1_IRQHandler(void)
@@ -4862,7 +4860,7 @@ ParserTask Running
 
 这就是最标准的 RTOS ISR 设计。
 
-## 10.8 `xHigherPriorityTaskWoken` 
+## 10.5 `xHigherPriorityTaskWoken` 
 
 这个变量经常让人迷糊。先看 `BaseType_t xHigherPriorityTaskWoken = pdFALSE;`，它的意思不是“当前是不是高优先级 Task。” 它表示**这次 ISR 操作有没有唤醒一个比当前被中断 Task 更高优先级的 Task。**
 
@@ -4895,7 +4893,7 @@ Blocked → Ready
 
 因为 `3 > 1` ，所以 `xHigherPriorityTaskWoken = pdTRUE`
 
-## 10.9 `portYIELD_FROM_ISR()` 
+## 10.6 `portYIELD_FROM_ISR()` 
 
 ```c
 portYIELD_FROM_ISR(
@@ -4907,181 +4905,32 @@ portYIELD_FROM_ISR(
 
 然后一般通过 `PendSV` 真正完成 Context Switch。
 
-## 10.16 ISR 可以访问共享变量吗
+## 10.7 `volatile` 在 ISR 场景里的作用
 
-可以，但要注意并发。
+比如 `volatile uint8_t rx_done;` ISR `rx_done = 1;`，Task：
 
-比如：
-
-```
-volatile uint32_t count;
-```
-
-main：
-
-```
-count++;
-```
-
-ISR：
-
-```
-count++;
-```
-
-即使：
-
-```
-volatile
-```
-
-仍然可能发生 RMW 竞争。
-
-因为：
-
-```
-count++
-=
-read
-modify
-write
-```
-
-不是原子操作。
-
-所以：
-
-> ISR 和 Task 共享数据，要考虑临界区、原子操作、队列等同步方式。
-
----
-
-## 10.17 `volatile` 在 ISR 场景里的作用
-
-比如：
-
-```
-volatile uint8_t rx_done;
-```
-
-ISR：
-
-```
-rx_done = 1;
-```
-
-Task：
-
-```
+```c
 while (!rx_done)
 {
 }
 ```
 
-`volatile` 作用：
-
-> 防止编译器假设这个变量不会异步变化。
-
-但：
+`volatile` 作用**防止编译器假设这个变量不会异步变化**。但：
 
 ```
 volatile ≠ synchronization
 volatile ≠ atomic
 volatile ≠ thread safe
 ```
-
-这点你之前已经学过。
-
 ---
 
-## 10.18 中断优先级也很重要
+## 10.8 经典例子
 
-Cortex-M 有 NVIC Interrupt Priority。
-
-不同 ISR 之间：
-
-```
-高优先级ISR
-可以抢占
-低优先级ISR
-```
-
-例如：
-
-```
-UART IRQ
-priority = 5
-
-Timer IRQ
-priority = 3
-```
-
-在 Cortex-M 常见配置中，数字越小通常硬件优先级越高。
-
-所以：
-
-```
-priority 3
-可以抢占
-priority 5
-```
-
-这里注意：
-
-> FreeRTOS Task priority 通常数字越大越高。
-
-而 NVIC：
-
-> 通常数字越小越高。
-
-两套正好容易搞反。
-
----
-
-## 10.19 FreeRTOS 对 ISR 优先级还有限制
-
-这是你后面一定会碰到的：
-
-```
-configMAX_SYSCALL_INTERRUPT_PRIORITY
-```
-
-或：
-
-```
-configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
-```
-
-核心意思：
-
-> **不是所有中断都可以调用 FreeRTOS 的 FromISR API。**
-
-有些非常高优先级的 ISR：
-
-```
-可以打断FreeRTOS内核临界区
-```
-
-所以不能安全调用内核 API。
-
-这块你第一遍先知道：
-
-> 调用 `xxxFromISR()` 的中断优先级必须符合 FreeRTOS 配置要求。
-
-先别急着背具体数值。
-
----
-
-## 10.20 一个完整例子：USART ISR → Notification → Task
-
-定义：
-
-```
-TaskHandle_t parser_handle;
-```
+定义 `TaskHandle_t parser_handle;`
 
 Task：
 
-```
+```c
 void parser_task(void *arg)
 {
     while (1)
@@ -5098,7 +4947,7 @@ void parser_task(void *arg)
 
 ISR：
 
-```
+```c
 void USART1_IRQHandler(void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -5127,7 +4976,7 @@ void USART1_IRQHandler(void)
 
 完整架构：
 
-```
+```text
 USART硬件
 ↓
 DMA
@@ -5149,15 +4998,11 @@ ParserTask运行
 解析协议
 ```
 
-这个就很适合你之前的 USART + DMA + RingBuffer 项目。
+## 10.9 总结
 
----
+可以把整个系统记成：
 
-## 10.21 ISR、Task、PendSV 最终关系
-
-你可以把整个系统记成：
-
-```
+```text
 硬件事件
 ↓
 ISR
@@ -5183,9 +5028,8 @@ PendSV
 
 ---
 
-## 10.22 你现在必须分清的几个概念
 
-```
+```text
 ISR
 → 响应硬件/异常事件
 
@@ -5211,9 +5055,7 @@ portYIELD_FROM_ISR
 → 请求ISR退出后尽快调度
 ```
 
-最后压缩成一句：
-
-> **ISR 的职责是“快速响应硬件事件并把复杂工作交给 Task”；如果 ISR 唤醒了更高优先级 Task，就通过 `portYIELD_FROM_ISR()` 请求 PendSV，在 ISR 退出后完成任务切换。**
+**ISR 的职责是“快速响应硬件事件并把复杂工作交给 Task”；如果 ISR 唤醒了更高优先级 Task，就通过 `portYIELD_FROM_ISR()` 请求 PendSV，在 ISR 退出后完成任务切换。**
 
 # 11 Hook 函数
 
