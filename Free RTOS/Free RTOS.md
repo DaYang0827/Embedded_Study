@@ -5048,8 +5048,6 @@ ISR生产数据
 Task消费数据
 ```
 
----
-
 ### 10.6.2 Semaphore 的 ISR API
 
 ```c
@@ -5061,7 +5059,7 @@ BaseType_t xSemaphoreGiveFromISR(
 
 例如：
 
-```
+```c
 BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 xSemaphoreGiveFromISR(
@@ -5074,7 +5072,7 @@ portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 
 典型场景：
 
-```
+```text
 DMA完成
 ↓
 ISR
@@ -5084,16 +5082,6 @@ Give Binary Semaphore
 等待中的Task醒来
 ```
 
----
-
-也有：
-
-```
-xSemaphoreTakeFromISR()
-```
-
-但第一遍你可以先知道有这个接口。
-
 工程里最常见的 ISR + Semaphore 模式还是：
 
 ```
@@ -5101,35 +5089,25 @@ ISR Give
 Task Take
 ```
 
----
-
 ### 10.6.3 Mutex 不能在 ISR 里用
 
-这个必须单独记。
+这个必须单独记。不要在 ISR 里：
 
-不要在 ISR 里：
-
-```
+```c
 xSemaphoreTake(mutex, ...)
 ```
 
-也不要试图把 Mutex 当普通 Semaphore 用。
+也不要试图把 Mutex 当普通 Semaphore 用。因为 Mutex 有：
 
-因为 Mutex 有：
-
-```
+```text
 Owner
 Priority Inheritance
 Task阻塞等待
 ```
 
-这些都是 Task 语义。
+这些都是 Task 语义。ISR 没有“Mutex Owner Task”这种概念。所以：
 
-ISR 没有“Mutex Owner Task”这种概念。
-
-所以：
-
-```
+```text
 ISR和Task同步
 → Queue
 → Binary Semaphore
@@ -5138,15 +5116,9 @@ ISR和Task同步
 
 而不是 Mutex。
 
----
-
 ### 10.6.4 Task Notification 的 ISR API
 
-你刚学过 Notification，所以这个要重点掌握。
-
-最常用：
-
-```
+```c
 void vTaskNotifyGiveFromISR(
     TaskHandle_t xTaskToNotify,
     BaseType_t *pxHigherPriorityTaskWoken
@@ -5155,7 +5127,7 @@ void vTaskNotifyGiveFromISR(
 
 例如：
 
-```
+```c
 BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 vTaskNotifyGiveFromISR(
@@ -5170,7 +5142,7 @@ portYIELD_FROM_ISR(
 
 Task：
 
-```
+```c
 void parser_task(void *arg)
 {
     while (1)
@@ -5187,7 +5159,7 @@ void parser_task(void *arg)
 
 完整流程：
 
-```
+```text
 ParserTask
 ↓
 ulTaskNotifyTake()
@@ -5211,15 +5183,11 @@ PendSV
 ParserTask Running
 ```
 
-这个非常适合你的 USART/DMA/RingBuffer 项目。
-
----
-
 ### 10.6.5 `xTaskNotifyFromISR()`
 
 比 `vTaskNotifyGiveFromISR()` 更通用：
 
-```
+```c
 BaseType_t xTaskNotifyFromISR(
     TaskHandle_t xTaskToNotify,
     uint32_t ulValue,
@@ -5228,17 +5196,9 @@ BaseType_t xTaskNotifyFromISR(
 );
 ```
 
-它可以做：
+可以**做计数、设置bi、t写一个32位值**。比如：
 
-```
-计数
-设置bit
-写一个32位值
-```
-
-比如：
-
-```
+```c
 xTaskNotifyFromISR(
     task_handle,
     (1U << 0),
@@ -5247,13 +5207,7 @@ xTaskNotifyFromISR(
 );
 ```
 
-意思：
-
-```
-把notification bit0置1
-```
-
-适合：
+意思把 notification bit0置1，适合：
 
 ```
 bit0 = UART事件
@@ -5263,33 +5217,25 @@ bit2 = Error
 
 ---
 
-### 10.6.6 `xHigherPriorityTaskWoken`
-
-这个必须彻底理解。
+### 10.6.6 `xHigherPriorityTaskWoken
 
 先初始化：
 
-```
+```c
 BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 ```
 
 然后传给：
 
-```
+```c
 xQueueSendFromISR(...)
 xSemaphoreGiveFromISR(...)
 vTaskNotifyGiveFromISR(...)
 ```
 
-FreeRTOS 会判断：
+FreeRTOS 会判断 “这次 ISR 操作，有没有让一个比当前被打断 Task 更高优先级的 Task 变成 Ready？”
 
-> “我这次 ISR 操作，有没有让一个比当前被打断 Task 更高优先级的 Task 变成 Ready？”
-
-如果有：
-
-```
-pdFALSE → pdTRUE
-```
+如果有 `pdFALSE → pdTRUE`
 
 例如：
 
