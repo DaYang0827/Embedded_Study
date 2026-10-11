@@ -4752,100 +4752,50 @@ ParserTask Running
 
 这就是最标准的 RTOS ISR 设计。
 
----
+## 10.8 `xHigherPriorityTaskWoken` 
 
-## 10.8 `xHigherPriorityTaskWoken` 到底是什么
-
-这个变量经常让人迷糊。
-
-先看：
-
-```
-BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-```
-
-它的意思不是：
-
-> “当前是不是高优先级 Task。”
-
-它表示：
-
-> **这次 ISR 操作有没有唤醒一个比当前被中断 Task 更高优先级的 Task。**
+这个变量经常让人迷糊。先看 `BaseType_t xHigherPriorityTaskWoken = pdFALSE;`，它的意思不是“当前是不是高优先级 Task。” 它表示**这次 ISR 操作有没有唤醒一个比当前被中断 Task 更高优先级的 Task。**
 
 比如：
 
-```
+```c
 LowTask priority = 1
 Running
 ```
 
 ParserTask：
 
-```
+```c
 priority = 3
 Blocked
 ```
 
 ISR：
 
-```
+```c
 vTaskNotifyGiveFromISR(...)
 ```
 
 导致：
 
-```
+```c
 ParserTask
 Blocked → Ready
 ```
 
-因为：
+因为 `3 > 1` ，所以 `xHigherPriorityTaskWoken = pdTRUE`
 
-```
-3 > 1
-```
+## 10.9 `portYIELD_FROM_ISR()` 
 
-所以：
-
-```
-xHigherPriorityTaskWoken = pdTRUE
-```
-
----
-
-## 10.9 `portYIELD_FROM_ISR()` 做什么
-
-```
+```c
 portYIELD_FROM_ISR(
     xHigherPriorityTaskWoken
 );
 ```
 
-如果是：
+如果是 `pdFALSE` 通常没必要切换。如果是 `pdTRUE` 就告诉 FreeRTOS，ISR 退出后赶紧重新调度，因为有更高优先级 Task 已经 Ready。
 
-```
-pdFALSE
-```
-
-通常没必要切换。
-
-如果是：
-
-```
-pdTRUE
-```
-
-就告诉 FreeRTOS：
-
-> ISR 退出后赶紧重新调度，因为有更高优先级 Task 已经 Ready。
-
-然后一般通过：
-
-```
-PendSV
-```
-
-真正完成 Context Switch。
+然后一般通过 `PendSV` 真正完成 Context Switch。
 
 ---
 
