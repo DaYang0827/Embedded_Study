@@ -4643,7 +4643,7 @@ CPU直接进入中断
 
 例如 `Task priority = 3` ，不能直接和 `USART IRQ priority = 5` 这样比较谁“更高”。它们不是一个优先级系统。
 
-## 10.5 ISR 里不能 Block
+## 10.5 ISR 里不能 Block和切 Task
 
 普通 Task 可以 `xQueueReceive(q, &data, portMAX_DELAY);`，没数据时：
 
@@ -4661,6 +4661,28 @@ Blocked
 ```
 
 这种 Task 状态。所以 ISR 不能说“等 500ms 再继续。”这就是为什么**ISR 不能调用可能阻塞的普通 API**。
+
+在 ISR 里一般不切 Task
+
+因为 Cortex-M/FreeRTOS 通常设计成：
+
+```text
+ISR
+↓
+只做中断处理
+↓
+如果需要切Task
+↓
+pend PendSV
+↓
+先退出当前ISR
+↓
+PendSV再做上下文切换
+```
+
+这样**所有真正的 Task Context Switch 统一交给 PendSV。** 系统更清晰。
+
+---
 
 ## 10.6 FreeRTOS 中的 `FromISR` 
 
@@ -4796,75 +4818,6 @@ portYIELD_FROM_ISR(
 如果是 `pdFALSE` 通常没必要切换。如果是 `pdTRUE` 就告诉 FreeRTOS，ISR 退出后赶紧重新调度，因为有更高优先级 Task 已经 Ready。
 
 然后一般通过 `PendSV` 真正完成 Context Switch。
-
----
-
-## 10.10 为什么不直接在 ISR 里切 Task
-
-因为 Cortex-M/FreeRTOS 通常设计成：
-
-```
-ISR
-↓
-只做中断处理
-↓
-如果需要切Task
-↓
-pend PendSV
-↓
-先退出当前ISR
-↓
-PendSV再做上下文切换
-```
-
-这样：
-
-> **所有真正的 Task Context Switch 统一交给 PendSV。**
-
-系统更清晰。
-
----
-
-## 10.11 ISR 进入时 CPU 自动做什么
-
-Cortex-M 发生中断/异常时，硬件会自动压一部分寄存器。
-
-典型包括：
-
-```
-R0
-R1
-R2
-R3
-R12
-LR
-PC
-xPSR
-```
-
-保存到当前使用的 Stack。
-
-所以：
-
-```
-Task执行到某处
-↓
-ISR发生
-↓
-硬件保存必要现场
-↓
-执行ISR
-```
-
-ISR 返回时：
-
-```
-恢复这些寄存器
-↓
-继续之前代码
-```
-
-这就是为什么普通中断返回后 Task 可以继续。
 
 ---
 
