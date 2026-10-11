@@ -4878,7 +4878,7 @@ PendSV再做上下文切换
 
 ---
 
-2.  ISR 里不能用 Mutex
+2. **ISR 里不能用 Mutex**
 
 这是重点。因为Mutex 有：
 
@@ -4918,13 +4918,7 @@ xSemaphoreGiveFromISR(...)
 vTaskNotifyGiveFromISR(...)
 ```
 
-原因不是单纯名字不同。而是 ISR 环境要求：
-
-```text
-不能阻塞
-不能做普通Task调度逻辑
-需要专门处理“是否唤醒更高优先级Task”
-```
+原因不是单纯名字不同。而是 **ISR 环境要求不能阻塞、不能做普通Task调度逻辑、需要专门处理“是否唤醒更高优先级Task”**。ISR 如果唤醒了更高优先级 Task，就通过 `xHigherPriorityTaskWoken + portYIELD_FROM_ISR()` 让它尽快运行。
 
 比如 ParserTask：
 
@@ -4990,54 +4984,380 @@ ParserTask Running
 
 这就是最标准的 RTOS ISR 设计。
 
-## API
+## 10.6 API
+### 10.6.1 Queue 的 ISR API
 
-### 10.6 `xHigherPriorityTaskWoken` 
-
-这个变量经常让人迷糊。先看 `BaseType_t xHigherPriorityTaskWoken = pdFALSE;`，它的意思不是“当前是不是高优先级 Task。” 它表示**这次 ISR 操作有没有唤醒一个比当前被中断 Task 更高优先级的 Task。**
-
-比如：
+发送：
 
 ```c
-LowTask priority = 1
-Running
+BaseType_t xQueueSendFromISR(
+    QueueHandle_t xQueue,
+    const void *pvItemToQueue,
+    BaseType_t *pxHigherPriorityTaskWoken
+);
 ```
 
-ParserTask：
+典型：
 
 ```c
-priority = 3
-Blocked
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+xQueueSendFromISR(
+    queue,
+    &data,
+    &xHigherPriorityTaskWoken
+);
+
+portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 ```
 
-ISR：
+含义：
 
-```c
-vTaskNotifyGiveFromISR(...)
+```text
+ISR产生数据
+↓
+把一个item放进Queue
+↓
+如果Queue里原来有Task在等数据
+↓
+可能把那个Task从Blocked唤醒到Ready
 ```
 
-导致：
+如果被唤醒的 Task 优先级更高：
 
 ```c
-ParserTask
-Blocked → Ready
+xHigherPriorityTaskWoken = pdTRUE
 ```
 
-因为 `3 > 1` ，所以 `xHigherPriorityTaskWoken = pdTRUE`
+---
 
-### 10.7 `portYIELD_FROM_ISR()` 
+接收：
 
 ```c
+BaseType_t xQueueReceiveFromISR(
+    QueueHandle_t xQueue,
+    void *pvBuffer,
+    BaseType_t *pxHigherPriorityTaskWoken
+);
+```
+
+这个也有，但实际 STM32 项目里常见程度通常没有 `SendFromISR()` 高。因为更常见模式是：
+
+```text
+ISR生产数据
+Task消费数据
+```
+
+---
+
+### 10.6.2 Semaphore 的 ISR API
+
+```c
+BaseType_t xSemaphoreGiveFromISR(
+    SemaphoreHandle_t xSemaphore,
+    BaseType_t *pxHigherPriorityTaskWoken
+);
+```
+
+例如：
+
+```
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+xSemaphoreGiveFromISR(
+    rx_sem,
+    &xHigherPriorityTaskWoken
+);
+
+portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+```
+
+典型场景：
+
+```
+DMA完成
+↓
+ISR
+↓
+Give Binary Semaphore
+↓
+等待中的Task醒来
+```
+
+---
+
+也有：
+
+```
+xSemaphoreTakeFromISR()
+```
+
+但第一遍你可以先知道有这个接口。
+
+工程里最常见的 ISR + Semaphore 模式还是：
+
+```
+ISR Give
+Task Take
+```
+
+---
+
+### 10.6.3 Mutex 不能在 ISR 里用
+
+这个必须单独记。
+
+不要在 ISR 里：
+
+```
+xSemaphoreTake(mutex, ...)
+```
+
+也不要试图把 Mutex 当普通 Semaphore 用。
+
+因为 Mutex 有：
+
+```
+Owner
+Priority Inheritance
+Task阻塞等待
+```
+
+这些都是 Task 语义。
+
+ISR 没有“Mutex Owner Task”这种概念。
+
+所以：
+
+```
+ISR和Task同步
+→ Queue
+→ Binary Semaphore
+→ Task Notification
+```
+
+而不是 Mutex。
+
+---
+
+### 10.6.4 Task Notification 的 ISR API
+
+你刚学过 Notification，所以这个要重点掌握。
+
+最常用：
+
+```
+void vTaskNotifyGiveFromISR(
+    TaskHandle_t xTaskToNotify,
+    BaseType_t *pxHigherPriorityTaskWoken
+);
+```
+
+例如：
+
+```
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+vTaskNotifyGiveFromISR(
+    parser_task_handle,
+    &xHigherPriorityTaskWoken
+);
+
 portYIELD_FROM_ISR(
     xHigherPriorityTaskWoken
 );
 ```
 
-如果是 `pdFALSE` 通常没必要切换。如果是 `pdTRUE` 就告诉 FreeRTOS，ISR 退出后赶紧重新调度，因为有更高优先级 Task 已经 Ready。
+Task：
 
-然后一般通过 `PendSV` 真正完成 Context Switch。
+```
+void parser_task(void *arg)
+{
+    while (1)
+    {
+        ulTaskNotifyTake(
+            pdTRUE,
+            portMAX_DELAY
+        );
 
-## 10.8 `volatile` 在 ISR 场景里的作用
+        protocol_process();
+    }
+}
+```
+
+完整流程：
+
+```
+ParserTask
+↓
+ulTaskNotifyTake()
+↓
+Blocked
+
+USART / DMA ISR
+↓
+vTaskNotifyGiveFromISR()
+↓
+ParserTask Blocked → Ready
+↓
+如果优先级更高
+↓
+xHigherPriorityTaskWoken = pdTRUE
+↓
+portYIELD_FROM_ISR()
+↓
+PendSV
+↓
+ParserTask Running
+```
+
+这个非常适合你的 USART/DMA/RingBuffer 项目。
+
+---
+
+### 10.6.5 `xTaskNotifyFromISR()`
+
+比 `vTaskNotifyGiveFromISR()` 更通用：
+
+```
+BaseType_t xTaskNotifyFromISR(
+    TaskHandle_t xTaskToNotify,
+    uint32_t ulValue,
+    eNotifyAction eAction,
+    BaseType_t *pxHigherPriorityTaskWoken
+);
+```
+
+它可以做：
+
+```
+计数
+设置bit
+写一个32位值
+```
+
+比如：
+
+```
+xTaskNotifyFromISR(
+    task_handle,
+    (1U << 0),
+    eSetBits,
+    &xHigherPriorityTaskWoken
+);
+```
+
+意思：
+
+```
+把notification bit0置1
+```
+
+适合：
+
+```
+bit0 = UART事件
+bit1 = DMA完成
+bit2 = Error
+```
+
+---
+
+### 10.6.6 `xHigherPriorityTaskWoken`
+
+这个必须彻底理解。
+
+先初始化：
+
+```
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+```
+
+然后传给：
+
+```
+xQueueSendFromISR(...)
+xSemaphoreGiveFromISR(...)
+vTaskNotifyGiveFromISR(...)
+```
+
+FreeRTOS 会判断：
+
+> “我这次 ISR 操作，有没有让一个比当前被打断 Task 更高优先级的 Task 变成 Ready？”
+
+如果有：
+
+```
+pdFALSE → pdTRUE
+```
+
+例如：
+
+```
+LowTask priority = 1
+当前Running
+
+HighTask priority = 3
+Blocked
+```
+
+ISR：
+
+```
+Give / Send / Notify
+```
+
+导致：
+
+```
+HighTask Blocked → Ready
+```
+
+那么：
+
+```
+xHigherPriorityTaskWoken = pdTRUE
+```
+
+---
+
+### 10.6.7 `portYIELD_FROM_ISR()`
+
+这个通常放在 ISR 尾部：
+
+```
+portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+```
+
+如果：
+
+```
+xHigherPriorityTaskWoken = pdFALSE
+```
+
+那通常继续返回原 Task。
+
+如果：
+
+```
+pdTRUE
+```
+
+就请求：
+
+```
+ISR退出后
+↓
+尽快切换Task
+```
+
+通常底层就是触发：
+
+```
+PendSV
+```
+
+## 10.7 `volatile` 在 ISR 场景里的作用
 
 比如 `volatile uint8_t rx_done;` ISR `rx_done = 1;`，Task：
 
@@ -5056,7 +5376,7 @@ volatile ≠ thread safe
 ```
 ---
 
-## 10.9 经典例子
+## 10.8 经典例子
 
 定义 `TaskHandle_t parser_handle;`
 
@@ -5130,7 +5450,7 @@ ParserTask运行
 解析协议
 ```
 
-## 10.10 总结
+## 10.9 总结
 
 ```text
 ISR
