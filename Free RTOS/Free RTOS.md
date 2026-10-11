@@ -5333,7 +5333,6 @@ volatile ≠ synchronization
 volatile ≠ atomic
 volatile ≠ thread safe
 ```
----
 
 ## 10.8 经典例子
 
@@ -5579,7 +5578,7 @@ write count = 11
 
 可以把 Race Condition 的产生条件记成三个：
 
-```
+```text
 1. 有共享资源
 2. 有多个并发执行者
 3. 至少一个会修改共享资源
@@ -5587,18 +5586,16 @@ write count = 11
 
 比如：
 
-```
+```text
 Task A
 Task B
 ISR
 DMA
 ```
 
-都可能形成并发访问。
+都可能形成并发访问。共享资源可能是：
 
-共享资源可能是：
-
-```
+```text
 全局变量
 数组
 RingBuffer
@@ -5612,7 +5609,6 @@ Queue 外部数据结构
 
 ---
 
-在你现在学 STM32 + FreeRTOS 里，很常见的例子是串口。
 
 假设两个任务都调用：
 
@@ -5854,7 +5850,7 @@ count++;
 
 这就是 RTOS 工程思维开始形成的标志。
 
-## 12.2 thread safety
+## 12.2 Thread safety
 
 线程安全（thread safety）可以理解成$\boxed{\text{多个线程/任务同时调用同一段代码或访问同一资源时，结果仍然正确、可预测}}$
 
