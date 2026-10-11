@@ -4591,7 +4591,6 @@ Task Notification
 
 **ISR = Interrupt Service Routine，中断服务程序。** 它不是普通 Task，而是 CPU 响应硬件/系统异常后，临时打断当前代码去执行的一段处理函数。
 
-
 ## 10.1 ISR 的发生
 
 假设 CPU 正在运行 `LowTask Running`，这时候 USART 收到数据，触发中断：
