@@ -4588,6 +4588,7 @@ Task Notification
 如果想直接把`cmd、value、Package_t`传过去，那 Queue 更合适。
 
 # 10 ISR
+## 概念
 
 **ISR = Interrupt Service Routine，中断服务程序。** 它不是普通 Task，而是 CPU 响应硬件/系统异常后，临时打断当前代码去执行的一段处理函数。把 ISR + RTOS 压缩成一条主线：
 
@@ -4612,6 +4613,8 @@ PendSV 完成 Task 切换
 ↓
 新 Task 开始处理复杂工作
 ```
+
+
 
 ## 10.1 ISR 的发生
 
