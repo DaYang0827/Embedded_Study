@@ -4641,9 +4641,7 @@ CPU直接进入中断
 
 所以**ISR 优先级和 Task 优先级是两套体系。**
 
-例如 `Task priority = 3` ，不能直接和`USART IRQ priority = 5` 这样比较谁“更高”。它们不是一个优先级系统。
-
----
+例如 `Task priority = 3` ，不能直接和 `USART IRQ priority = 5` 这样比较谁“更高”。它们不是一个优先级系统。
 
 ## 10.5 ISR 里不能 Block
 
