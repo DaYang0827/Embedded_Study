@@ -4615,7 +4615,92 @@ PendSV 完成 Task 切换
 ```
 
 ISR 本身不是普通 Task，不通过普通阻塞/调度方式切换；ISR 可以唤醒 Task，并请求在 ISR 退出时进行任务切换。
-## 10.2 ISR 的发生
+
+区分三层
+
+第一层：Task 世界
+
+```c
+Task A priority = 1
+Task B priority = 3
+```
+
+它们有：
+
+```text
+Running
+Ready
+Blocked
+Suspended
+```
+
+Scheduler 决定：
+
+```text
+Ready Task里面谁优先级最高
+↓
+谁运行
+```
+
+这就是 FreeRTOS Task 调度。
+
+---
+
+第二层：ISR 世界
+
+假设 Task A 正在运行 `Task A Running`，突然 USART 收到数据：
+
+```text
+USART收到数据
+↓
+产生中断
+↓
+NVIC
+↓
+CPU立刻进入 USART1_IRQHandler()
+```
+
+注意这里 **不是 Scheduler 选择了 ISR**。而是硬件强行打断当前程序。所以：
+
+```text
+Task A
+   ↓ 被硬件打断
+USART ISR
+```
+
+ISR 不属于 `Ready / Running / Blocked` 这一套 Task 状态。 这就是为什么 **ISR 不是 Task**。
+
+---
+
+第三层：Task Context Switch
+
+ISR 做完之后，可能出现：
+
+```text
+Task A 原来正在运行
+
+ISR 又唤醒了 Task B
+
+Task B priority = 3
+Task A priority = 1
+```
+
+那么显然Task B应该马上运行，但是 ISR 自己不负责保存 Task A 的完整上下文然后切 Task B。它只提出“有更高优先级Task醒了，需要重新调度。”最终真正做 Task Context Switch 的，是 PendSV 所以关系是：
+
+```text
+ISR
+负责硬件事件
+
+Scheduler
+决定下一步谁应该运行
+
+PendSV
+真正完成 Task A → Task B
+```
+
+把这三个角色分开以后，就没那么乱了。
+
+## 10.2 ISR 触发
 
 假设 CPU 正在运行 `LowTask Running`，这时候 USART 收到数据，触发中断：
 
@@ -4835,7 +4920,7 @@ void parser_task(void *arg)
 }
 ```
 
-没有数据 ParserTask -> Blocked，USART ISR：
+没有数据 `ParserTask -> Blocked`，USART ISR：
 
 ```c
 void USART1_IRQHandler(void)
@@ -4881,6 +4966,8 @@ ParserTask Running
 ```
 
 这就是最标准的 RTOS ISR 设计。
+
+## API
 
 ## 10.6 `xHigherPriorityTaskWoken` 
 
