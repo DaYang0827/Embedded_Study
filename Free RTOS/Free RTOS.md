@@ -4589,7 +4589,29 @@ Task Notification
 
 # 10 ISR
 
-**ISR = Interrupt Service Routine，中断服务程序。** 它不是普通 Task，而是 CPU 响应硬件/系统异常后，临时打断当前代码去执行的一段处理函数。
+**ISR = Interrupt Service Routine，中断服务程序。** 它不是普通 Task，而是 CPU 响应硬件/系统异常后，临时打断当前代码去执行的一段处理函数。把 ISR + RTOS 压缩成一条主线：
+
+```text
+硬件发生事件
+↓
+进入 ISR
+↓
+ISR 做最少的事情
+↓
+通知某个 Task
+↓
+Task 从 Blocked → Ready
+↓
+如果这个 Task 优先级更高
+↓
+请求调度
+↓
+ISR 退出
+↓
+PendSV 完成 Task 切换
+↓
+新 Task 开始处理复杂工作
+```
 
 ## 10.1 ISR 的发生
 
@@ -4707,7 +4729,7 @@ PendSV
 
 ## 10.3 ISR 注意事项
 
-1. ISR里不能 Block和切 Task
+1. ISR 里不能 Block
 
 普通 Task 可以 `xQueueReceive(q, &data, portMAX_DELAY);`，没数据时：
 
@@ -4716,7 +4738,7 @@ Task
 Running → Blocked
 ```
 
-然后 Scheduler 运行别的 Task。但是**ISR 不是 Task**。它没有：
+然后 Scheduler 运行别的 Task。但是 **ISR 不是 Task**。它没有：
 
 ```c
 Running
@@ -4726,9 +4748,7 @@ Blocked
 
 这种 Task 状态。所以 ISR 不能说“等 500ms 再继续。”这就是为什么**ISR 不能调用可能阻塞的普通 API**。
 
-在 ISR 里一般不切 Task
-
-因为 Cortex-M/FreeRTOS 通常设计成：
+在 ISR 里一般不切 Task， **ISR 本身不是普通 Task，不通过普通阻塞/调度方式切换；ISR 可以唤醒 Task，并请求在 ISR 退出时进行任务切换**。Cortex-M/FreeRTOS 通常设计成：
 
 ```text
 ISR
