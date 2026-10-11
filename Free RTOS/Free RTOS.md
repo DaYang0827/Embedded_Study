@@ -4590,6 +4590,29 @@ Task Notification
 # 10 ISR
 ## 10.1 概念
 
+整体为
+
+```text
+                    FreeRTOS
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+        Task                       ISR
+          │                         │
+Ready/Blocked/Running          硬件触发
+          │                         │
+      Scheduler                FromISR API
+          │                         │
+          └──────────┬──────────────┘
+                     │
+          有更高优先级Task Ready？
+                     │
+                  PendSV
+                     │
+              Context Switch
+```
+
+
 **ISR = Interrupt Service Routine，中断服务程序。** 它不是普通 Task，而是 CPU 响应硬件/系统异常后，临时打断当前代码去执行的一段处理函数。把 ISR + RTOS 压缩成一条主线：
 
 ```text
@@ -4616,7 +4639,7 @@ PendSV 完成 Task 切换
 
 ISR 本身不是普通 Task，不通过普通阻塞/调度方式切换；ISR 可以唤醒 Task，并请求在 ISR 退出时进行任务切换。
 
-区分三层
+区分三层的状态
 
 第一层：Task 世界
 
@@ -4877,7 +4900,7 @@ Queue
 
 更合适。
 
-## 10.5 `FromISR` 
+## 10.5 FromISR 
 
 例如普通 Task 中：
 
@@ -4969,7 +4992,7 @@ ParserTask Running
 
 ## API
 
-## 10.6 `xHigherPriorityTaskWoken` 
+### 10.6 `xHigherPriorityTaskWoken` 
 
 这个变量经常让人迷糊。先看 `BaseType_t xHigherPriorityTaskWoken = pdFALSE;`，它的意思不是“当前是不是高优先级 Task。” 它表示**这次 ISR 操作有没有唤醒一个比当前被中断 Task 更高优先级的 Task。**
 
@@ -5002,7 +5025,7 @@ Blocked → Ready
 
 因为 `3 > 1` ，所以 `xHigherPriorityTaskWoken = pdTRUE`
 
-## 10.7 `portYIELD_FROM_ISR()` 
+### 10.7 `portYIELD_FROM_ISR()` 
 
 ```c
 portYIELD_FROM_ISR(
@@ -5108,35 +5131,6 @@ ParserTask运行
 ```
 
 ## 10.10 总结
-
-可以把整个系统记成：
-
-```text
-硬件事件
-↓
-ISR
-↓
-快速处理
-↓
-通知Task
-↓
-Task Blocked → Ready
-↓
-判断优先级
-↓
-如果需要抢占
-↓
-PendSV
-↓
-保存当前Task现场
-↓
-恢复目标Task现场
-↓
-新Task Running
-```
-
----
-
 
 ```text
 ISR
