@@ -2910,6 +2910,18 @@ union Data
 
 这个 `union Data` 里面有三个成员 `u32、u16、u8` 但是它们不是分别占 `4 + 2 + 1 = 7 Byte` 。而是**都从同一个起始地址开始，占用同一块内存**。
 
+union 不能理解成“同时存多个值”这是最常见错误。比如：
+
+```c
+union Data
+{
+    uint32_t a;
+    uint32_t b;
+};
+```
+
+然后`data.a = 100; data.b = 200;`不能理解成 `a = 100 b = 200` 两个都独立保存着。因为 a、b 占的是同一块内存。最后写 `b=200`，实际上这块内存就被改成了 200。所以后面 `data.a` 通常看到的也是和这份最新位模式对应的值。
+
 ### 1. union 大小与成员地址
 
 ```c
@@ -2989,48 +3001,6 @@ union是“**共用内存**”的可以把它想成一个盒子：
 
 ---
 
-### 4. union 和 struct 的区别
-
-比如 struct：
-
-```c
-struct Data
-{
-    uint32_t u32;
-    uint16_t u16;
-    uint8_t  u8;
-};
-```
-
-这些成员是独立的：
-
-```text
-u32有自己的空间
-u16有自己的空间
-u8有自己的空间
-```
-
-写：
-
-```c
-data.u32 = 100;
-data.u16 = 200;
-```
-
-这两个值可以同时存在。
-
-但 union：
-
-```c
-union Data
-{
-    uint32_t u32;
-    uint16_t u16;
-};
-```
-
-写 `data.u32 = 0x12345678;`，然后又 `data.u16 = 0xABCD;` 第二次写会修改同一块内存。所以union 不适合“同时保存多个独立值”。它适合**同一份底层数据，用不同类型/视角解释。**
-
 ### 6. union 用途
 
 #### 拆字节
@@ -3093,6 +3063,90 @@ data.byte[3] = 0x12;
 
 然后 `printf("%08X", data.value);`，在 STM32F4 常见小端环境下会得到 `0x12345678`，所以 union 可以用来字节数组 ↔ 整数之间快速共享同一块存储。
 
+### 4. union 与 struct 的区别
+
+比如 struct：
+
+```c
+struct Data
+{
+    uint32_t u32;
+    uint16_t u16;
+    uint8_t  u8;
+};
+```
+
+这些成员是独立的：
+
+```text
+u32有自己的空间
+u16有自己的空间
+u8有自己的空间
+```
+
+写：
+
+```c
+data.u32 = 100;
+data.u16 = 200;
+```
+
+这两个值可以同时存在。
+
+但 union：
+
+```c
+union Data
+{
+    uint32_t u32;
+    uint16_t u16;
+};
+```
+
+写 `data.u32 = 0x12345678;`，然后又 `data.u16 = 0xABCD;` 第二次写会修改同一块内存。所以union 不适合“同时保存多个独立值”。它适合**同一份底层数据，用不同类型/视角解释。**
+
+### 13. struct + union 组合
+
+这个在协议里很常见。比如：
+
+```c
+typedef struct
+{
+    uint8_t cmd;
+
+    union
+    {
+        uint32_t value;
+        uint8_t bytes[4];
+    } data;
+
+} Packet_t;
+```
+
+这里：
+
+```text
+struct
+→ 把不同字段组合在一起
+
+union
+→ 让某个字段有多种解释方式
+```
+
+所以：
+
+```
+Packet_t
+├── cmd
+└── data
+    ├── value
+    └── bytes[4]
+```
+
+这就是 struct 和 union 的经典组合。
+
+---
+
 ### 8. union 和强制类型转换
 
 比如：
@@ -3127,7 +3181,7 @@ uint8_t *p = (uint8_t *)&value;
 
 ---
 
-### 10. union 应用于寄存器/协议字段
+### 10. 经典例子
 
 ```c
 typedef union
@@ -3162,113 +3216,18 @@ reg &= ~(1U << 7);
 
 ---
 
-### 12. union 不能理解成“同时存多个值”
-
-这是最常见错误。
-
-比如：
-
-```
-union Data
-{
-    uint32_t a;
-    uint32_t b;
-};
-```
-
-然后：
-
-```
-data.a = 100;
-data.b = 200;
-```
-
-你不能理解成：
-
-```
-a = 100
-b = 200
-```
-
-两个都独立保存着。
-
-因为：
-
-```
-a
-b
-```
-
-占的是同一块内存。
-
-最后写 `b=200`，实际上这块内存就被改成了 200。
-
-所以后面：
-
-```
-data.a
-```
-
-通常看到的也是和这份最新位模式对应的值。
-
----
-
-### 13. struct + union 经常组合使用
-
-这个在协议里很常见。
-
-比如：
-
-```
-typedef struct
-{
-    uint8_t cmd;
-
-    union
-    {
-        uint32_t value;
-        uint8_t bytes[4];
-    } data;
-
-} Packet_t;
-```
-
-这里：
-
-```
-struct
-→ 把不同字段组合在一起
-
-union
-→ 让某个字段有多种解释方式
-```
-
-所以：
-
-```
-Packet_t
-├── cmd
-└── data
-    ├── value
-    └── bytes[4]
-```
-
-这就是 struct 和 union 的经典组合。
-
----
-
-### 14. 再举一个协议例子
+再举一个协议例子
 
 假设协议：
 
-```
+```c
 CMD = 0x01
 DATA = 4 Byte
 ```
 
-你可以：
+可以：
 
-```
+```c
 typedef union
 {
     uint32_t value;
@@ -3282,15 +3241,9 @@ typedef struct
 } Packet_t;
 ```
 
-收到：
+收到 `01 78 56 34 12` 可以：
 
-```
-01 78 56 34 12
-```
-
-可以：
-
-```
+```c
 packet.cmd = 0x01;
 packet.payload.bytes[0] = 0x78;
 packet.payload.bytes[1] = 0x56;
