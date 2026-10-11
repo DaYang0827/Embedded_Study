@@ -2933,9 +2933,7 @@ union Data
 };
 ```
 
-最大成员是 `uint32_t` 大小 4 Byte。所以 `sizeof(union Data)` 通常就是 `4 Byte`。因为整个 union 至少得能放得下最大的那个成员。
-
-可以记**union 的大小通常由最大成员决定，再考虑对齐。**
+最大成员是 `uint32_t` 大小 4 Byte。所以 `sizeof(union Data)` 通常就是 `4 Byte`。因为整个 union 至少得能放得下最大的那个成员。可以记**union 的大小通常由最大成员决定，再考虑对齐。**
 
 对于 `union Data data;` 那么通常：
 
@@ -2948,7 +2946,7 @@ union Data
 **它们的起始地址都是一样的**。可以画成：
 
 ```text
-同一块4 Byte内存
+同一块 4 Byte内存
 
 地址低
 ↓
@@ -2998,6 +2996,26 @@ union是“**共用内存**”的可以把它想成一个盒子：
 ```
 
 可以说现在把它当 `uint32_t` 看，也可以说现在把前 2 Byte当 `uint16_t` 看，或者把每个Byte单独看。但底层还是同一个盒子。
+
+注意**内存对齐**在union
+
+```c
+union Test
+{
+    uint8_t  a;
+    uint32_t b;
+    double   c;
+};
+```
+
+最大成员通常是 `double` 假设 8 Byte。那么 union 大小通常至少 `8 Byte` 并且**对齐通常也会满足最大成员的对齐要求**。
+
+所以不要简单理解union大小 = 成员大小相加这是错的。正确：
+
+```
+union大小 ≈ 最大成员大小
+再考虑alignment
+```
 
 ---
 
@@ -3062,6 +3080,40 @@ data.byte[3] = 0x12;
 ```
 
 然后 `printf("%08X", data.value);`，在 STM32F4 常见小端环境下会得到 `0x12345678`，所以 union 可以用来字节数组 ↔ 整数之间快速共享同一块存储。
+
+### 8. union 和强制类型转换的区别
+
+比如：
+
+```c
+uint32_t value = 0x12345678;
+
+uint8_t b = (uint8_t)value;
+```
+
+这是类型转换，只保留低 8 bit。而 union：
+
+```c
+union
+{
+    uint32_t u32;
+    uint8_t u8;
+} data;
+```
+
+是**同一块内存用不同成员解释**。概念完全不同。
+
+与指针强转也不一样，比如：
+
+```c
+uint32_t value = 0x12345678;
+
+uint8_t *p = (uint8_t *)&value;
+```
+
+然后 `p[0]` 也能看低地址 Byte。这和 union 达到的效果有点像。但一个是通过指针访问同一块对象，一个是**通过union成员共享同一块存储**实现方式不同。
+
+---
 
 ### 4. union 与 struct 的区别
 
@@ -3135,7 +3187,7 @@ union
 
 所以：
 
-```
+```text
 Packet_t
 ├── cmd
 └── data
@@ -3145,80 +3197,7 @@ Packet_t
 
 这就是 struct 和 union 的经典组合。
 
----
-
-### 8. union 和强制类型转换
-
-比如：
-
-```c
-uint32_t value = 0x12345678;
-
-uint8_t b = (uint8_t)value;
-```
-
-这是类型转换，只保留低 8 bit。而 union：
-
-```c
-union
-{
-    uint32_t u32;
-    uint8_t u8;
-} data;
-```
-
-是**同一块内存用不同成员解释**。概念完全不同。
-
-与指针强转也不一样，比如：
-
-```c
-uint32_t value = 0x12345678;
-
-uint8_t *p = (uint8_t *)&value;
-```
-
-然后 `p[0]` 也能看低地址 Byte。这和 union 达到的效果有点像。但一个是通过指针访问同一块对象，一个是**通过union成员共享同一块存储**实现方式不同。
-
----
-
-### 10. 经典例子
-
-```c
-typedef union
-{
-    uint8_t value;
-
-    struct
-    {
-        uint8_t bit0 : 1;
-        uint8_t bit1 : 1;
-        uint8_t bit2 : 1;
-        uint8_t bit3 : 1;
-        uint8_t bit4 : 1;
-        uint8_t bit5 : 1;
-        uint8_t bit6 : 1;
-        uint8_t bit7 : 1;
-    } bits;
-
-} Reg8_t;
-```
-
-然后 `Reg8_t reg;`，可以 `reg.value = 0x80;`，同时也可以 `reg.bits.bit7` 去看 bit7。这就是整体字节视角 + 单个位视角。
-
-不过这里要注意C bit-field 的布局有实现相关性，所以直接映射硬件寄存器时不能想当然跨编译器通用。STM32 工程里，很多时候还是更推荐：
-
-```
-reg |= (1U << 7);
-reg &= ~(1U << 7);
-```
-
-这种明确的位操作。
-
----
-
-再举一个协议例子
-
-假设协议：
+比如，假设协议：
 
 ```c
 CMD = 0x01
@@ -3251,71 +3230,15 @@ packet.payload.bytes[2] = 0x34;
 packet.payload.bytes[3] = 0x12;
 ```
 
-然后直接：
-
-```
-packet.payload.value
-```
-
-得到对应整数值。
+然后直接 `packet.payload.value` 得到对应整数值。
 
 ---
 
-### 15. union 和内存对齐
+### 16. union + enum 组合
 
-比如：
+工程里一个很常见的问题是 union 里面到底当前存的是哪个类型？比如：
 
-```
-union Test
-{
-    uint8_t  a;
-    uint32_t b;
-    double   c;
-};
-```
-
-最大成员通常是：
-
-```
-double
-```
-
-假设 8 Byte。
-
-那么 union 大小通常至少：
-
-```
-8 Byte
-```
-
-并且对齐通常也会满足最大成员的对齐要求。
-
-所以不要简单理解：
-
-```
-union大小 = 成员大小相加
-```
-
-那是错的。
-
-正确：
-
-```
-union大小 ≈ 最大成员大小
-再考虑alignment
-```
-
----
-
-### 16. union 和 enum 搭配更安全
-
-工程里一个很常见的问题是：
-
-> union 里面到底当前存的是哪个类型？
-
-比如：
-
-```
+```c
 union Value
 {
     uint32_t u32;
@@ -3373,6 +3296,39 @@ v.type
 > tagged union / discriminated union
 
 C 里非常常见。
+
+### 10. 经典例子
+
+```c
+typedef union
+{
+    uint8_t value;
+
+    struct
+    {
+        uint8_t bit0 : 1;
+        uint8_t bit1 : 1;
+        uint8_t bit2 : 1;
+        uint8_t bit3 : 1;
+        uint8_t bit4 : 1;
+        uint8_t bit5 : 1;
+        uint8_t bit6 : 1;
+        uint8_t bit7 : 1;
+    } bits;
+
+} Reg8_t;
+```
+
+然后 `Reg8_t reg;`，可以 `reg.value = 0x80;`，同时也可以 `reg.bits.bit7` 去看 bit7。这就是整体字节视角 + 单个位视角。
+
+不过这里要注意C bit-field 的布局有实现相关性，所以直接映射硬件寄存器时不能想当然跨编译器通用。STM32 工程里，很多时候还是更推荐：
+
+```
+reg |= (1U << 7);
+reg &= ~(1U << 7);
+```
+
+这种明确的位操作。
 
 ## 2.4 Pointer 指针
 
