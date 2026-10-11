@@ -95,6 +95,7 @@ void USART1_IRQHandler(void)
 早期芯片（如 STM32F1 / F4 系列）：
 
 - **清除规则**：必须通过 **“组合拳”** 来清除：**先读取 SR 寄存器，再读取 DR 寄存器**。
+
 ```c
 uint32_t temp;
 temp = USART1->SR; // 读状态寄存器
