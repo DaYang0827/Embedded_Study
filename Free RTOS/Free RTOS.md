@@ -4588,7 +4588,7 @@ Task Notification
 如果想直接把`cmd、value、Package_t`传过去，那 Queue 更合适。
 
 # 10 ISR
-## 概念
+## 10.1 概念
 
 **ISR = Interrupt Service Routine，中断服务程序。** 它不是普通 Task，而是 CPU 响应硬件/系统异常后，临时打断当前代码去执行的一段处理函数。把 ISR + RTOS 压缩成一条主线：
 
@@ -4614,9 +4614,8 @@ PendSV 完成 Task 切换
 新 Task 开始处理复杂工作
 ```
 
-
-
-## 10.1 ISR 的发生
+ISR 本身不是普通 Task，不通过普通阻塞/调度方式切换；ISR 可以唤醒 Task，并请求在 ISR 退出时进行任务切换。
+## 10.2 ISR 的发生
 
 假设 CPU 正在运行 `LowTask Running`，这时候 USART 收到数据，触发中断：
 
@@ -4642,7 +4641,7 @@ Task继续
 
 如果 ISR 期间没有引起更高优先级 Task 调度，那么原 Task 会继续运行。
 
-## 10.2 ISR 与 RTOS的关系
+## 10.3 ISR 与 RTOS的关系
 
 1. ISR与Task的区别
 
@@ -4730,7 +4729,7 @@ PendSV
 ```
 
 
-## 10.3 ISR 注意事项
+## 10.4 ISR 注意事项
 
 1. ISR 里不能 Block
 
@@ -4793,7 +4792,7 @@ Queue
 
 更合适。
 
-## 10.4 `FromISR` 
+## 10.5 `FromISR` 
 
 例如普通 Task 中：
 
@@ -4883,7 +4882,7 @@ ParserTask Running
 
 这就是最标准的 RTOS ISR 设计。
 
-## 10.5 `xHigherPriorityTaskWoken` 
+## 10.6 `xHigherPriorityTaskWoken` 
 
 这个变量经常让人迷糊。先看 `BaseType_t xHigherPriorityTaskWoken = pdFALSE;`，它的意思不是“当前是不是高优先级 Task。” 它表示**这次 ISR 操作有没有唤醒一个比当前被中断 Task 更高优先级的 Task。**
 
@@ -4916,7 +4915,7 @@ Blocked → Ready
 
 因为 `3 > 1` ，所以 `xHigherPriorityTaskWoken = pdTRUE`
 
-## 10.6 `portYIELD_FROM_ISR()` 
+## 10.7 `portYIELD_FROM_ISR()` 
 
 ```c
 portYIELD_FROM_ISR(
@@ -4928,7 +4927,7 @@ portYIELD_FROM_ISR(
 
 然后一般通过 `PendSV` 真正完成 Context Switch。
 
-## 10.7 `volatile` 在 ISR 场景里的作用
+## 10.8 `volatile` 在 ISR 场景里的作用
 
 比如 `volatile uint8_t rx_done;` ISR `rx_done = 1;`，Task：
 
@@ -4947,7 +4946,7 @@ volatile ≠ thread safe
 ```
 ---
 
-## 10.8 经典例子
+## 10.9 经典例子
 
 定义 `TaskHandle_t parser_handle;`
 
@@ -5021,7 +5020,7 @@ ParserTask运行
 解析协议
 ```
 
-## 10.9 总结
+## 10.10 总结
 
 可以把整个系统记成：
 
