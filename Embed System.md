@@ -3582,11 +3582,11 @@ MAP
 
 ---
 
-10. **最好自己写一个 HardFault_Handler 调试模板。**
+10. **自己写一个 HardFault_Handler 调试模板。**
 
-你现在可以先用最简单版本：
+可以先用最简单版本：
 
-```
+```c
 void HardFault_Handler(void)
 {
     volatile uint32_t cfsr  = SCB->CFSR;
@@ -3631,6 +3631,8 @@ PC / MAP / Disassembly
 CFSR / HFSR / BFAR / MMFAR / MSP
 → 为什么炸
 ```
+
+## 编译流程
 
 # 2 并发与线程安全基础
 
