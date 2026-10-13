@@ -3841,15 +3841,11 @@ uart.o:
 
 Linker 找到定义 -> 把调用地址补上。这叫 `symbol resolution` 符号解析
 
-## 7. 链接器还负责安排 Flash / RAM 地址
+#### 安排 Flash / RAM 地址
 
-这是嵌入式中特别重要的一步。
+这是嵌入式中特别重要的一步。STM32 不能随便把代码放哪里。比如 Bootloader 项目：
 
-STM32 不能随便把代码放哪里。
-
-比如你的 Bootloader 项目：
-
-```
+```text
 Bootloader:
 0x08000000 ~ 0x0800FFFF
 
@@ -3859,7 +3855,7 @@ APP:
 
 Linker 必须知道：
 
-```
+```text
 代码放Flash哪里
 .data放RAM哪里
 .bss放RAM哪里
@@ -3869,7 +3865,7 @@ heap在哪里
 
 所以会有：
 
-```
+```text
 Scatter File
 Linker Script
 .icf / .sct / .ld
@@ -3879,50 +3875,24 @@ Linker Script
 
 ---
 
-## 8. 例如 APP 为什么能从 `0x08010000` 开始
+ Bootloader APP `APP_START = 0x08010000` ，这不是运行时 `#define APP_START 0x08010000` 就自动决定的。真正决定 APP 被链接到哪里的，是 Linker configuration。比如 GNU linker script 可能类似：
 
-你之前 Bootloader APP：
-
-```
-APP_START = 0x08010000
-```
-
-这不是你运行时：
-
-```
-#define APP_START 0x08010000
-```
-
-就自动决定的。
-
-真正决定 APP 被链接到哪里的，是：
-
-> Linker configuration。
-
-比如 GNU linker script 可能类似：
-
-```
+```c
 FLASH (rx) : ORIGIN = 0x08010000, LENGTH = ...
 RAM   (rwx): ORIGIN = 0x20000000, LENGTH = ...
 ```
 
 这样 Linker 才会把：
 
-```
+```c
 .isr_vector
 .text
 .rodata
 ```
 
-安排到：
+安排到 `0x08010000` 以后，所以之前看到：
 
-```
-0x08010000以后
-```
-
-所以你之前看到：
-
-```
+```c
 0x08010000 = Initial MSP
 0x08010004 = Reset_Handler
 ```
@@ -3931,11 +3901,11 @@ RAM   (rwx): ORIGIN = 0x20000000, LENGTH = ...
 
 ---
 
-## 9. 链接过程中会生成不同 Section
+#### 9. 链接过程中会生成不同 Section
 
 典型：
 
-```
+```c
 .isr_vector
 .text
 .rodata
@@ -3943,13 +3913,13 @@ RAM   (rwx): ORIGIN = 0x20000000, LENGTH = ...
 .bss
 ```
 
-你要很熟。
+要很熟。
 
-### `.isr_vector`
+1. `.isr_vector`
 
 中断向量表：
 
-```
+```c
 Initial MSP
 Reset_Handler
 NMI_Handler
@@ -3959,51 +3929,33 @@ HardFault_Handler
 
 通常放 Flash 起始位置。
 
-Bootloader APP：
-
-```
-0x08010000
-```
+Bootloader APP `0x08010000`
 
 ---
 
-### `.text`
+2. `.text`
 
 程序代码：
 
-```
+```c
 main()
 uart_init()
 protocol_process()
 ```
 
-机器指令通常放：
-
-```
-Flash
-```
+机器指令通常放 `Flash`
 
 ---
 
-### `.rodata`
+3. `.rodata`
 
-只读常量：
-
-```
-const char str[] = "hello";
-```
-
-通常放 Flash。
+只读常量 `const char str[] = "hello";` 通常放 Flash。
 
 ---
 
-### `.data`
+4. `.data`
 
-有初始值的全局/static变量：
-
-```
-uint32_t count = 10;
-```
+有初始值的全局/static变量 `uint32_t count = 10;`
 
 运行时要在 RAM：
 
