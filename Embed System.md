@@ -3634,6 +3634,1187 @@ CFSR / HFSR / BFAR / MMFAR / MSP
 
 ## 编译流程
 
+最核心的一条链是：
+
+```text
+.c / .h 源文件
+↓
+预处理 Preprocess
+↓
+编译 Compile
+↓
+汇编 Assemble
+↓
+链接 Link
+↓
+生成 ELF/AXF
+↓
+生成 HEX / BIN
+↓
+下载到 Flash
+↓
+MCU 从向量表开始运行
+```
+
+### 1. 预处理 Preprocess
+
+假设写：
+
+```c
+#include "stm32f4xx.h"
+
+#define LED_PIN 5
+
+int main(void)
+{
+    GPIOA->ODR |= (1U << LED_PIN);
+}
+```
+
+预处理器主要处理：
+
+```c
+#include
+#define
+#if / #ifdef / #ifndef
+```
+
+比如 `#define LED_PIN 5` 预处理后大致就变成：
+
+```c
+GPIOA->ODR |= (1U << 5);
+```
+
+而 `#include "stm32f4xx.h"` 本质上可以先理解成**把头文件里的声明、宏、类型定义等内容展开进来**。所以：
+
+```text
+源码.c
++
+头文件.h
+↓
+预处理
+↓
+展开后的C源码
+```
+
+这一阶段还没有机器码。
+
+---
+
+## 2. 头文件本身一般不单独“编译”
+
+这个点很重要。
+
+比如：
+
+```
+main.c
+uart.c
+parser.c
+```
+
+每个 `.c` 文件通常是独立的编译单元。
+
+而：
+
+```
+uart.h
+parser.h
+```
+
+一般不是直接生成一个 `.o`。
+
+而是通过：
+
+```
+#include "uart.h"
+```
+
+参与对应 `.c` 文件的预处理。
+
+所以：
+
+```
+main.c
+↓
+main.o
+
+uart.c
+↓
+uart.o
+
+parser.c
+↓
+parser.o
+```
+
+不是：
+
+```
+uart.h
+↓
+uart.o
+```
+
+---
+
+## 3. 第二步：编译 Compile
+
+预处理后的 C 代码会交给编译器。
+
+例如：
+
+```
+uint32_t add(uint32_t a, uint32_t b)
+{
+    return a + b;
+}
+```
+
+编译器会把 C 语言翻译成目标 CPU 的汇编逻辑。
+
+对于 STM32F4：
+
+```
+C语言
+↓
+ARM Cortex-M4 指令
+```
+
+概念上可能变成：
+
+```
+ADD r0, r0, r1
+BX  lr
+```
+
+这一步还会做很多事情：
+
+```
+类型检查
+语法检查
+优化
+函数调用生成
+寄存器分配
+```
+
+所以：
+
+```
+uint32_t *p;
+```
+
+类型错了，很多问题就在 compile 阶段报。
+
+---
+
+## 4. 第三步：汇编 Assemble
+
+汇编器把：
+
+```
+MOV
+ADD
+LDR
+STR
+BL
+BX
+```
+
+这种汇编指令转成：
+
+```
+010101...
+```
+
+也就是机器指令。
+
+然后每个 `.c` 通常生成一个目标文件：
+
+```
+main.c
+↓
+main.o
+
+uart.c
+↓
+uart.o
+
+parser.c
+↓
+parser.o
+```
+
+Keil 里可能看到类似：
+
+```
+.obj
+```
+
+GNU 工具链更常见：
+
+```
+.o
+```
+
+---
+
+## 5. `.o` 里面还不是完整程序
+
+比如：
+
+```
+// main.c
+extern void uart_init(void);
+
+int main(void)
+{
+    uart_init();
+}
+```
+
+编译 `main.c` 的时候，编译器知道：
+
+```
+有一个函数叫 uart_init
+```
+
+但是它可能还不知道：
+
+```
+uart_init最终地址是多少
+```
+
+因为它在：
+
+```
+uart.c
+```
+
+里面。
+
+所以 `main.o` 里可能先留下：
+
+```
+这里要调用 uart_init
+但地址以后再补
+```
+
+这就是为什么需要 Linker。
+
+---
+
+## 6. 第四步：链接 Link
+
+链接器会把：
+
+```
+main.o
+uart.o
+parser.o
+startup.o
+库文件
+```
+
+全部组合起来。
+
+例如：
+
+```
+main.o:
+需要 uart_init
+
+uart.o:
+提供 uart_init
+```
+
+Linker：
+
+```
+找到定义
+↓
+把调用地址补上
+```
+
+这叫：
+
+```
+symbol resolution
+符号解析
+```
+
+---
+
+## 7. 链接器还负责安排 Flash / RAM 地址
+
+这是嵌入式中特别重要的一步。
+
+STM32 不能随便把代码放哪里。
+
+比如你的 Bootloader 项目：
+
+```
+Bootloader:
+0x08000000 ~ 0x0800FFFF
+
+APP:
+0x08010000 开始
+```
+
+Linker 必须知道：
+
+```
+代码放Flash哪里
+.data放RAM哪里
+.bss放RAM哪里
+stack在哪里
+heap在哪里
+```
+
+所以会有：
+
+```
+Scatter File
+Linker Script
+.icf / .sct / .ld
+```
+
+不同工具链名字不同。
+
+---
+
+## 8. 例如 APP 为什么能从 `0x08010000` 开始
+
+你之前 Bootloader APP：
+
+```
+APP_START = 0x08010000
+```
+
+这不是你运行时：
+
+```
+#define APP_START 0x08010000
+```
+
+就自动决定的。
+
+真正决定 APP 被链接到哪里的，是：
+
+> Linker configuration。
+
+比如 GNU linker script 可能类似：
+
+```
+FLASH (rx) : ORIGIN = 0x08010000, LENGTH = ...
+RAM   (rwx): ORIGIN = 0x20000000, LENGTH = ...
+```
+
+这样 Linker 才会把：
+
+```
+.isr_vector
+.text
+.rodata
+```
+
+安排到：
+
+```
+0x08010000以后
+```
+
+所以你之前看到：
+
+```
+0x08010000 = Initial MSP
+0x08010004 = Reset_Handler
+```
+
+本质上就是链接结果。
+
+---
+
+## 9. 链接过程中会生成不同 Section
+
+典型：
+
+```
+.isr_vector
+.text
+.rodata
+.data
+.bss
+```
+
+你要很熟。
+
+### `.isr_vector`
+
+中断向量表：
+
+```
+Initial MSP
+Reset_Handler
+NMI_Handler
+HardFault_Handler
+...
+```
+
+通常放 Flash 起始位置。
+
+Bootloader APP：
+
+```
+0x08010000
+```
+
+---
+
+### `.text`
+
+程序代码：
+
+```
+main()
+uart_init()
+protocol_process()
+```
+
+机器指令通常放：
+
+```
+Flash
+```
+
+---
+
+### `.rodata`
+
+只读常量：
+
+```
+const char str[] = "hello";
+```
+
+通常放 Flash。
+
+---
+
+### `.data`
+
+有初始值的全局/static变量：
+
+```
+uint32_t count = 10;
+```
+
+运行时要在 RAM：
+
+```
+RAM里：
+count = 10
+```
+
+但是初始值 `10` 必须先存 Flash。
+
+所以：
+
+```
+Flash保存初始镜像
+↓
+Startup启动时
+↓
+复制到RAM
+```
+
+---
+
+### `.bss`
+
+未初始化或零初始化的全局/static：
+
+```
+uint32_t count;
+static uint8_t flag;
+```
+
+运行时放 RAM。
+
+启动时：
+
+```
+清零
+```
+
+---
+
+## 10. startup 文件什么时候参与
+
+你的 STM32 工程通常有：
+
+```
+startup_stm32f4xx.s
+```
+
+它本身也会被汇编：
+
+```
+startup.s
+↓
+startup.o
+```
+
+然后和：
+
+```
+main.o
+uart.o
+parser.o
+```
+
+一起链接。
+
+startup 里通常提供：
+
+```
+Vector Table
+Reset_Handler
+Default_Handler
+弱定义中断函数
+```
+
+---
+
+## 11. MCU 上电后不是直接跑 `main()`
+
+这一点特别重要。
+
+编译/link 完的程序烧进去之后：
+
+```
+MCU复位
+↓
+读取向量表第0项
+→ MSP
+↓
+读取向量表第1项
+→ Reset_Handler
+↓
+执行Reset_Handler
+↓
+SystemInit()
+↓
+C runtime初始化
+↓
+.data复制
+↓
+.bss清零
+↓
+调用main()
+```
+
+所以：
+
+> `main()` 不是 MCU 真正的第一条用户代码入口。
+
+真正复位入口是：
+
+```
+Reset_Handler
+```
+
+---
+
+## 12. `.data` 为什么要复制
+
+例如：
+
+```
+uint32_t value = 100;
+```
+
+你编译完后：
+
+```
+Flash里存：
+100这个初始化值
+```
+
+但运行的时候：
+
+```
+value实际应该在RAM
+```
+
+所以启动过程：
+
+```
+Flash
+[100]
+↓ copy
+RAM
+[value = 100]
+```
+
+这就是 `.data` 初始化。
+
+---
+
+## 13. `.bss` 为什么不用在 Flash 保存一堆 0
+
+例如：
+
+```
+uint8_t buffer[1000];
+```
+
+如果没有初始化：
+
+```
+启动时要求全部为0
+```
+
+没必要在 Flash 里面真的存：
+
+```
+1000 Byte 的 0
+```
+
+只需要 Linker 记录：
+
+```
+.bss范围：
+0x20001000 ~ 0x200013E7
+```
+
+startup：
+
+```
+for (...)
+{
+    *p = 0;
+}
+```
+
+就行。
+
+所以 `.bss` 可以节省固件镜像空间。
+
+---
+
+## 14. 链接完成会得到 ELF / AXF
+
+Keil ARM 工程你经常看到：
+
+```
+.axf
+```
+
+GNU 常见：
+
+```
+.elf
+```
+
+它不是只有裸机器码。
+
+里面还有很多信息：
+
+```
+机器代码
+地址
+Section
+Symbol
+Debug信息
+函数名
+变量名
+```
+
+所以 Debugger 特别喜欢 ELF/AXF。
+
+例如 Keil Debug 能知道：
+
+```
+PC = 0x08010229
+```
+
+对应：
+
+```
+Reset_Handler
+```
+
+就是因为 AXF 里有符号信息。
+
+---
+
+## 15. Map 文件是什么时候来的
+
+Linker 还可以生成：
+
+```
+.map
+```
+
+Map 本质是：
+
+> **最终链接结果的文字地图。**
+
+里面可以看到：
+
+```
+函数地址
+变量地址
+Section大小
+Flash占用
+RAM占用
+符号来自哪个.o
+```
+
+你之前 Bootloader 看：
+
+```
+.isr_vector
+Reset_Handler
+.data
+.bss
+```
+
+就是在分析 Linker 最终布局。
+
+所以：
+
+```
+Map = Linker的体检报告
+```
+
+这个理解很好用。
+
+---
+
+## 16. ELF / AXF 再转成 HEX / BIN
+
+烧录时经常使用：
+
+```
+.hex
+.bin
+```
+
+比如：
+
+```
+AXF / ELF
+↓
+objcopy / fromelf
+↓
+HEX
+或者
+BIN
+```
+
+### BIN
+
+基本就是：
+
+```
+纯机器数据
+```
+
+不知道自己应该烧到哪个地址。
+
+所以烧 `.bin` 通常需要你告诉工具：
+
+```
+起始地址 = 0x08010000
+```
+
+---
+
+### HEX
+
+Intel HEX 除了数据，还有：
+
+```
+地址信息
+校验信息
+```
+
+所以它能表示：
+
+```
+这段数据应该放0x08010000
+```
+
+---
+
+## 17. 这和你 Bootloader 项目关系非常大
+
+你 Bootloader 下载 APP 时：
+
+```
+APP.bin
+```
+
+实际上就是编译流程：
+
+```
+APP源代码
+↓
+compile
+↓
+各个.o
+↓
+link
+↓
+APP.axf / APP.elf
+↓
+转换
+↓
+APP.bin
+```
+
+然后上位机：
+
+```
+读取 APP.bin
+↓
+串口分包
+↓
+Bootloader接收
+↓
+写Flash 0x08010000
+```
+
+所以 Bootloader 根本不关心：
+
+```
+main.c
+uart.c
+```
+
+它只关心：
+
+```
+最终生成的机器码固件
+```
+
+---
+
+## 18. 为什么 APP 的向量表必须在 bin 最前面
+
+因为 APP 链接地址是：
+
+```
+0x08010000
+```
+
+最前面：
+
+```
+offset 0
+→ Initial MSP
+
+offset 4
+→ Reset_Handler
+```
+
+所以你的 APP.bin 前 8 Byte 实际上就是：
+
+```
+Byte 0~3
+Initial MSP
+
+Byte 4~7
+Reset_Handler
+```
+
+例如：
+
+```
+A8 06 00 20
+29 02 01 08
+```
+
+小端解析：
+
+```
+MSP
+= 0x200006A8
+
+Reset_Handler
+= 0x08010229
+```
+
+这正是你之前 Bootloader 验证 APP 合法性的来源。
+
+---
+
+## 19. 一个 `.c` 文件具体经历什么
+
+比如：
+
+```
+parser.c
+```
+
+完整：
+
+```
+parser.c
++
+parser.h
+stm32f4xx.h
+其他include
+↓
+Preprocessor
+↓
+展开宏/include
+↓
+Compiler
+↓
+ARM Assembly
+↓
+Assembler
+↓
+parser.o
+```
+
+所有：
+
+```
+main.o
+parser.o
+ringbuffer.o
+uart.o
+startup.o
+```
+
+然后：
+
+```
+            Linker
+              ↓
+       ┌─────────────┐
+       │ final.axf   │
+       └─────────────┘
+              ↓
+        ┌─────┴─────┐
+        ↓           ↓
+      .hex         .bin
+```
+
+---
+
+## 20. 编译错误和链接错误怎么区分
+
+这个面试也很常见。
+
+### Compile Error
+
+例如：
+
+```
+uint32_t a = "hello";
+```
+
+或者：
+
+```
+if (
+```
+
+语法/type出问题。
+
+通常：
+
+```
+Compiler直接失败
+```
+
+---
+
+### Link Error
+
+例如头文件声明：
+
+```
+void uart_init(void);
+```
+
+main：
+
+```
+uart_init();
+```
+
+但是整个工程没有任何：
+
+```
+void uart_init(void)
+{
+}
+```
+
+每个 `.c` 都可能成功编译：
+
+```
+main.c → main.o ✅
+```
+
+但 Linker：
+
+```
+找不到 uart_init 定义
+```
+
+于是：
+
+```
+undefined reference
+undefined symbol
+```
+
+这就是 Link Error。
+
+---
+
+## 21. `static` 为什么会影响链接
+
+比如：
+
+```
+// uart.c
+static void uart_send(void)
+{
+}
+```
+
+`static` 文件作用域函数具有 internal linkage。
+
+所以：
+
+```
+uart_send
+只在 uart.c 内部可见
+```
+
+另一个：
+
+```
+// main.c
+extern void uart_send(void);
+
+uart_send();
+```
+
+最后 Linker 找不到一个对外可见的 `uart_send`。
+
+这就是你前面 C 基础和编译流程真正连起来的地方：
+
+```
+static
+extern
+声明
+定义
+链接
+Symbol
+```
+
+---
+
+## 22. `extern` 在编译流程里的意义
+
+例如：
+
+```
+extern uint32_t count;
+```
+
+它的意思不是：
+
+> 创建一个 count。
+
+而是告诉当前编译单元：
+
+> `count` 定义在别的地方，你先允许我使用，链接时再找它。
+
+比如：
+
+```
+// a.c
+uint32_t count = 10;
+```
+
+```
+// b.c
+extern uint32_t count;
+```
+
+流程：
+
+```
+a.c
+→ 提供 count 符号
+
+b.c
+→ 引用 count 符号
+
+Linker
+→ 把两者连起来
+```
+
+---
+
+## 23. 最终给你压缩成一张图
+
+你以后面试直接画这个：
+
+```
+                Source Code
+        .c                  .h
+         │                   │
+         └────── include ─────┘
+                  ↓
+            Preprocessor
+                  ↓
+         Preprocessed C
+                  ↓
+              Compiler
+                  ↓
+             Assembly
+                  ↓
+              Assembler
+                  ↓
+          Object Files .o
+             │   │   │
+             │   │   └── startup.o
+             │   └────── uart.o
+             └────────── main.o
+                  ↓
+                Linker
+        + Linker Script / Scatter
+                  ↓
+              ELF / AXF
+             ↙         ↘
+          MAP          HEX/BIN
+                         ↓
+                    Flash烧录
+                         ↓
+                  MCU Reset
+                         ↓
+                     MSP
+                         ↓
+                 Reset_Handler
+                         ↓
+               .data / .bss初始化
+                         ↓
+                       main()
+```
+
+你现在最应该掌
+
 # 2 并发与线程安全基础
 
 ## 2.1 原子性
