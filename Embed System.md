@@ -3716,13 +3716,9 @@ uart.h
 parser.h
 ```
 
-一般不是直接生成一个 `.o`。而是通过 `#include "uart.h"`
+一般不是直接生成一个 `.o`。而是通过 `#include "uart.h"` 参与对应 `.c` 文件的预处理。所以：
 
-参与对应 `.c` 文件的预处理。
-
-所以：
-
-```
+```text
 main.c
 ↓
 main.o
@@ -3736,34 +3732,22 @@ parser.c
 parser.o
 ```
 
-不是：
+不是 `uart.h -> uart.o`
 
-```
-uart.h
-↓
-uart.o
-```
+### 3. 编译 Compile
 
----
+预处理后的 C 代码会交给编译器。例如：
 
-## 3. 第二步：编译 Compile
-
-预处理后的 C 代码会交给编译器。
-
-例如：
-
-```
+```c
 uint32_t add(uint32_t a, uint32_t b)
 {
     return a + b;
 }
 ```
 
-编译器会把 C 语言翻译成目标 CPU 的汇编逻辑。
+编译器会把 C 语言翻译成目标 CPU 的汇编逻辑。对于 STM32F4：
 
-对于 STM32F4：
-
-```
+```text
 C语言
 ↓
 ARM Cortex-M4 指令
@@ -3771,14 +3755,14 @@ ARM Cortex-M4 指令
 
 概念上可能变成：
 
-```
+```assembly
 ADD r0, r0, r1
 BX  lr
 ```
 
 这一步还会做很多事情：
 
-```
+```text
 类型检查
 语法检查
 优化
@@ -3786,21 +3770,13 @@ BX  lr
 寄存器分配
 ```
 
-所以：
+所以 `uint32_t *p;` 类型错了，很多问题就在 compile 阶段报。
 
-```
-uint32_t *p;
-```
-
-类型错了，很多问题就在 compile 阶段报。
-
----
-
-## 4. 第三步：汇编 Assemble
+### 汇编 Assemble
 
 汇编器把：
 
-```
+```assembly
 MOV
 ADD
 LDR
