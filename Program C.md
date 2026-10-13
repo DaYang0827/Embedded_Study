@@ -19,6 +19,7 @@
 
 <img width="682" height="345" alt="image" src="https://github.com/user-attachments/assets/32853df2-7874-4b9c-b2f0-18ebe4813761" />
 
+注意：
 
 
 ## 1.2 负数相加
@@ -468,7 +469,9 @@ printf("%d\n", *p);     // 6
 printf("%d\n", a[0]);   // 6
 ```
 
-3. 
+3. 运算优先级带来的错误
+
+
 
 ## 1.5 Keyword（关键字）
 
