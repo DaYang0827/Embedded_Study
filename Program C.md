@@ -5360,7 +5360,7 @@ int add(int a, int b)
 
 例如：
 
-```assembly
+```text
 0x08001000    PUSH ...
 
 0x08001002    ADD  ...
