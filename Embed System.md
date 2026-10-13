@@ -4063,28 +4063,13 @@ Debug信息
 
 所以 Debugger 特别喜欢 ELF/AXF。
 
-例如 Keil Debug 能知道 `PC = 0x08010229` 对应`Reset_Handler
-```
+例如 Keil Debug 能知道 `PC = 0x08010229` 对应 `Reset_Handler` 就是因为 AXF 里有符号信息。
 
-就是因为 AXF 里有符号信息。
+#### 15. Map 文件
 
----
+Linker 还可以生成 `.map` Map 本质是**最终链接结果的文字地图。** 里面可以看到：
 
-## 15. Map 文件是什么时候来的
-
-Linker 还可以生成：
-
-```
-.map
-```
-
-Map 本质是：
-
-> **最终链接结果的文字地图。**
-
-里面可以看到：
-
-```
+```text
 函数地址
 变量地址
 Section大小
@@ -4093,39 +4078,31 @@ RAM占用
 符号来自哪个.o
 ```
 
-你之前 Bootloader 看：
+Bootloader 看：
 
-```
+```c
 .isr_vector
 Reset_Handler
 .data
 .bss
 ```
 
-就是在分析 Linker 最终布局。
-
-所以：
-
-```
-Map = Linker的体检报告
-```
-
-这个理解很好用。
+就是在分析 Linker 最终布局。所以 Map = Linker的体检报告这个理解很好用。
 
 ---
 
-## 16. ELF / AXF 再转成 HEX / BIN
+### 16. ELF / AXF 转成 HEX / BIN
 
 烧录时经常使用：
 
-```
+```text
 .hex
 .bin
 ```
 
 比如：
 
-```
+```text
 AXF / ELF
 ↓
 objcopy / fromelf
@@ -4135,38 +4112,57 @@ HEX
 BIN
 ```
 
-### BIN
+1. BIN
 
-基本就是：
-
-```
-纯机器数据
-```
-
-不知道自己应该烧到哪个地址。
-
-所以烧 `.bin` 通常需要你告诉工具：
-
-```
-起始地址 = 0x08010000
-```
+基本就是**纯机器数据**，不知道自己应该烧到哪个地址。所以烧 `.bin` 通常需要告诉工具起始地址 = `0x08010000`
 
 ---
 
-### HEX
+2. HEX
 
-Intel HEX 除了数据，还有：
+Intel HEX 除了数据，还有**地址信息、校验信息**。所以它能表示这段数据应该放 `0x08010000`
+
+### 20. 编译错误和链接错误
+
+这个面试也很常见。
+
+#### Compile Error
+
+例如：
+
+```c
+uint32_t a = "hello";
+```
+
+或者 `if (` 语法/type出问题。通常 Compiler 直接失败
+
+#### Link Error
+
+例如头文件声明 `void uart_init(void);` main `uart_init();`，但是整个工程没有任何：
+
+```c
+void uart_init(void)
+{
+}
+```
+
+每个 `.c` 都可能成功编译 `main.c → main.o ✅
+```
+
+但 Linker：
 
 ```
-地址信息
-校验信息
+找不到 uart_init 定义
 ```
 
-所以它能表示：
+于是：
 
 ```
-这段数据应该放0x08010000
+undefined reference
+undefined symbol
 ```
+
+这就是 Link Error。
 
 ---
 
@@ -4325,79 +4321,6 @@ startup.o
         ↓           ↓
       .hex         .bin
 ```
-
----
-
-## 20. 编译错误和链接错误怎么区分
-
-这个面试也很常见。
-
-### Compile Error
-
-例如：
-
-```
-uint32_t a = "hello";
-```
-
-或者：
-
-```
-if (
-```
-
-语法/type出问题。
-
-通常：
-
-```
-Compiler直接失败
-```
-
----
-
-### Link Error
-
-例如头文件声明：
-
-```
-void uart_init(void);
-```
-
-main：
-
-```
-uart_init();
-```
-
-但是整个工程没有任何：
-
-```
-void uart_init(void)
-{
-}
-```
-
-每个 `.c` 都可能成功编译：
-
-```
-main.c → main.o ✅
-```
-
-但 Linker：
-
-```
-找不到 uart_init 定义
-```
-
-于是：
-
-```
-undefined reference
-undefined symbol
-```
-
-这就是 Link Error。
 
 ---
 
