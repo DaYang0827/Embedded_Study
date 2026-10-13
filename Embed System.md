@@ -3917,7 +3917,7 @@ RAM   (rwx): ORIGIN = 0x20000000, LENGTH = ...
 
 1. `.isr_vector`
 
-中断向量表：
+**中断向量表**：
 
 ```c
 Initial MSP
@@ -3935,7 +3935,7 @@ Bootloader APP `0x08010000`
 
 2. `.text`
 
-程序代码：
+**程序代码**：
 
 ```c
 main()
@@ -3949,26 +3949,22 @@ protocol_process()
 
 3. `.rodata`
 
-只读常量 `const char str[] = "hello";` 通常放 Flash。
+**只读常量** `const char str[] = "hello";` 通常放 Flash。
 
 ---
 
 4. `.data`
 
-有初始值的全局/static变量 `uint32_t count = 10;`
-
-运行时要在 RAM：
+**有初始值的全局/static变量** `uint32_t count = 10;`，运行时要在 RAM：
 
 ```
 RAM里：
 count = 10
 ```
 
-但是初始值 `10` 必须先存 Flash。
+但是初始值 `10` 必须先存 Flash。所以：
 
-所以：
-
-```
+```text
 Flash保存初始镜像
 ↓
 Startup启动时
@@ -3978,11 +3974,11 @@ Startup启动时
 
 ---
 
-### `.bss`
+5. `.bss`
 
-未初始化或零初始化的全局/static：
+**未初始化或零初始化的全局/static**：
 
-```
+```c
 uint32_t count;
 static uint8_t flag;
 ```
