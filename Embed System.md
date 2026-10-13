@@ -3998,33 +3998,23 @@ static uint8_t flag;
 
 运行时放 RAM，启动时清零。
 
-例如：`uint8_t buffer[1000];` 如果没有初始化启动时要求全部为0
+例如：`uint8_t buffer[1000];` 如果没有初始化启动时要求全部为 0，没必要在 Flash 里面真的存1000 Byte 的 0 只需要 Linker 记录：
 
-没必要在 Flash 里面真的存：
-
-```
-1000 Byte 的 0
-```
-
-只需要 Linker 记录：
-
-```
+```text
 .bss范围：
 0x20001000 ~ 0x200013E7
 ```
 
 startup：
 
-```
+```c
 for (...)
 {
     *p = 0;
 }
 ```
 
-就行。
-
-所以 `.bss` 可以节省固件镜像空间。
+就行。所以 `.bss` 可以节省固件镜像空间。
 
 #### 10. startup 文件
 
@@ -4057,25 +4047,11 @@ Default_Handler
 
 ---
 
-## 14. 链接完成会得到 ELF / AXF
+#### ELF / AXF
 
-Keil ARM 工程你经常看到：
+Keil ARM 工程经常看到 `.axf` GNU 常见 `.elf` 它不是只有裸机器码。里面还有很多信息：
 
-```
-.axf
-```
-
-GNU 常见：
-
-```
-.elf
-```
-
-它不是只有裸机器码。
-
-里面还有很多信息：
-
-```
+```text
 机器代码
 地址
 Section
@@ -4087,16 +4063,7 @@ Debug信息
 
 所以 Debugger 特别喜欢 ELF/AXF。
 
-例如 Keil Debug 能知道：
-
-```
-PC = 0x08010229
-```
-
-对应：
-
-```
-Reset_Handler
+例如 Keil Debug 能知道 `PC = 0x08010229` 对应`Reset_Handler
 ```
 
 就是因为 AXF 里有符号信息。
