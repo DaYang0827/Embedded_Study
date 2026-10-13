@@ -3957,7 +3957,7 @@ protocol_process()
 
 **有初始值的全局/static变量** `uint32_t count = 10;`，运行时要在 RAM：
 
-```
+```text
 RAM里：
 count = 10
 ```
@@ -3972,6 +3972,19 @@ Startup启动时
 复制到RAM
 ```
 
+例如 `uint32_t value = 100;`，编译完后 Flash 里存 100 这个初始化值，但运行的时候 value 实际应该在 RAM。所以启动过程：
+
+```text
+Flash
+[100]
+↓ copy
+RAM
+[value = 100]
+```
+
+这就是 `.data` 初始化。
+
+
 ---
 
 5. `.bss`
@@ -3983,141 +3996,9 @@ uint32_t count;
 static uint8_t flag;
 ```
 
-运行时放 RAM。
+运行时放 RAM，启动时清零。
 
-启动时：
-
-```
-清零
-```
-
----
-
-## 10. startup 文件什么时候参与
-
-你的 STM32 工程通常有：
-
-```
-startup_stm32f4xx.s
-```
-
-它本身也会被汇编：
-
-```
-startup.s
-↓
-startup.o
-```
-
-然后和：
-
-```
-main.o
-uart.o
-parser.o
-```
-
-一起链接。
-
-startup 里通常提供：
-
-```
-Vector Table
-Reset_Handler
-Default_Handler
-弱定义中断函数
-```
-
----
-
-## 11. MCU 上电后不是直接跑 `main()`
-
-这一点特别重要。
-
-编译/link 完的程序烧进去之后：
-
-```
-MCU复位
-↓
-读取向量表第0项
-→ MSP
-↓
-读取向量表第1项
-→ Reset_Handler
-↓
-执行Reset_Handler
-↓
-SystemInit()
-↓
-C runtime初始化
-↓
-.data复制
-↓
-.bss清零
-↓
-调用main()
-```
-
-所以：
-
-> `main()` 不是 MCU 真正的第一条用户代码入口。
-
-真正复位入口是：
-
-```
-Reset_Handler
-```
-
----
-
-## 12. `.data` 为什么要复制
-
-例如：
-
-```
-uint32_t value = 100;
-```
-
-你编译完后：
-
-```
-Flash里存：
-100这个初始化值
-```
-
-但运行的时候：
-
-```
-value实际应该在RAM
-```
-
-所以启动过程：
-
-```
-Flash
-[100]
-↓ copy
-RAM
-[value = 100]
-```
-
-这就是 `.data` 初始化。
-
----
-
-## 13. `.bss` 为什么不用在 Flash 保存一堆 0
-
-例如：
-
-```
-uint8_t buffer[1000];
-```
-
-如果没有初始化：
-
-```
-启动时要求全部为0
-```
+例如：`uint8_t buffer[1000];` 如果没有初始化启动时要求全部为0
 
 没必要在 Flash 里面真的存：
 
@@ -4144,6 +4025,35 @@ for (...)
 就行。
 
 所以 `.bss` 可以节省固件镜像空间。
+
+#### 10. startup 文件
+
+STM32 工程通常有 `startup_stm32f4xx.s`
+
+它本身也会被汇编：
+
+```text
+startup.s
+↓
+startup.o
+```
+
+然后和：
+
+```text
+main.o
+uart.o
+parser.o
+```
+
+一起链接。startup 里通常提供：
+
+```text
+Vector Table
+Reset_Handler
+Default_Handler
+弱定义中断函数
+```
 
 ---
 
