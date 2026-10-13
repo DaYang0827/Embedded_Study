@@ -3815,18 +3815,13 @@ int main(void)
 }
 ```
 
-编译 `main.c` 的时候，编译器知道有一个函数叫 `uart_init` 但是它可能还不知道 `uart_init`最终地址是多少。因为它在 `uart.c` 里面。所以 `main.o` 里可能先留下这里要调用 uart_init，但地址以后再补
-```
+编译 `main.c` 的时候，编译器知道有一个函数叫 `uart_init` 但是它可能还不知道 `uart_init`最终地址是多少。因为它在 `uart.c` 里面。所以 `main.o` 里可能先留下这里要调用 `uart_init`，但地址以后再补这就是为什么需要 Linker。
 
-这就是为什么需要 Linker。
-
----
-
-## 6. 第四步：链接 Link
+### 链接 Link
 
 链接器会把：
 
-```
+```text
 main.o
 uart.o
 parser.o
@@ -3834,11 +3829,9 @@ startup.o
 库文件
 ```
 
-全部组合起来。
+全部组合起来。例如：
 
-例如：
-
-```
+```text
 main.o:
 需要 uart_init
 
@@ -3846,22 +3839,7 @@ uart.o:
 提供 uart_init
 ```
 
-Linker：
-
-```
-找到定义
-↓
-把调用地址补上
-```
-
-这叫：
-
-```
-symbol resolution
-符号解析
-```
-
----
+Linker 找到定义 -> 把调用地址补上。这叫 `symbol resolution` 符号解析
 
 ## 7. 链接器还负责安排 Flash / RAM 地址
 
