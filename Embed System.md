@@ -3633,7 +3633,7 @@ CFSR / HFSR / BFAR / MMFAR / MSP
 ```
 
 ## 1.9 编译流程
-### 概念
+### 1.9.1 概念
 
 嵌入式开发（如 STM32/ARM）中，完整的演变有5 个阶段：
 
@@ -3697,7 +3697,7 @@ CFSR / HFSR / BFAR / MMFAR / MSP
 - **`.elf` / `.axf`**：是**合体成功、排好兵布好阵**的完整战队（带电脑调试信息）。
 - **`.bin` / `.hex`**：是**脱掉所有包装**、直接脱水成纯数字的、随时可以往单片机 Flash 里无脑灌注的**终极机器码**。
 
-### 1.9.1 预处理 Preprocess
+### 1.9.2 预处理 Preprocess
 
 假设写：
 
@@ -3775,7 +3775,7 @@ parser.o
 
 不是 `uart.h -> uart.o`
 
-### 1.9.2 编译 Compile
+### 1.9.3 编译 Compile
 
 预处理后的 C 代码会交给编译器。例如：
 
@@ -3813,7 +3813,7 @@ BX  lr
 
 所以 `uint32_t *p;` 类型错了，很多问题就在 compile 阶段报。
 
-### 1.9.3 汇编 Assemble
+### 1.9.4 汇编 Assemble
 
 汇编器把：
 
@@ -3858,7 +3858,7 @@ int main(void)
 
 编译 `main.c` 的时候，编译器知道有一个函数叫 `uart_init` 但是它可能还不知道 `uart_init`最终地址是多少。因为它在 `uart.c` 里面。所以 `main.o` 里可能先留下这里要调用 `uart_init`，但地址以后再补这就是为什么需要 Linker。
 
-### 1.9.4 链接 Link
+### 1.9.5 链接 Link
 
 链接器会把：
 
@@ -3882,7 +3882,7 @@ uart.o:
 
 Linker 找到定义 -> 把调用地址补上。这叫 `symbol resolution` 符号解析
 
-#### 1.9.4.1 安排 Flash / RAM 地址
+#### 1.9.5.1 安排 Flash / RAM 地址
 
 这是嵌入式中特别重要的一步。STM32 不能随便把代码放哪里。比如 Bootloader 项目：
 
@@ -3972,7 +3972,7 @@ Linker
 
 ---
 
-#### 1.9.4.2 链接过程中生成不同 Section
+#### 1.9.5.2 链接过程中生成不同 Section
 
 典型：
 
@@ -4086,7 +4086,7 @@ for (...)
 
 就行。所以 `.bss` 可以节省固件镜像空间。
 
-#### 1.9.4.3 startup 文件
+#### 1.9.5.3 startup 文件
 
 STM32 工程通常有 `startup_stm32f4xx.s` 它本身也会被汇编：
 
@@ -4113,7 +4113,7 @@ Default_Handler
 弱定义中断函数
 ```
 
-#### 1.9.4.4 ELF / AXF
+#### 1.9.5.4 ELF / AXF
 
 Keil ARM 工程经常看到 `.axf` GNU 常见 `.elf` 它不是只有裸机器码。里面还有很多信息：
 
@@ -4131,7 +4131,7 @@ Debug信息
 
 例如 Keil Debug 能知道 `PC = 0x08010229` 对应 `Reset_Handler` 就是因为 AXF 里有符号信息。
 
-#### 1.9.4.5 Map 文件
+#### 1.9.5.5 Map 文件
 
 Linker 还可以生成 `.map` Map 本质是**最终链接结果的文字地图。** 里面可以看到：
 
@@ -4157,7 +4157,7 @@ Reset_Handler
 
 ---
 
-### 1.9.5 ELF / AXF 转成 HEX / BIN
+### 1.9.6 ELF / AXF 转成 HEX / BIN
 
 烧录时经常使用：
 
@@ -4188,11 +4188,11 @@ BIN
 
 Intel HEX 除了数据，还有**地址信息、校验信息**。所以它能表示这段数据应该放 `0x08010000`
 
-### 1.9.6 编译错误和链接错误
+### 1.9.7 编译错误和链接错误
 
 这个面试也很常见。
 
-#### 1.9.6.1 Compile Error
+#### 1.9.7.1 Compile Error
 
 例如：
 
@@ -4202,7 +4202,7 @@ uint32_t a = "hello";
 
 或者 `if (` 语法/type出问题。通常 Compiler 直接失败
 
-#### 1.9.6.2 Link Error
+#### 1.9.7.2 Link Error
 
 例如头文件声明 `void uart_init(void);` main `uart_init();`，但是整个工程没有任何：
 
