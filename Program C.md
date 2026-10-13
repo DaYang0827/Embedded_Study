@@ -18,7 +18,7 @@
 | long double | 扩展精度浮点数 |    8或16 (平台相关)    |
 
 <img width="682" height="345" alt="image" src="https://github.com/user-attachments/assets/32853df2-7874-4b9c-b2f0-18ebe4813761" />
-## 负数相加
+负数相加
 
 **负数相加**远没有表面上看起来那么简单。它直接涉及计算机底层的 **二进制补码（Two's Complement）**、**符号位扩展** 以及 **整型提升与溢出** 机制。
 
@@ -637,7 +637,7 @@ volatile uint8_t dma_buffer[512];
 
 `volatile const uint32_t status_reg;`软件只读，但硬件可能随时修改。
 
-## 1.7 `enum` （enumeration）（枚举）
+## 1.7 `Enum` （enumeration）（枚举）
 
 ### 1.7.1 定义
 <img width="692" height="248" alt="image" src="https://github.com/user-attachments/assets/9cfeccf3-d08b-4929-ba9e-a7ceffd1709d" />
@@ -769,7 +769,7 @@ enum W25Q128_CMD
 1. **什么时候用 `enum`？** 只要数字之间有**关联性、属于同一个归类**（比如：状态机的状态、通信协议的错误码、星期几、车载屏幕的菜单项），**一律强制使用 `enum`**。
 2. **什么时候用 `#define`？** 只有当数字是**孤立的、全局的常量配置**时才用（比如：定义板子的晶振频率 `#define CPU_FREQ 168000000`，或者定义一个数组的大小 `#define BUFFER_SIZE 1024`）。
 
-## 1.8 main  函数
+## 1.8 Main  函数
 
 **这是 C 语言程序的入口**，也是整个程序的起跑线。简单来说：单片机上电复位后，干完必要的杂活（启动文件），就会直奔这里，开始执行你写的代码。
 
@@ -1320,8 +1320,9 @@ printf("%d\n", (*p)++);
 printf("%d\n", *p);     // 6
 printf("%d\n", a[0]);   // 6
 ```
-## 1.12 `sizeof`与内存大小
+## 1.12 `Sizeof`与内存大小
 ### 1.12.1 定义
+
 `sizeof` 用来获取**某个类型、变量、数组或对象占用的内存字节数**。注意返回的值是==字节数==
 
 基本语法：
@@ -1427,7 +1428,7 @@ sizeof(*p)    → 指针指向的数据多大
 
 统一理解：
 
-```
+```text
 p + n
 
 实际地址偏移 =
@@ -1436,7 +1437,7 @@ n × sizeof(*p)
 
 例如：
 
-```
+```text
 uint8_t  *p1;    // p1 + 1 → 1字节
 uint16_t *p2;    // p2 + 1 → 2字节
 uint32_t *p3;    // p3 + 1 → 4字节
@@ -1469,7 +1470,7 @@ void test(uint8_t *arr, size_t len)
 
 核心总结
 
-```
+```text
 sizeof(变量)      → 变量占多少字节
 sizeof(类型)      → 类型占多少字节
 
