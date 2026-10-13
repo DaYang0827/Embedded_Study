@@ -3745,7 +3745,7 @@ uint32_t add(uint32_t a, uint32_t b)
 }
 ```
 
-编译器会把 C 语言翻译成目标 CPU 的汇编逻辑。对于 STM32F4：
+编译器**会把 C 语言翻译成目标 CPU 的汇编逻辑**。对于 STM32F4：
 
 ```text
 C语言
@@ -4146,16 +4146,7 @@ void uart_init(void)
 }
 ```
 
-每个 `.c` 都可能成功编译 `main.c → main.o ✅
-```
-
-但 Linker：
-
-```
-找不到 uart_init 定义
-```
-
-于是：
+每个 `.c` 都可能成功编译 `main.c → main.o ✅`，但 Linker 找不到 uart_init 定义，于是：
 
 ```
 undefined reference
@@ -4166,17 +4157,11 @@ undefined symbol
 
 ---
 
-## 17. 这和你 Bootloader 项目关系非常大
+## 17. 与 Bootloader 项目关系
 
-你 Bootloader 下载 APP 时：
+Bootloader 下载 APP 时 `APP.bin`，实际上就是编译流程：
 
-```
-APP.bin
-```
-
-实际上就是编译流程：
-
-```
+```text
 APP源代码
 ↓
 compile
@@ -4194,7 +4179,7 @@ APP.bin
 
 然后上位机：
 
-```
+```text
 读取 APP.bin
 ↓
 串口分包
@@ -4206,82 +4191,19 @@ Bootloader接收
 
 所以 Bootloader 根本不关心：
 
-```
+```c
 main.c
 uart.c
 ```
 
-它只关心：
+它只关心最终生成的机器码固件
 
-```
-最终生成的机器码固件
-```
+## 19. 一个 `.c` 文件具体流程
 
----
+比如 `parser.c`，完整流程为：
 
-## 18. 为什么 APP 的向量表必须在 bin 最前面
-
-因为 APP 链接地址是：
-
-```
-0x08010000
-```
-
-最前面：
-
-```
-offset 0
-→ Initial MSP
-
-offset 4
-→ Reset_Handler
-```
-
-所以你的 APP.bin 前 8 Byte 实际上就是：
-
-```
-Byte 0~3
-Initial MSP
-
-Byte 4~7
-Reset_Handler
-```
-
-例如：
-
-```
-A8 06 00 20
-29 02 01 08
-```
-
-小端解析：
-
-```
-MSP
-= 0x200006A8
-
-Reset_Handler
-= 0x08010229
-```
-
-这正是你之前 Bootloader 验证 APP 合法性的来源。
-
----
-
-## 19. 一个 `.c` 文件具体经历什么
-
-比如：
-
-```
-parser.c
-```
-
-完整：
-
-```
-parser.c
-+
-parser.h
+```text
+parser.c + parser.h
 stm32f4xx.h
 其他include
 ↓
@@ -4300,7 +4222,7 @@ parser.o
 
 所有：
 
-```
+```c
 main.o
 parser.o
 ringbuffer.o
@@ -4310,7 +4232,7 @@ startup.o
 
 然后：
 
-```
+```text
             Linker
               ↓
        ┌─────────────┐
@@ -4411,9 +4333,7 @@ Linker
 
 ---
 
-## 23. 最终给你压缩成一张图
-
-你以后面试直接画这个：
+## 23. 全流程
 
 ```
                 Source Code
@@ -4423,11 +4343,11 @@ Linker
                   ↓
             Preprocessor
                   ↓
-         Preprocessed C
+            Preprocessed C
                   ↓
-              Compiler
+               Compiler
                   ↓
-             Assembly
+              Assembly
                   ↓
               Assembler
                   ↓
