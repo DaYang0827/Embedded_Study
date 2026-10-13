@@ -4196,11 +4196,13 @@ main.c
 uart.c
 ```
 
-它只关心最终生成的机器码固件
+它只关心最终生成的机器码固件。
 
-## 19. 一个 `.c` 文件具体流程
+---
 
-比如 `parser.c`，完整流程为：
+## 23. 全流程
+
+一个 `parser.c`文件的全流程为：
 
 ```text
 parser.c + parser.h
@@ -4244,96 +4246,7 @@ startup.o
       .hex         .bin
 ```
 
----
-
-## 21. `static` 为什么会影响链接
-
-比如：
-
-```
-// uart.c
-static void uart_send(void)
-{
-}
-```
-
-`static` 文件作用域函数具有 internal linkage。
-
-所以：
-
-```
-uart_send
-只在 uart.c 内部可见
-```
-
-另一个：
-
-```
-// main.c
-extern void uart_send(void);
-
-uart_send();
-```
-
-最后 Linker 找不到一个对外可见的 `uart_send`。
-
-这就是你前面 C 基础和编译流程真正连起来的地方：
-
-```
-static
-extern
-声明
-定义
-链接
-Symbol
-```
-
----
-
-## 22. `extern` 在编译流程里的意义
-
-例如：
-
-```
-extern uint32_t count;
-```
-
-它的意思不是：
-
-> 创建一个 count。
-
-而是告诉当前编译单元：
-
-> `count` 定义在别的地方，你先允许我使用，链接时再找它。
-
-比如：
-
-```
-// a.c
-uint32_t count = 10;
-```
-
-```
-// b.c
-extern uint32_t count;
-```
-
-流程：
-
-```
-a.c
-→ 提供 count 符号
-
-b.c
-→ 引用 count 符号
-
-Linker
-→ 把两者连起来
-```
-
----
-
-## 23. 全流程
+完整的全流程为：
 
 ```
                 Source Code
@@ -4364,20 +4277,18 @@ Linker
              ↙         ↘
           MAP          HEX/BIN
                          ↓
-                    Flash烧录
+                     Flash烧录
                          ↓
-                  MCU Reset
+                     MCU Reset
                          ↓
-                     MSP
+                        MSP
                          ↓
-                 Reset_Handler
+                    Reset_Handler
                          ↓
-               .data / .bss初始化
+                 .data / .bss初始化
                          ↓
                        main()
 ```
-
-你现在最应该掌
 
 # 2 并发与线程安全基础
 
