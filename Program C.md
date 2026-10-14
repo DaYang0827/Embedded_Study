@@ -2806,9 +2806,7 @@ uart.buffer = &uart_buffer;
 uart.buffer->tx_buffer[0] = 'A';
 ```
 
-拆开看 `uart` 是变量 `uart.buffer` 而 `uart.buffer` 是 `Buffer *`
-
-所以`uart.buffer->tx_buffer`，最终`uart.buffer->tx_buffer[0]`
+拆开看 `uart` 是变量 `uart.buffer` ，而 `uart.buffer` 是 `Buffer *`。所以`uart.buffer->tx_buffer`，最终`uart.buffer->tx_buffer[0]`
 
 ---
 
@@ -2825,13 +2823,7 @@ struct Student
 struct Student stu;
 ```
 
-访问：
-
-```c
-stu.birthday.year
-```
-
-逻辑：
+访问 `stu.birthday.year`，逻辑：
 
 ```text
 stu            结构体      .
@@ -2839,11 +2831,7 @@ birthday       结构体      .
 year
 ```
 
-所以：
-
-```c
-stu.birthday.year
-```
+所以 `stu.birthday.year`
 
 ---
 
@@ -2858,13 +2846,7 @@ struct Student
 struct Student *p;
 ```
 
-访问：
-
-```c
-p->birthday.year
-```
-
-逻辑：
+访问 `p->birthday.year`，逻辑：
 
 ```c
 p              指针        ->
@@ -2872,11 +2854,7 @@ birthday       结构体      .
 year
 ```
 
-所以：
-
-```c
-p->birthday.year
-```
+所以 `p->birthday.year`
 
 ---
 
@@ -2891,13 +2869,7 @@ struct Student
 struct Student stu;
 ```
 
-访问：
-
-```c
-stu.birthday->year
-```
-
-逻辑：
+访问 `stu.birthday->year` 逻辑：
 
 ```text
 stu            结构体      .
@@ -2905,11 +2877,7 @@ birthday       指针        ->
 year
 ```
 
-所以：
-
-```c
-stu.birthday->year
-```
+所以 `stu.birthday->year`
 
 ---
 
@@ -2924,13 +2892,7 @@ struct Student
 struct Student *p;
 ```
 
-那么：
-
-```text
-p->birthday->year
-```
-
-逻辑：
+那么 `p->birthday->year`，逻辑：
 
 ```text
 p              指针        ->
@@ -2938,11 +2900,9 @@ birthday       指针        ->
 year
 ```
 
-所以：
+所以 `p->birthday->year`
 
-```c
-p->birthday->year
-```
+---
 
 判断结构体嵌套只需要**每走一层，看当前左边那个东西是什么类型**
 
@@ -2961,7 +2921,7 @@ p->birthday->year
 ## 2.4 Union
 ### 2.4.1 概念
 
-**union（联合体）= 多个成员共用同一块内存。** 它和 `struct` 最大的区别就是：
+**union（联合体）= 多个成员共用同一块内存。** 和 `struct` 最大的区别就是：
 
 ```text
 struct
