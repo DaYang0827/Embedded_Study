@@ -2433,7 +2433,7 @@ int arr[4];
 
 在赋值的时候就不可以给 `arr[4]` 赋值，会引起数组越界，找不到这个地方
 
-### 柔性数组
+### 2.1.9 柔性数组
 
 **柔性数组（Flexible Array Member）** 是 C 语言（C99 标准及以后）中一个非常精妙且硬核的特性。它允许在定义结构体时，在结构体的**最末尾声明一个没有指定长度的数组**。它的核心价值在于：**用来实现“可变长度的、内存连续的结构体缓冲区”**。
 
@@ -2558,15 +2558,13 @@ void ProcessIncomingData(uint16_t rx_len, uint8_t *rx_raw_buf)
 char str[] = "hello";
 ```
 
-编译器自动计算大小：`char str[6];`  内容：`h e l l o \0`  
-
-这个数组里的内容可以修改：
+编译器自动计算大小 `char str[6];`  ，内容为`h e l l o \0`  。这个数组里的内容可以修改：
 
 ```c
 str[0] = 'H';
 ```
 
-变成：Hello
+变成 Hello
 
 ---
 
@@ -2578,9 +2576,10 @@ str[0] = 'H';
 char str[20] = "hello";
 ```
 
-内存是：`h e l l o \0 0 0 0 0 ...`  数组总大小：20 Byte。这在嵌入式里非常常见。
+内存中是 `h e l l o \0 0 0 0 0 ...`  ，数组总大小为 20 Byte。这在嵌入式里非常常见。
 
 例如 UART：
+
 ```c
 char rx_buffer[128];
 
@@ -2636,7 +2635,7 @@ str
 "hello"
 ```
 
-字符串字面量通常存储在：只读区`.rodata` 因此：`str[0] = 'H';`属于：**Undefined Behavior**嵌入式设备上甚至可能直接：`HardFault`
+字符串字面量通常存储在只读区 `.rodata`， 因此 `str[0] = 'H';` 属于**Undefined Behavior**嵌入式设备上甚至可能直接 `HardFault`
 
 ---
 
@@ -2648,7 +2647,7 @@ str
 const char *str = "hello";
 ```
 
-这才是推荐方式。意思是： `str` 指向的字符不允许通过这个指针修改。
+这才是推荐方式。意思是 `str` 指向的字符不允许通过这个指针修改。
 
 例如：
 
@@ -2668,9 +2667,7 @@ char str1[] = "hello";
 char *str2 = "hello";
 ```
 
-假设 STM32 32 位系统：`sizeof(str1)`   结果是6，因为`h e l l o \0`   一共 6 Byte。
-
-但是 `sizeof(str2)`    通常：4，因为：**str2本质是一个指针**。32 位 MCU ：pointer = 4 Byte
+假设 STM32 32 位系统 `sizeof(str1)`   结果是 6，因为`h e l l o \0`   一共 6 Byte。但是 `sizeof(str2)` 通常为 4，因为**str2本质是一个指针**。32 位 MCU 中 pointer = 4 Byte
 
 ```text
 char str[] = "hello";
