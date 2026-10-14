@@ -39,11 +39,10 @@ MCP
 ```
 
 # LLM
+
 **LLM** 是 **Large Language Model** 的缩写，中文全称是 **“大语言模型”**。
 
 简单来说，它是一种**基于海量文本数据训练的人工智能（AI）模型**，拥有极其强大的**自然语言理解和生成能力**。日常熟知的 **ChatGPT（GPT-4）**、**Claude** 等 AI 背后的核心技术，本质上都是大语言模型。
-
----
 
 1.  LLM 到底是什么
 
@@ -170,14 +169,7 @@ Act
 
 比如目标是“检查我的Bootloader”
 
-第一次：
-
-```
-Agent:
-先读取parser.c
-```
-
-发现LEN没有做范围检查，然后继续读取`flash.c`，又发现 WRITE_APP没有检查APP_END，再继续查看jump.c 最终才给出结果。
+第一次Agent，先读取 `parser.c` 发现 LEN 没有做范围检查，然后继续读取`flash.c`，又发现 WRITE_APP没有检查APP_END，再继续查看jump.c 最终才给出结果。
 
 所以 Agent 本质是**LLM + 状态 + 工具 + 多步执行逻辑。**
 
