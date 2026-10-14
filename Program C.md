@@ -19,7 +19,8 @@
 
 <img width="682" height="345" alt="image" src="https://github.com/user-attachments/assets/32853df2-7874-4b9c-b2f0-18ebe4813761" />
 
-注意：
+注意：真正安全的浮点数除法
+
 
 
 ## 1.2 负数相加
