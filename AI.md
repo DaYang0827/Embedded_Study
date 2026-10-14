@@ -167,34 +167,15 @@ Act
 ...
 ```
 
-比如目标是“检查我的Bootloader”
-
-第一次Agent，先读取 `parser.c` 发现 LEN 没有做范围检查，然后继续读取`flash.c`，又发现 WRITE_APP没有检查APP_END，再继续查看jump.c 最终才给出结果。
+比如目标是 “检查我的Bootloader” 第一次 Agent ，先读取 `parser.c` 发现 LEN 没有做范围检查，然后继续读取 `flash.c`，又发现 `WRITE_APP` 没有检查 `APP_END`，再继续查看 `jump.c `最终才给出结果。
 
 所以 Agent 本质是**LLM + 状态 + 工具 + 多步执行逻辑。**
 
-# 3. Agency 是什么
+# 3. Agency 
 
-你写的是 `agency`，如果你指的是 AI 里的 **agency / agentic capability**，它和 Agent 有一点区别。
+AI 里的 **agency / agentic capability**，它和 Agent 有一点区别。`Agent` 一个具体的智能体系统。`Agency` 这个系统“**自主行动、做决定、推进目标**”的能力程度。比如两个 AI：
 
-`Agent`：
-
-> 一个具体的智能体系统。
-
-`Agency`：
-
-> 这个系统“自主行动、做决定、推进目标”的能力程度。
-
-比如两个 AI：
-
-A：
-
-```
-你问一句
-→ 回答一句
-```
-
-它 agency 很低。
+A 你问一句 → 回答一句，它 agency 很低。
 
 B：
 

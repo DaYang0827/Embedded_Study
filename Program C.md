@@ -2445,9 +2445,9 @@ uint8_t* message;      // 一个指针，指向 uint8_t
 uint8_t* message[];    // 数组，里面放 uint8_t*
 ```
 
-### 2.2.5 `char *` 和：`uint8_t *`
+### 2.2.5 `char *` 和`uint8_t *`
 
-在嵌入式里会频繁碰到：**`char *`和：`uint8_t *`**
+在嵌入式里会频繁碰到：**`char *`和`uint8_t *`**
 
 UART 底层函数可能定义：`void UART_Send(uint8_t *data, uint16_t len);`
 
