@@ -3969,7 +3969,6 @@ Linker
 → 把两者连起来
 ```
 
-
 ---
 
 #### 1.9.5.2 链接过程中生成不同 Section
@@ -4029,8 +4028,7 @@ protocol_process()
 **有初始值的全局/static变量** `uint32_t count = 10;`，运行时要在 RAM：
 
 ```text
-RAM里：
-count = 10
+RAM里：count = 10
 ```
 
 但是初始值 `10` 必须先存 Flash。所以：
@@ -4200,7 +4198,7 @@ Intel HEX 除了数据，还有**地址信息、校验信息**。所以它能表
 uint32_t a = "hello";
 ```
 
-或者 `if (` 语法/type出问题。通常 Compiler 直接失败
+或者 `if (` 语法 /type 出问题。通常 Compiler 直接失败
 
 #### 1.9.7.2 Link Error
 
