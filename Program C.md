@@ -2447,30 +2447,19 @@ uint8_t* message[];    // 数组，里面放 uint8_t*
 
 ### 2.2.5 `char *` 和`uint8_t *`
 
-在嵌入式里会频繁碰到：**`char *`和`uint8_t *`**
+在嵌入式里会频繁碰到 **`char *` 和 `uint8_t *`**，UART 底层函数可能定义 `void UART_Send(uint8_t *data, uint16_t len);`。但是有 `char *str = "hello";` ，于是经常看到 `UART_Send((uint8_t *)str, strlen(str));`
 
-UART 底层函数可能定义：`void UART_Send(uint8_t *data, uint16_t len);`
+这里 `(uint8_t *)` 是在做指针类型转换。因为 `char = 1 Byte`   `uint8_t = 1 Byte` 底层实际上都是字节。但是语义不同：
 
-但是你有：`char *str = "hello";`
-
-于是经常看到：
-
-`UART_Send((uint8_t *)str, strlen(str));`
-
-这里：`(uint8_t *)` 是在做指针类型转换。
-
-因为：`char = 1 Byte`      `uint8_t = 1 Byte`     底层实际上都是字节。
-
-但是语义不同：
-
-`char`      更偏**文本**
-
-`uint8_t`   更偏**原始字节数据**
+- `char`         更偏**文本**
+- `uint8_t`   更偏**原始字节数据**
 
 ---
+ 
  参数一般写 `const char *`
 
 比如：
+
 ```c
 void UART_SendString(const char *str);
 
@@ -2480,11 +2469,9 @@ void UART_SendString(char *str);
 ```
 
 
-因为这个函数：只读取字符串，不修改字符串。所以应该告诉编译器：const
+因为这个函数，只读取字符串，不修改字符串。所以应该告诉编译器 const，这样`UART_SendString("hello");` 也更加规范。
 
-这样：`UART_SendString("hello");`也更加规范。
-
-### 2.2.6 `' '`和`" "`的区别
+### 2.2.6 `' '` 和 `" "` 区别
 
 **单引号 ' '：给单个字符用的（==本质是数字==）**。
 
@@ -2492,17 +2479,18 @@ void UART_SendString(char *str);
 
 1. 单引号 ' ' (Character)
 
-含义：代表一个字符 (char)。本质：在 C 语言看来，它就是一个整数 (Integer)（对应的 ASCII 码值）。占用空间：**1 个字节**。
+代表**一个字符** (char)。本质在 C 语言看来，它就是一个整数 (Integer)（对应的 ASCII 码值）。占用空间为**1 个字节**。
 
-举例：`char = ‘A’;`本质：在 C 语言看来，它就是一个**整数 (Integer)**（对应的 ASCII 码值）。
+`char = ‘A’;`  在 C 语言看来，它就是一个**整数 (Integer)**（对应的 ASCII 码值）。
 
 2. 双引号 " " (String)
 
-含义：**代表一个字符串** (String)。本质：它是一个数组，或者说是一个指向内存首地址的指针。占用空间：**字符数量 + 1 (必须要有一个看不见的结束符 \0)**。
+含义 **代表一个字符串** (String)。它是一个数组，或者说是一个指向内存首地址的指针。占用空间：**字符数量 + 1 (必须要有一个看不见的结束符 \0)**。
 
-举例：`char str[ ]="A";`编译器看到 "A"，它会在内存里开辟两个格子：`A(65) ; \0 (0)` -> 这是双引号自动帮你加上的结束标志！
+`char str[ ]="A";` 编译器看到 "A"，它会在内存里开辟两个格子 `A(65) ; \0 (0)` -> 这是双引号自动加上的结束标志！
 
 举例：
+
 ```C
 // 1.修正类型:用char* 来保存字符串
 char name[] = "Da Yang" ;
