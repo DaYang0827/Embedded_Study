@@ -809,7 +809,7 @@ Program Size: Code=12000 RO-data=800 RW-data=300 ZI-data=5000
 
 1. Code：程序机器码
 
-   `Code` 表示程序编译后生成的机器指令，通常存放在 Flash 中。例如：
+   `Code` 表示**程序编译后生成的机器指令**，通常存放在 Flash 中。例如：
 
 ```c
 void led_on(void)
