@@ -1840,23 +1840,9 @@ ARM 调用约定里通常 `R0-R3` 主要用于：
 临时值
 ```
 
-它们通常属于caller-saved / volatile registers，意思是调用别的函数以后，不能假设这些寄存器内容还保留。
+它们通常属于caller-saved / volatile registers，意思是**调用别的函数以后，不能假设这些寄存器内容还保留**。而 `R4-R11` 通常属于 callee-saved，也就是说如果被调用函数想使用它们：
 
-而：
-
-```
-R4-R11
-```
-
-通常属于：
-
-> callee-saved
-
-也就是说：
-
-如果被调用函数想使用它们：
-
-```
+```text
 先保存
 ↓
 使用
@@ -1866,7 +1852,7 @@ R4-R11
 
 例如：
 
-```
+```assembly
 PUSH {R4, R5, LR}
 
 ...
@@ -1874,13 +1860,7 @@ PUSH {R4, R5, LR}
 POP {R4, R5, PC}
 ```
 
-所以你前面看到 FreeRTOS PendSV 保存：
-
-```
-R4-R11
-```
-
-也和 ARM ABI 的寄存器角色有关。
+所以 FreeRTOS PendSV 保存 `R4-R11` 也和 ARM ABI 的寄存器角色有关。
 
 ### 1.4.1 SP (栈指针)
 
