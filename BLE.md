@@ -29,7 +29,7 @@ Central
 
 可以理解为：
 
-```
+```text
 ESP32设备
 ↓
 Advertising
