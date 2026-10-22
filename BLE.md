@@ -49,13 +49,11 @@ ESP32 = Peripheral
 
 ---
 
-# 三、Advertising：广播
-
-你之前 ESP32 项目里其实已经用了 BLE 广播。
+# Advertising：广播
 
 广播就是：
 
-```
+```text
 设备不建立连接
 ↓
 周期性发送Advertising Packet
@@ -65,7 +63,7 @@ ESP32 = Peripheral
 
 例如：
 
-```
+```text
 ESP32
 每100ms广播一次
 ↓
@@ -74,15 +72,9 @@ ESP32
 看到Manufacturer Data
 ```
 
-你之前把递增序号放在：
+把递增序号放在 Manufacturer Data，本质就是：
 
-```
-Manufacturer Data
-```
-
-本质就是：
-
-```
+```text
 Advertising Payload
 ↓
 AD Structures
@@ -90,21 +82,11 @@ AD Structures
 Manufacturer Specific Data
 ```
 
----
+## 广播包
 
-# 四、广播包里有什么
+Advertising Data 不是随便塞。通常由多个 `AD Structure`，组成：
 
-Advertising Data 不是随便塞。
-
-通常由多个：
-
-```
-AD Structure
-```
-
-组成：
-
-```
+```text
 Length
 Type
 Data
