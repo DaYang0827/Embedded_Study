@@ -148,63 +148,31 @@ ACK
 多个设备都可能收到
 ```
 
-特点：
-
-```
-无连接
-低功耗
-低开销
-不保证可靠
-数据量小
-```
+特点是无连接、低功耗、低开销、不保证可靠、数据量小
 
 连接：
 
-```
+```text
 Central
 ↔
 Peripheral
 ```
 
-特点：
+特点是有连接状态、可以双向通信、有ACK/重传机制、可以GATT读写、更适合OTA
 
-```
-有连接状态
-可以双向通信
-有ACK/重传机制
-可以GATT读写
-更适合OTA
-```
+因此 BLE OTA 一般不靠普通广播传完整固件。而是：
 
-因此 BLE OTA 一般：
-
-> 不靠普通广播传完整固件。
-
-而是：
-
-```
+```text
 建立连接
 ↓
 通过GATT Characteristic传输固件
 ```
 
----
+# GATT
 
-# 七、GATT：你接下来必须重点学
+GATT `Generic Attribute Profile` 它解决**BLE 连接以后，数据以什么形式组织**。结构：
 
-GATT：
-
-```
-Generic Attribute Profile
-```
-
-它解决：
-
-> BLE 连接以后，数据以什么形式组织。
-
-结构：
-
-```
+```text
 Server
 │
 ├── Service
@@ -215,9 +183,9 @@ Server
 └── Service
 ```
 
-你可以把它理解成：
+可以把它理解成：
 
-```
+```text
 设备
 ↓
 多个模块
@@ -225,23 +193,11 @@ Server
 每个模块有多个变量/接口
 ```
 
----
+## Service 
 
-# 八、Service 是什么
+Service **一组相关功能的集合**。例如 OTA Service，下面可以有：
 
-Service：
-
-> 一组相关功能的集合。
-
-例如 OTA：
-
-```
-OTA Service
-```
-
-下面可以有：
-
-```
+```text
 Control Characteristic
 Data Characteristic
 Status Characteristic
@@ -249,7 +205,7 @@ Status Characteristic
 
 于是：
 
-```
+```text
 OTA Service
 ├── Control
 ├── Data
@@ -260,11 +216,9 @@ OTA Service
 
 ---
 
-# 九、Characteristic 是什么
+## Characteristic
 
-Characteristic 可以理解成：
-
-> 一个可以被读取、写入或通知的数据项。
+Characteristic 可以理解成一个**可以被读取、写入或通知的数据项**。
 
 例如：
 
