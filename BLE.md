@@ -218,42 +218,16 @@ OTA Service
 
 ## Characteristic
 
-Characteristic 可以理解成一个**可以被读取、写入或通知的数据项**。
+Characteristic 可以理解成一个**可以被读取、写入或通知的数据项**。例如：
 
-例如：
-
-```
+```text
 Battery Service
 └── Battery Level Characteristic
 ```
 
-手机可以：
+手机可以 Read 得到 `80%` 或者设备主动 Notify 告诉手机 Battery = 79%
 
-```
-Read
-```
-
-得到：
-
-```
-80%
-```
-
-或者设备主动：
-
-```
-Notify
-```
-
-告诉手机：
-
-```
-Battery = 79%
-```
-
----
-
-# 十、Characteristic Property
+### Characteristic Property
 
 Characteristic 可以有不同属性：
 
