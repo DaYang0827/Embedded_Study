@@ -234,7 +234,7 @@ Peripheral
 
 # GATT
 
-GATT `Generic Attribute Profile` 它解决**BLE 连接以后，数据以什么形式组织**。结构：
+GATT （Generic Attribute Profile）是通用属性配置文件，它解决**BLE 连接以后，数据以什么形式组织**。结构为：
 
 ```text
 Server
@@ -277,8 +277,6 @@ OTA Service
 ```
 
 这就是很典型的 OTA GATT 设计。
-
----
 
 ## Characteristic
 
@@ -387,18 +385,7 @@ status = OK
 
 ### Indicate
 
-Indicate 和 Notify 很像，但：
-
-```
-Indicate
-→ 对方需要确认
-```
-
-所以可靠性更高，但：
-
-```
-速度更慢
-```
+Indicate 和 Notify 很像，但 `Indicate → 对方需要确认`，所以**可靠性更高，但速度更慢**。
 
 简单理解：
 
@@ -410,21 +397,11 @@ Indicate
 → 慢，但有确认
 ```
 
----
+# ATT 
 
-# 十六、ATT 是什么
+ATT （Attribute Protocol），GATT 实际是建立在 ATT 上面的。可以理解：
 
-ATT：
-
-```
-Attribute Protocol
-```
-
-GATT 实际是建立在 ATT 上面的。
-
-你可以理解：
-
-```
+```text
 GATT
 → 规定数据怎么组织
 
@@ -434,7 +411,7 @@ ATT
 
 比如：
 
-```
+```text
 Read
 Write
 Notify
@@ -443,60 +420,20 @@ Indicate
 
 本质都是 ATT 操作。
 
----
+# UUID 
 
-# 十七、Handle 是什么
+UUID是通用唯一标识符（Universally Unique Identifier），BLE Service 和 Characteristic 都有 UUID。例如：
 
-这里又出现 Handle。
-
-BLE Attribute 每一个都有：
-
-```
-Attribute Handle
-```
-
-例如：
-
-```
-0x0010 → Service
-0x0011 → Characteristic Declaration
-0x0012 → Characteristic Value
-```
-
-所以 Central 可以通过 Handle 找到具体 Attribute。
-
-这个和 FreeRTOS Handle 思想很像：
-
-> Handle = 标识某个对象。
-
----
-
-# 十八、UUID 是什么
-
-BLE Service 和 Characteristic 都有 UUID。
-
-例如：
-
-```
+```text
 Service UUID
 Characteristic UUID
 ```
 
-标准服务：
-
-```
-16-bit UUID
-```
-
-自定义服务通常：
-
-```
-128-bit UUID
-```
+标准服务 `16-bit UUID`，自定义服务通常 `128-bit UUID`
 
 OTA一般就是自定义：
 
-```
+```text
 OTA Service UUID
 
 Control Characteristic UUID
@@ -506,7 +443,7 @@ Status Characteristic UUID
 
 所以手机知道：
 
-```
+```text
 哪个Characteristic负责控制
 哪个负责数据
 哪个负责状态
