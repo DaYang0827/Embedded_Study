@@ -212,9 +212,9 @@ ACK
 多个设备都可能收到
 ```
 
-特点是无连接、低功耗、低开销、不保证可靠、数据量小
+特点是**无连接、低功耗、低开销、不保证可靠、数据量小**。
 
-连接：
+连接是：
 
 ```text
 Central
@@ -222,7 +222,7 @@ Central
 Peripheral
 ```
 
-特点是有连接状态、可以双向通信、有ACK/重传机制、可以GATT读写、更适合OTA
+特点是**有连接状态、可以双向通信、有ACK/重传机制、可以GATT读写、更适合OTA**。
 
 因此 BLE OTA 一般不靠普通广播传完整固件。而是：
 
@@ -295,7 +295,7 @@ Battery Service
 
 Characteristic 可以有不同属性：
 
-```
+```text
 Read
 Write
 Write Without Response
@@ -303,13 +303,9 @@ Notify
 Indicate
 ```
 
-这个你 OTA 必须非常熟。
+### Read
 
----
-
-# 十一、Read
-
-```
+```text
 Central
 ↓
 Read Request
@@ -317,26 +313,11 @@ Read Request
 Peripheral返回数据
 ```
 
-适合：
+适合**设备版本、设备状态、固件版本、电池电量**。比如 OTA `Read Firmware Version`
 
-```
-设备版本
-设备状态
-固件版本
-电池电量
-```
+### Write
 
-比如 OTA：
-
-```
-Read Firmware Version
-```
-
----
-
-# 十二、Write
-
-```
+```text
 Central
 ↓
 Write Request
@@ -346,27 +327,17 @@ Peripheral
 Response
 ```
 
-特点：
+特点是**有响应、更可靠、但吞吐较低**，适合：
 
-```
-有响应
-更可靠
-但吞吐较低
-```
-
-适合：
-
-```
+```text
 控制命令
 BEGIN_UPDATE
 FINISH_UPDATE
 ```
 
----
+### Write Without Response
 
-# 十三、Write Without Response
-
-```
+```text
 Central
 ↓
 直接写
@@ -374,38 +345,16 @@ Central
 不等待ATT响应
 ```
 
-特点：
+特点为**更快、吞吐更高**，非常适合 `OTA Firmware Data Chunk`，比如：
 
-```
-更快
-吞吐更高
-```
-
-非常适合：
-
-```
-OTA Firmware Data Chunk
-```
-
-比如：
-
-```
+```text
 Chunk1
 Chunk2
 Chunk3
 ...
 ```
 
-但是你自己需要考虑：
-
-```
-流控
-序号
-重传
-接收缓存
-```
-
----
+但是需要考虑流控、序号、重传、接收缓存。
 
 # 十四、Notify
 
