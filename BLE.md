@@ -356,21 +356,19 @@ Chunk3
 
 但是需要考虑流控、序号、重传、接收缓存。
 
-# 十四、Notify
+### Notify
 
 Notify：
 
-```
+```text
 Peripheral
 ↓
 主动通知Central
 ```
 
-不需要每次 Central 来 Read。
+不需要每次 Central 来 Read。例如：
 
-例如：
-
-```
+```text
 OTA progress
 ACK
 Error
@@ -379,21 +377,15 @@ Result
 
 设备可以：
 
-```
+```text
 Notify:
 offset = 4096
 status = OK
 ```
 
-手机就知道：
+手机就知道目前收到4096 Byte
 
-```
-目前收到4096 Byte
-```
-
----
-
-# 十五、Indicate
+### Indicate
 
 Indicate 和 Notify 很像，但：
 
