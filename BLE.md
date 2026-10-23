@@ -385,9 +385,7 @@ status = OK
 
 ### Indicate
 
-Indicate 和 Notify 很像，但 `Indicate → 对方需要确认`，所以**可靠性更高，但速度更慢**。
-
-简单理解：
+Indicate 和 Notify 很像，但 `Indicate → 对方需要确认`，所以**可靠性更高，但速度更慢**。可以简单理解为：
 
 ```
 Notify
@@ -399,7 +397,7 @@ Indicate
 
 # ATT 
 
-ATT （Attribute Protocol），GATT 实际是建立在 ATT 上面的。可以理解：
+ATT （Attribute Protocol）属性协议，GATT 实际是建立在 ATT 上面的。可以理解：
 
 ```text
 GATT
@@ -422,7 +420,7 @@ Indicate
 
 # UUID 
 
-UUID是通用唯一标识符（Universally Unique Identifier），BLE Service 和 Characteristic 都有 UUID。例如：
+UUID是**通用唯一标识符**（Universally Unique Identifier），BLE Service 和 Characteristic 都有 UUID。例如：
 
 ```text
 Service UUID
@@ -449,15 +447,11 @@ Status Characteristic UUID
 哪个负责状态
 ```
 
----
+# Client / Server
 
-# 十九、Client / Server
+这个也很容易和 Central / Peripheral 混。它们不是完全同一个概念。
 
-这个也很容易和 Central / Peripheral 混。
-
-它们不是完全同一个概念。
-
-```
+```text
 Central / Peripheral
 → GAP角色
 
@@ -467,7 +461,7 @@ Client / Server
 
 典型：
 
-```
+```text
 手机
 Central
 GATT Client
@@ -479,16 +473,14 @@ GATT Server
 
 但概念上：
 
-```
+```text
 Central ≠ Client
 Peripheral ≠ Server
 ```
 
 只是实际项目里经常这么搭配。
 
----
-
-# 二十、Connection Interval
+# Connection Interval
 
 BLE 建立连接后，不是一直持续传输。
 
