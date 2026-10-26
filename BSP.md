@@ -30,87 +30,48 @@ GPIO_SetBits(GPIOA, GPIO_Pin_5);
 
 这段代码上层直接知道LED接在GPIOA、Pin5，以后换板子LED从 PA5，换成 PB12，所有业务代码里如果都写死了：
 
-```
+```c
 GPIOA
 GPIO_Pin_5
 ```
 
-就很麻烦。
+就很麻烦。所以可以做 BSP：
 
-所以可以做 BSP：
-
-```
+```c
 void BSP_LED_On(void);
 void BSP_LED_Off(void);
 ```
 
-上层：
+上层 `BSP_LED_On();`，至于底层到底 `GPIO_SetBits(GPIOA, GPIO_Pin_5);` 还是 `GPIO_SetBits(GPIOB, GPIO_Pin_12);`上层不用知道。
 
-```
-BSP_LED_On();
-```
+这就是 BSP 最核心的价值**隔离板级硬件差异。**
 
-至于底层到底：
+# 2. BSP 和 Driver 
 
-```
-GPIO_SetBits(GPIOA, GPIO_Pin_5);
-```
+这个特别容易混。可以这样理解：
 
-还是：
+```text
+Driver → 驱动“某一种硬件外设”
 
-```
-GPIO_SetBits(GPIOB, GPIO_Pin_12);
-```
-
-上层不用知道。
-
-这就是 BSP 最核心的价值：
-
-> **隔离板级硬件差异。**
-
----
-
-### 2. BSP 和 Driver 有什么区别
-
-这个特别容易混。
-
-你可以先这样理解：
-
-```
-Driver
-→ 驱动“某一种硬件外设”
-
-BSP
-→ 描述“这块板子具体用了哪些硬件，以及怎么组合”
+BSP → 描述“这块板子具体用了哪些硬件，以及怎么组合”
 ```
 
 比如 USART Driver：
 
-```
+```c
 uart_init();
 uart_send();
 uart_receive();
 ```
 
-它关注：
+它关注 USART 本身怎么工作，BSP UART：
 
-```
-USART本身怎么工作
-```
-
-BSP UART：
-
-```
+```c
 BSP_DebugUart_Init();
 BSP_DebugUart_Send();
 ```
 
-它关注：
-
-```
-这块板子的Debug串口到底是哪一个USART
-用了哪些GPIO
-波特率是多少
+它关注这块板子的Debug串口到底是哪一个USART，用了哪些GPIO，波特率是多少
 DMA是哪一路
 ```
 
