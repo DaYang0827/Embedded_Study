@@ -71,13 +71,9 @@ BSP_DebugUart_Init();
 BSP_DebugUart_Send();
 ```
 
-它关注这块板子的Debug串口到底是哪一个USART，用了哪些GPIO，波特率是多少
-DMA是哪一路
-```
+它关注这块板子的Debug串口到底是哪一个USART，用了哪些GPIO，波特率是多少，DMA是哪一路。比如 STM32F4 项目里：
 
-比如你 STM32F4 项目里：
-
-```
+```c
 USART1
 PA9 TX
 PA10 RX
@@ -87,13 +83,11 @@ DMA2某个Stream
 
 这些其实都属于很典型的板级信息。
 
----
+##  项目举例
 
-### 3. 用你的项目举例
+项目中可能有：
 
-你现在的项目可能有：
-
-```
+```text
 USART1
 LED
 Flash
@@ -103,7 +97,7 @@ Button
 
 那 BSP 可以组织成：
 
-```
+```text
 BSP/
 ├── bsp_led.c
 ├── bsp_led.h
@@ -116,7 +110,7 @@ BSP/
 
 比如：
 
-```
+```c
 void BSP_Init(void)
 {
     BSP_LED_Init();
@@ -127,7 +121,7 @@ void BSP_Init(void)
 
 然后 `main()`：
 
-```
+```c
 int main(void)
 {
     BSP_Init();
@@ -141,7 +135,7 @@ int main(void)
 
 这样 `main()` 就不会塞满：
 
-```
+```c
 RCC_AHB1PeriphClockCmd(...)
 GPIO_Init(...)
 USART_Init(...)
@@ -149,13 +143,11 @@ DMA_Init(...)
 NVIC_Init(...)
 ```
 
----
-
-### 4. BSP 里面一般放什么
+# 4. BSP 内容
 
 常见可以放：
 
-```
+```text
 板级GPIO定义
 LED
 Button
@@ -173,85 +165,52 @@ Board Init
 
 例如：
 
-```
+```c
 #define BSP_LED_PORT GPIOA
 #define BSP_LED_PIN  GPIO_Pin_5
 ```
 
 或者：
 
-```
+```c
 void BSP_LED_Init(void);
 void BSP_LED_On(void);
 void BSP_LED_Off(void);
 void BSP_LED_Toggle(void);
 ```
 
----
+## 5. 不应该放什么
 
-### 5. BSP 不应该放什么
+BSP **一般不应该塞太多业务逻辑**。比如：
 
-BSP 一般不应该塞太多业务逻辑。
-
-比如：
-
-```
+```c
 void BSP_LED_On_When_CRC_Failed(void);
 ```
 
-这种就很奇怪。
+这种就很奇怪。因为 CRC 失败是业务逻辑。BSP 只应该提供 `BSP_LED_On();` 然后上层：
 
-因为：
-
-```
-CRC失败
-```
-
-是业务逻辑。
-
-BSP 只应该提供：
-
-```
-BSP_LED_On();
-```
-
-然后上层：
-
-```
+```c
 if (crc_failed)
 {
     BSP_LED_On();
 }
 ```
 
-所以：
+所以 BSP 应该“提供硬件能力”，而不是“决定业务行为”。
 
-> BSP 应该“提供硬件能力”，而不是“决定业务行为”。
+# 6. BSP 和 HAL 
 
----
+HAL（Hardware Abstraction Layer）**硬件抽象层**，比如 STM32 HAL：
 
-### 6. BSP 和 HAL 的关系
-
-HAL：
-
-```
-Hardware Abstraction Layer
-硬件抽象层
-```
-
-比如 STM32 HAL：
-
-```
+```c
 HAL_UART_Transmit()
 HAL_GPIO_WritePin()
 HAL_SPI_Transmit()
 ```
 
-这些 API 是 ST 给你的，面向 MCU 外设。
+这些 API 是 ST 给的，面向 MCU 外设。BSP 可以在 HAL 上再封一层：
 
-BSP 可以在 HAL 上再封一层：
-
-```
+```c
 void BSP_Debug_Print(const uint8_t *data, uint16_t len)
 {
     HAL_UART_Transmit(
@@ -263,15 +222,9 @@ void BSP_Debug_Print(const uint8_t *data, uint16_t len)
 }
 ```
 
-上层只写：
+上层只写 `BSP_Debug_Print(...);`，所以：
 
-```
-BSP_Debug_Print(...);
-```
-
-所以：
-
-```
+```text
 Application
 ↓
 BSP
@@ -283,87 +236,7 @@ Registers
 
 是很常见的关系。
 
----
-
-### 7. 但有时候 BSP 会直接操作寄存器
-
-完全可以。
-
-比如：
-
-```
-void BSP_LED_On(void)
-{
-    GPIOA->BSRR = (1U << 5);
-}
-```
-
-所以 BSP 不等于：
-
-> 必须依赖 HAL。
-
-BSP 是架构层概念。
-
-它下面可以用：
-
-```
-HAL
-LL
-SPL
-Registers
-Vendor Driver
-```
-
-都可以。
-
----
-
-### 8. BSP 和 CMSIS 又是什么关系
-
-你 STM32F4 里还有：
-
-```
-CMSIS
-```
-
-CMSIS 更底层。
-
-大致可以理解：
-
-```
-Application
-↓
-BSP
-↓
-HAL / LL / SPL
-↓
-CMSIS
-↓
-Cortex-M / MCU Registers
-```
-
-CMSIS 提供：
-
-```
-NVIC
-SCB
-SysTick
-Core Register定义
-MCU寄存器结构
-```
-
-比如：
-
-```
-SCB->VTOR
-NVIC_EnableIRQ()
-```
-
-属于更底层的 Cortex-M 接口。
-
----
-
-### 9. BSP 和 RTOS 的关系
+# 9. BSP 和 RTOS 
 
 有了 FreeRTOS 后可以变成：
 
