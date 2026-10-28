@@ -400,11 +400,9 @@ Indicate
 ATT （Attribute Protocol）属性协议，GATT 实际是建立在 ATT 上面的。可以理解：
 
 ```text
-GATT
-→ 规定数据怎么组织
+GATT → 规定数据怎么组织
 
-ATT
-→ 规定怎么访问这些数据
+ATT → 规定怎么访问这些数据
 ```
 
 比如：
@@ -452,11 +450,9 @@ Status Characteristic UUID
 这个也很容易和 Central / Peripheral 混。它们不是完全同一个概念。
 
 ```text
-Central / Peripheral
-→ GAP角色
+Central / Peripheral → GAP角色
 
-Client / Server
-→ GATT角色
+Client / Server → GATT角色
 ```
 
 典型：
@@ -482,73 +478,19 @@ Peripheral ≠ Server
 
 # Connection Interval
 
-BLE 建立连接后，不是一直持续传输。
+BLE 建立连接后，不是一直持续传输。而是按照 `Connection Event` 周期通信。比如：
 
-而是按照：
-
-```
-Connection Event
-```
-
-周期通信。
-
-比如：
-
-```
+```c
 Connection Interval = 30 ms
 ```
 
-大概：
+大概每30ms有一次通信机会，这个会影响吞吐量、延迟、功耗，OTA通常希望更短 Connection Interval 提高吞吐。但功耗会上升。
 
-```
-每30ms有一次通信机会
-```
+## Slave Latency / Peripheral Latency
 
-这个会影响：
+Peripheral 不一定每个 Connection Event 都参与。可以跳过一些。这叫 Peripheral Latency 适合低功耗设备。
 
-```
-吞吐量
-延迟
-功耗
-```
-
-OTA通常希望：
-
-```
-更短Connection Interval
-```
-
-提高吞吐。
-
-但：
-
-```
-功耗会上升
-```
-
----
-
-# 二十一、Slave Latency / Peripheral Latency
-
-Peripheral 不一定每个 Connection Event 都参与。
-
-可以跳过一些。
-
-这叫：
-
-```
-Peripheral Latency
-```
-
-适合低功耗设备。
-
-但 OTA 时一般：
-
-```
-不希望跳太多
-```
-
-因为会降低传输速度。
+但 OTA 时一般不希望跳太多，因为会降低传输速度。
 
 ---
 
@@ -1131,49 +1073,6 @@ GET_STATUS
 从offset继续
 ```
 
----
-
-# 三十八、安全：Pairing / Bonding
-
-OTA 以后最好不能：
-
-```
-附近任何人
-↓
-连接
-↓
-刷Firmware
-```
-
-所以需要考虑：
-
-```
-Pairing
-Bonding
-Authentication
-Encryption
-Authorization
-```
-
-第一版学习：
-
-```
-Pairing
-→ 建立安全关系
-
-Bonding
-→ 保存长期密钥
-
-Encryption
-→ 链路数据加密
-```
-
-但是要注意：
-
-> BLE加密不等于固件可信。
-
----
-
 # 三十九、为什么 OTA 还要数字签名
 
 CRC：
@@ -1227,136 +1126,6 @@ Signature
 ```
 
 你现在第一版做 CRC 足够，后面知道签名即可。
-
----
-
-# 四十、OTA Version
-
-BEGIN_UPDATE 建议未来包括：
-
-```
-version
-image_size
-expected_crc
-```
-
-例如：
-
-```
-typedef struct
-{
-    uint32_t version;
-    uint32_t image_size;
-    uint32_t expected_crc;
-} OtaInfo_t;
-```
-
-Bootloader 可以判断：
-
-```
-新版本 <= 当前版本
-↓
-拒绝
-```
-
-这样可以避免：
-
-```
-意外降级
-```
-
-安全 OTA 里还涉及：
-
-```
-Anti-rollback
-```
-
-以后再学。
-
----
-
-# 四十一、BLE OTA 和 Bootloader 到底怎么分工
-
-这是你一定要理解的架构问题。
-
-BLE 协议栈往往运行在：
-
-```
-Application
-```
-
-而 Bootloader 尽量简单。
-
-所以一种很常见思路：
-
-```
-APP负责：
-BLE连接
-下载Firmware
-写入备用区域
-验证基础信息
-
-Bootloader负责：
-最终验证
-选择Image
-切换版本
-Rollback
-```
-
-而不是：
-
-```
-Bootloader里面塞完整BLE Stack
-```
-
-因为那会让 Bootloader：
-
-```
-非常大
-非常复杂
-攻击面更大
-难维护
-```
-
----
-
-# 四十二、如果只有一个 APP 区怎么办
-
-你现在目前还是：
-
-```
-Bootloader
-+
-Single APP
-```
-
-那可以：
-
-```
-BLE APP
-↓
-接收固件
-↓
-通知Bootloader进入升级模式
-↓
-Bootloader从某个暂存区升级APP
-```
-
-但如果内部 Flash 没有足够备用空间，就比较麻烦。
-
-所以 OTA 更自然的结构是：
-
-```
-Bootloader
-+
-Slot A
-+
-Slot B
-+
-Metadata
-```
-
----
 
 # 四十三、BLE OTA 最终理想架构
 
@@ -1454,7 +1223,7 @@ Rollback
 
 ---
 
-# 四十五、给你整理成真正的学习路线
+# 给你整理成真正的学习路线
 
 我建议你接下来 BLE 按这个顺序：
 
