@@ -113,7 +113,7 @@ ESP32 = Peripheral
 
 ---
 
-# Advertising：广播
+# Advertising 广播
 
 广播就是：
 
@@ -232,7 +232,7 @@ Peripheral
 通过GATT Characteristic传输固件
 ```
 
-# GATT
+# GATT（Generic Attribute Profile）
 
 GATT （Generic Attribute Profile）是通用属性配置文件，它解决**BLE 连接以后，数据以什么形式组织**。结构为：
 
@@ -395,7 +395,7 @@ Indicate
 → 慢，但有确认
 ```
 
-# ATT 
+# ATT （Attribute Protocol）
 
 ATT （Attribute Protocol）属性协议，GATT 实际是建立在 ATT 上面的。可以理解：
 
@@ -492,9 +492,7 @@ Peripheral 不一定每个 Connection Event 都参与。可以跳过一些。这
 
 但 OTA 时一般不希望跳太多，因为会降低传输速度。
 
----
-
-# 二十二、Supervision Timeout
+# Supervision Timeout
 
 表示：
 
@@ -557,32 +555,6 @@ ATT_MTU = 23
 ```
 20 Byte一包
 ```
-
----
-
-# 二十四、为什么现在很多 BLE 可以超过 20 Byte
-
-因为可以：
-
-```
-MTU Exchange
-```
-
-例如：
-
-```
-MTU = 247
-```
-
-那么每个 ATT payload 可以大很多。
-
-例如：
-
-```
-247 - 3 = 244 Byte
-```
-
-所以 OTA 吞吐大幅提升。
 
 ---
 
@@ -967,34 +939,6 @@ offset = 4096
 ```
 
 这就是以后断点续传。
-
----
-
-# 三十五、第一版 OTA 可以不做断点续传
-
-你现在不要一开始搞这么复杂。
-
-第一版：
-
-```
-断线
-↓
-重新连接
-↓
-重新BEGIN_UPDATE
-↓
-Erase
-↓
-从0开始
-```
-
-已经够用了。
-
-第二版再加：
-
-```
-current_offset
-```
 
 ---
 
