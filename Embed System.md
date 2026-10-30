@@ -877,21 +877,44 @@ static uint32_t timeout = 1000;
 uint32_t count = 10;
 ```
 
-编译完成后：
+在内存中可以画成：
 
 ```text
-Flash
-保存初始化值 10
+编译完成：
 
-启动后
-↓
-Reset_Handler / C runtime
-↓
-把10复制到RAM
+FLASH
+┌─────────────────┐
+│ Code            │
+├─────────────────┤
+│ RO-data         │
+├─────────────────┤
+│ RW init image   │ ← count = 10
+└─────────────────┘
 
 RAM
-count = 10
+┌─────────────────┐
+│ RW-data         │
+├─────────────────┤
+│ ZI-data         │
+└─────────────────┘
 ```
+
+刚上电：
+
+```text
+Flash RW init image
+↓ copy
+RAM RW-data
+```
+
+然后：
+
+```text
+ZI区域
+↓ memset(0)
+```
+
+最后 `main()` 开始。
 
 所以 **RW-data ≈ .data**
 
@@ -1036,140 +1059,6 @@ RAM:
 RW-data运行变量
 ZI-data
 ```
-
-# 9. 这和启动流程直接相关
-
-你之前已经学过：
-
-```
-Reset
-↓
-MSP
-↓
-Reset_Handler
-↓
-SystemInit
-↓
-C Runtime Init
-↓
-main
-```
-
-其中 C Runtime Init 最关键的工作之一就是：
-
-```
-.data
-Flash → RAM
-```
-
-以及：
-
-```
-.bss
-清零
-```
-
-换成 Keil 术语：
-
-```
-RW-data
-Flash初始化镜像 → RAM
-```
-
-以及：
-
-```
-ZI-data
-RAM清零
-```
-
-所以这些不是单纯“编译报告里的数字”，而是真正对应启动代码做的事情。
-
----
-
-# 10. Local variable 属于哪个
-
-例如：
-
-```
-void func(void)
-{
-    int a = 10;
-}
-```
-
-普通局部 automatic variable 通常：
-
-```
-Stack / Register
-```
-
-所以不简单直接归到：
-
-```
-RW-data
-ZI-data
-```
-
-比如：
-
-```
-void func(void)
-{
-    uint8_t buf[100];
-}
-```
-
-这个 `buf` 通常消耗：
-
-```
-Stack
-```
-
-而不是 `ZI-data`。
-
----
-
-# 12. 一个非常典型的面试题
-
-```
-uint32_t a;
-uint32_t b = 10;
-const uint32_t c = 20;
-
-void func(void)
-{
-    uint32_t d;
-    static uint32_t e;
-    static uint32_t f = 30;
-}
-```
-
-你现在应该会分：
-
-```
-a
-→ ZI-data / .bss
-
-b
-→ RW-data / .data
-
-c
-→ RO-data / .rodata
-
-d
-→ Stack / Register
-
-e
-→ ZI-data / .bss
-
-f
-→ RW-data / .data
-```
-
-这是很经典的一题。
-
----
 
 # 13. Heap 和 Stack 为什么没直接显示成 RW/ZI
 
