@@ -1001,11 +1001,9 @@ CPU继续从 Task2 上次停的位置执行
 这个真正的“上下文切换”在 Cortex-M 上通常主要靠 `PendSV` 来完成。可以先记：
 
 ```text
-Scheduler
-= 决定“换成谁”
+Scheduler = 决定“换成谁”
 
-PendSV
-= 真正执行“任务切换”
+PendSV = 真正执行“任务切换”
 ```
 
 比如：
