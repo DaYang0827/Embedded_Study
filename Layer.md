@@ -19,7 +19,7 @@ BSP、Driver、Middleware、Application，可以这样区分：
 
  **BSP = Board Support Package，板级支持包。**  它的作用是把“这块具体硬件板子怎么用”封装起来，**让上层业务代码尽量不直接碰芯片寄存器和板级细节**。
 
-可以先把整个工程理解成：
+可以把整个工程理解成：
 
 ```text
 Application / Business Logic
