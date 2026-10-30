@@ -805,201 +805,944 @@ c 的偏移量: 8
 Program Size: Code=12000 RO-data=800 RW-data=300 ZI-data=5000
 ```
 
-这些字段反映了程序最终占用了多少 Flash 和 SRAM
+说的 Keil 里 ROM / RAM 后面那些 `Code / RO-data / RW-data / ZI-data`，本质上就是在告诉程序最终有多少内容放在 Flash，多少内容运行时要占 RAM。记住最核心的四个：
 
-1. Code：程序机器码
+```text
+Code
+RO-data
+RW-data
+ZI-data
+```
 
-   `Code` 表示**程序编译后生成的机器指令**，通常存放在 Flash 中。例如：
+它们分别对应 `.text / .rodata / .data / .bss` 这一套。
+
+#### 1. `Code`
+
+`Code` 就是**程序机器指令本身**。例如：
 
 ```c
-void led_on(void)
+int add(int a, int b)
 {
-    GPIO_SetBits(GPIOA, GPIO_Pin_5);
+    return a + b;
 }
 ```
 
-这段 C 代码会被编译器翻译成 ARM 机器指令，这些指令最终存放在 Flash 中。特点：
+编译以后会变成 ARM 指令，这些指令属于 Code 一般存放在 Flash / ROM 因为程序代码不需要运行过程中频繁修改。
 
-```text
-存放位置：Flash
-内容：CPU真正执行的机器码
-是否掉电丢失：不会
-是否运行时修改：通常不会
+所以可以近似理解 `Code ≈ .text`
+
+#### 2. `RO-data`
+
+`RO` Read Only 也就是**只读数据**。例如：
+
+```c
+const uint32_t table[3] = {1, 2, 3};
 ```
+
+或者字符串常量：
+
+```c
+printf("hello");
+```
+
+这些运行过程中通常不会修改，所以放在 Flash。因此 `RO-data ≈ .rodata`
+
+可以理解为 `Code + RO-data` 主要就是真正长期待在 Flash 里的只读内容。
+
+#### 3. `RW-data`
+
+`RW` （Read Write）表示可读可写，并且有非零初始值的数据。
+
+例如：
+
+```
+uint32_t count = 10;
+```
+
+或者：
+
+```
+static uint32_t timeout = 1000;
+```
+
+这种变量运行时必须能修改，所以：
+
+```
+运行时位置
+→ RAM
+```
+
+但是问题来了：
+
+上电以后 RAM 里面原本是随机的。
+
+你又要求：
+
+```
+count一开始必须等于10
+```
+
+所以 `10` 这个初始值必须先存在哪里？
+
+答案：
+
+```
+Flash
+```
+
+因此 `RW-data` 有一个非常重要的特点：
+
+> **它同时影响 Flash 和 RAM。**
+
+比如：
+
+```
+uint32_t count = 10;
+```
+
+编译完成后：
+
+```
+Flash
+保存初始化值 10
+
+启动后
+↓
+Reset_Handler / C runtime
+↓
+把10复制到RAM
+
+RAM
+count = 10
+```
+
+所以：
+
+```
+RW-data
+≈ .data
+```
+
 ---
 
-2. RO-data：只读数据
+## 4. `ZI-data`
 
-   `RO-data` 是 Read Only Data，只读数据。
+这个就是你问的 `ZI`。
 
-   常见内容包括：
+`ZI`：
 
-```c
-const uint8_t table[] = {1, 2, 3, 4};
-
-const char message[] = "Hello STM32";
+```
+Zero Initialized
 ```
 
-这些数据通常存放在 Flash 中，因为它们运行时不需要被修改。
+意思：
 
-需要注意：
+> 零初始化数据。
 
-```c
-const char *str = "Hello";
+例如：
+
+```
+uint32_t count;
 ```
 
-这里要分开看：
+或者：
 
-```text
-"Hello" 字符串字面量：通常在只读区
-str 指针变量本身：取决于它定义在哪里
+```
+static uint32_t flag;
 ```
 
-如果写在函数内部：
+根据 C 语言规则，这些全局/static变量启动后：
 
-```c
-void test(void)
+```
+count = 0
+flag = 0
+```
+
+它们运行时还是需要 RAM。
+
+所以：
+
+```
+ZI-data
+→ 占 RAM
+```
+
+但不需要在 Flash 里真的存很多个 `0`。
+
+例如：
+
+```
+uint8_t buffer[10000];
+```
+
+如果这是全局变量：
+
+```
+uint8_t buffer[10000];
+```
+
+你不需要在 Flash 里面专门保存：
+
+```
+00 00 00 00 ...
+一万个0
+```
+
+Linker 只需要告诉启动代码：
+
+```
+RAM这10000 Byte
+启动时清零
+```
+
+所以：
+
+```
+ZI-data
+≈ .bss
+```
+
+---
+
+# 5. 四个东西放在哪里
+
+你可以直接记这张表：
+
+|Keil|含义|Flash|RAM|对应 Section|
+|---|---|---|---|---|
+|Code|机器代码|✅|通常❌|`.text`|
+|RO-data|只读数据|✅|通常❌|`.rodata`|
+|RW-data|有初值可读写变量|✅ 初始镜像|✅ 运行对象|`.data`|
+|ZI-data|零初始化变量|❌ 不存实际0|✅|`.bss`|
+
+这个表非常重要。
+
+---
+
+# 6. Keil 为什么会显示 ROM 和 RAM 使用量
+
+Keil 编译完经常会看到类似：
+
+```
+Program Size:
+Code=20000
+RO-data=1000
+RW-data=500
+ZI-data=3000
+```
+
+那 ROM 大概怎么算？
+
+```
+ROM Size
+≈ Code
++ RO-data
++ RW-data
+```
+
+为什么 RW-data 也算 ROM？
+
+因为：
+
+> RW-data 的初始值要存 Flash。
+
+所以：
+
+```
+ROM
+≈ Code + RO + RW
+```
+
+而 RAM：
+
+```
+RAM
+≈ RW-data + ZI-data
+```
+
+因为运行时：
+
+```
+RW-data
+→ RAM
+
+ZI-data
+→ RAM
+```
+
+所以：
+
+```
+RAM
+≈ RW + ZI
+```
+
+---
+
+# 7. 举一个具体例子
+
+假设：
+
+```
+const uint32_t version = 0x01020304;
+
+uint32_t count = 10;
+
+uint32_t error_count;
+
+static uint8_t buffer[1000];
+
+int main(void)
 {
-    const char *str = "Hello";
+    ...
 }
 ```
 
-`str` 这个指针变量本身通常在栈上，而 `"Hello"` 字符串内容通常在只读区。
+大致分类：
 
-如果写成全局变量：
+```
+main()机器指令
+→ Code
 
-```c
-const char *str = "Hello";
+version
+→ RO-data
+
+count = 10
+→ RW-data
+
+error_count
+→ ZI-data
+
+buffer[1000]
+→ ZI-data
 ```
 
-指针变量 `str` 本身可能占用 RW-data 或 RO-data，具体取决于修饰方式和编译器安排。
+所以：
 
----
-3. RW-data：已初始化的全局变量和静态变量
-
-`RW-data` 是 Read Write Data，表示有初始值、运行时可以修改的全局变量或静态变量。
-
-例如：
-
-```c
-int global_value = 10;
-
-static uint8_t mode = 1;
 ```
+Flash:
+Code
+RO-data
+RW-data初始化值
 
-这些变量运行时需要放在 SRAM 中，因为程序可能会修改它们。但是它们的初始值又必须保存在 Flash 里，否则单片机断电后就不知道开机时应该初始化成什么值。所以 RW-data 有一个很重要的特点：
-
-```text
-初始值存放在 Flash
-运行时变量实体在 SRAM
-启动时由启动文件从 Flash 复制到 SRAM
+RAM:
+RW-data运行变量
+ZI-data
 ```
-
-例如：
-
-```c
-int global_value = 10;
-```
-
-启动时大致发生：
-
-```txet
-Flash 中保存 10
-        ↓
-Reset_Handler 启动时复制
-        ↓
-SRAM 中的 global_value = 10
-```
-
-之后程序修改：
-
-```c
-global_value = 20;
-```
-
-修改的是 SRAM 中的运行时变量，不会改 Flash 里的初始值。
 
 ---
 
-4. ZI-data：未初始化或初始化为0的全局/静态变
+# 8. 为什么 RW-data 同时占两边
 
-`ZI-data` 是 Zero Initialized Data，表示启动时被清零的变量。
+这是最容易混的。
 
-例如：
+你可以画成：
 
-```c
-int global_count;
+```
+编译完成：
 
-static uint8_t rx_buffer[128];
+FLASH
+┌─────────────────┐
+│ Code            │
+├─────────────────┤
+│ RO-data         │
+├─────────────────┤
+│ RW init image   │ ← count = 10
+└─────────────────┘
 
-uint32_t flag = 0;
+RAM
+┌─────────────────┐
+│ RW-data         │
+├─────────────────┤
+│ ZI-data         │
+└─────────────────┘
 ```
 
-这些变量都属于运行时需要放在 SRAM 中的数据。
+刚上电：
 
-特点：
-
-```text
-存放位置：SRAM
-初始值：启动时清零
-是否占用 Flash：通常不占用实际初始化数据空间
+```
+Flash RW init image
+↓ copy
+RAM RW-data
 ```
 
-例如：
+然后：
 
-```c
-uint8_t buffer[1024];
+```
+ZI区域
+↓ memset(0)
 ```
 
-如果它是全局变量且没有显式初始化：
+最后：
 
-```c
-uint8_t buffer[1024];
+```
+main()
 ```
 
-它通常属于 ZI-data。
-
-启动时，启动代码会把这块 SRAM 清成 0。
-
-如果写成：
-
-```c
-uint8_t buffer[1024] = {1};
-```
-
-那么它就不再是纯 ZI-data，而会涉及 RW-data，因为初始值不是全0。
+开始。
 
 ---
 
-5. Flash 和 SRAM 的实际占用计算
+# 9. 这和启动流程直接相关
 
-在 Keil 中通常可以这样理解：
+你之前已经学过：
 
-```text
-Flash 占用 ≈ Code + RO-data + RW-data
-SRAM  占用 ≈ RW-data + ZI-data + Stack + Heap
+```
+Reset
+↓
+MSP
+↓
+Reset_Handler
+↓
+SystemInit
+↓
+C Runtime Init
+↓
+main
 ```
 
-为什么 Flash 中也要包含 RW-data？因为 RW-data 的初始值要保存在 Flash 中，开机后再复制到 SRAM。
+其中 C Runtime Init 最关键的工作之一就是：
+
+```
+.data
+Flash → RAM
+```
+
+以及：
+
+```
+.bss
+清零
+```
+
+换成 Keil 术语：
+
+```
+RW-data
+Flash初始化镜像 → RAM
+```
+
+以及：
+
+```
+ZI-data
+RAM清零
+```
+
+所以这些不是单纯“编译报告里的数字”，而是真正对应启动代码做的事情。
+
+---
+
+# 10. Local variable 属于哪个
 
 例如：
 
-```text
-Code     = 12000
-RO-data  = 800
-RW-data  = 300
-ZI-data  = 5000
+```
+void func(void)
+{
+    int a = 10;
+}
 ```
 
-大致表示：
+普通局部 automatic variable 通常：
 
-```text
-Flash 至少占用：12000 + 800 + 300 = 13100 字节
-SRAM 至少占用 ：300 + 5000 + Stack + Heap
+```
+Stack / Register
 ```
 
-其中 Stack 和 Heap 的大小通常由启动文件、链接脚本或工程配置决定，不一定直接显示在 `RW-data + ZI-data` 中。
+所以不简单直接归到：
 
+```
+RW-data
+ZI-data
+```
+
+比如：
+
+```
+void func(void)
+{
+    uint8_t buf[100];
+}
+```
+
+这个 `buf` 通常消耗：
+
+```
+Stack
+```
+
+而不是 `ZI-data`。
+
+---
+
+# 11. `static local` 就不一样
+
+例如：
+
+```
+void func(void)
+{
+    static uint32_t count = 10;
+}
+```
+
+它不是 Stack 变量。
+
+因为：
+
+```
+生命周期 = 整个程序
+```
+
+所以：
+
+```
+count = 10
+→ RW-data
+```
+
+如果：
+
+```
+static uint32_t count;
+```
+
+通常：
+
+```
+ZI-data
+```
+
+这和你之前学 static 的内容正好连起来。
+
+---
+
+# 12. 一个非常典型的面试题
+
+```
+uint32_t a;
+uint32_t b = 10;
+const uint32_t c = 20;
+
+void func(void)
+{
+    uint32_t d;
+    static uint32_t e;
+    static uint32_t f = 30;
+}
+```
+
+你现在应该会分：
+
+```
+a
+→ ZI-data / .bss
+
+b
+→ RW-data / .data
+
+c
+→ RO-data / .rodata
+
+d
+→ Stack / Register
+
+e
+→ ZI-data / .bss
+
+f
+→ RW-data / .data
+```
+
+这是很经典的一题。
+
+---
+
+# 13. Heap 和 Stack 为什么没直接显示成 RW/ZI
+
+Keil 的 RAM 使用还要稍微注意一点。
+
+除了：
+
+```
+RW-data
+ZI-data
+```
+
+程序运行时还可能需要：
+
+```
+Stack
+Heap
+```
+
+例如：
+
+```
+RAM
+┌─────────────────┐
+│ RW-data         │
+├─────────────────┤
+│ ZI-data         │
+├─────────────────┤
+│ Heap            │
+├─────────────────┤
+│ Stack           │
+└─────────────────┘
+```
+
+不同工具链/启动文件如何统计 Stack 和 Heap 到最终 RAM 数字里，显示方式可能不同。
+
+所以工程上不要只看：
+
+```
+RW + ZI
+```
+
+然后就认为：
+
+> 剩下 RAM 全都安全。
+
+你还要给：
+
+```
+Stack
+Heap
+RTOS Task Stack
+```
+
+留下空间。
+
+---
+
+# 14. 到 FreeRTOS 后更加重要
+
+FreeRTOS 里面：
+
+```
+xTaskCreate(...)
+```
+
+会从 FreeRTOS Heap 创建：
+
+```
+TCB
++
+Task Stack
+```
+
+例如 5 个 Task：
+
+```
+Task1 Stack
+Task2 Stack
+Task3 Stack
+Task4 Stack
+Task5 Stack
+```
+
+都会占 RAM。
+
+所以你最终 RAM 不是只有：
+
+```
+Global variables
+```
+
+还有：
+
+```
+.data
+.bss
+FreeRTOS Heap
+Task Stacks
+Queue storage
+Semaphore objects
+TCB
+RingBuffer
+DMA Buffer
+```
+
+这也是为什么 RTOS 项目特别容易出现：
+
+```
+Flash还有很多
+但RAM不够
+```
+
+---
+
+# 15. 为什么一个大 buffer 会让 ZI 暴涨
+
+比如：
+
+```
+uint8_t rx_buffer[1024];
+```
+
+全局：
+
+```
+ZI +1024
+```
+
+再来：
+
+```
+uint8_t dma_buffer[2048];
+```
+
+又：
+
+```
+ZI +2048
+```
+
+再来：
+
+```
+uint8_t image_buffer[8192];
+```
+
+直接：
+
+```
+ZI +8192
+```
+
+所以你看到 Keil：
+
+```
+ZI-data突然变大
+```
+
+首先应该查：
+
+```
+有没有大的全局/static数组
+```
+
+---
+
+# 16. 为什么 const 能省 RAM
+
+比如：
+
+```
+uint8_t table[1000] =
+{
+    ...
+};
+```
+
+这是可写变量：
+
+```
+RW-data
+```
+
+运行时需要：
+
+```
+1000 Byte RAM
+```
+
+而：
+
+```
+const uint8_t table[1000] =
+{
+    ...
+};
+```
+
+如果工具链正常把它放只读区：
+
+```
+RO-data
+```
+
+主要留在 Flash。
+
+所以：
+
+```
+RAM少用约1000 Byte
+```
+
+这在嵌入式特别有价值。
+
+---
+
+# 17. 和你的 Bootloader 也直接相关
+
+比如：
+
+```
+uint8_t dma_rx_buf[1024];
+```
+
+如果全局：
+
+```
+ZI-data +1024
+```
+
+RingBuffer：
+
+```
+uint8_t ring_buffer[1024];
+```
+
+又：
+
+```
+ZI-data +1024
+```
+
+Parser：
+
+```
+uint8_t data[32];
+```
+
+如果在全局结构体里：
+
+```
+也进入RAM常驻区域
+```
+
+再加 FreeRTOS：
+
+```
+Task Stack
+Queue
+TCB
+```
+
+所以你以后分析 Bootloader RAM 时就可以问：
+
+```
+DMA Buffer占多少
+RingBuffer占多少
+Queue占多少
+Task Stack占多少
+Metadata runtime object占多少
+```
+
+而不是只看代码行数。
+
+---
+
+# 18. 你看到 Map 文件时怎么对应
+
+Map 里面你可能看到：
+
+```
+.text
+.rodata
+.data
+.bss
+```
+
+Keil Build Summary 看到：
+
+```
+Code
+RO-data
+RW-data
+ZI-data
+```
+
+基本对应：
+
+```
+Code
+↔ .text
+
+RO-data
+↔ .rodata
+
+RW-data
+↔ .data
+
+ZI-data
+↔ .bss
+```
+
+虽然实际 linker section 可能比这复杂很多，但第一遍这么对应完全正确。
+
+---
+
+# 19. 最后压缩成一个公式
+
+这个面试特别好用：
+
+```
+Flash / ROM usage
+≈
+Code + RO-data + RW-data
+```
+
+因为：
+
+```
+RW-data的初始化值也必须保存在Flash
+```
+
+而：
+
+```
+RAM usage
+≈
+RW-data + ZI-data
+```
+
+再加实际工程运行需要考虑：
+
+```
+Stack
+Heap
+RTOS动态对象
+```
+
+---
+
+你现在最应该牢牢记住这一张：
+
+```
+                 FLASH                 RAM
+
+Code        ───→   ✅                   ❌
+
+RO-data     ───→   ✅                   ❌
+
+RW-data     ───→   ✅ 初始值   ─copy→   ✅ 运行对象
+
+ZI-data     ───→   不存0      ─zero→   ✅ 运行对象
+```
+
+然后把它和变量联系起来：
+
+```
+普通函数代码
+→ Code
+
+const全局数据
+→ RO
+
+非零初始化 global/static
+→ RW
+
+零/未初始化 global/static
+→ ZI
+
+普通局部变量
+→ Stack / Register
+```
+
+这块你如果弄透了，**Keil Program Size、Map 文件、`.data/.bss`、启动过程、Bootloader RAM 分配和 FreeRTOS 内存**就基本连起来了。
 ### 1.1.8 Endianness（大小端）
 
  **一个内存地址只能存 1 Byte。** 假设现在有一个 32 位整数：
@@ -1808,7 +2551,7 @@ ISR结束，从 Stack恢复现场
 ```
 
 ## 1.4 核心寄存器家族
-### 概念
+### 1.4.1 概念
 
 在 **ARM Cortex-M 架构（如常用的 STM3 等）** 处理器中，CPU 内核里一共有 **16 个最核心的通用/核心寄存器**（编号为 **R0 到 R15**），每个寄存器都是 32 位长（可以存8 个十六进制数字）
 
@@ -1862,9 +2605,9 @@ POP {R4, R5, PC}
 
 所以 FreeRTOS PendSV 保存 `R4-R11` 也和 ARM ABI 的寄存器角色有关。
 
-### 1.4.1 SP (栈指针)
+### 1.4.2 SP (栈指针)
 
-#### 1.4.1.1 基础概念
+#### 1.4.2.1 基础概念
 
 **SP （Stack Pointer，栈指针）** 和 **PC （Program Counter，程序计数器）** 是 CPU 内部最核心的两个寄存器（可以理解为 CPU 随身携带的超高速、特制微型存储单元）。
 
@@ -1878,7 +2621,7 @@ SP （Stack Pointer，栈指针），**动态数据的“水位调度员”**，
     - 当函数执行完毕，变量销毁，数据出栈，SP 的指针位置就会移回去（水位下降）。
 - **FreeRTOS 的核心秘密**：FreeRTOS 为什么能同时跑好几个任务？因为每个任务都有自己独立的栈。当 FreeRTOS 要从任务 A 切换到任务 B 时，它只需要**把当前 CPU 的 SP 寄存器数值修改成任务 B 的栈顶地址**，CPU 就会瞬间无缝进入任务 B 的世界。这就是多任务操作系统的底层本质。
 
-#### 1.4.1.2 栈排序方式
+#### 1.4.2.2 栈排序方式
 
 栈指针是**满递减栈**的
 
@@ -1957,7 +2700,7 @@ Heap
 - 把**堆底**设在 RAM 的**低地址**。每当申请内存，堆指针就**增大**（向上生长）。
 - **好处**：只要“堆”和“栈”的总和没有超过 RAM 的总容量，它们就可以**自由分享、动态压榨中间那一块未知的剩余空间**。只有当它们在中间真正“迎头相撞”时，才会发生堆栈冲突。
 
-### 1.4.2 LR（连接寄存器）
+### 1.4.3 LR（连接寄存器）
 
 LR （Link Register，连接寄存器）是 ARM 架构**处理器中专门用来存放“函数返回地址”的特殊核心寄存器**。
 
@@ -1993,7 +2736,7 @@ int main(void) {
 
 LR 是函数的“返程车票”。单层调用锁在寄存器，嵌套调用备份进堆栈
 
-### 1.4.3 PC (程序计数器)
+### 1.4.4 PC (程序计数器)
 
 1. PC （Program Counter，程序计数器），**CPU 永不停歇的执行引擎**，PC 是个“硬件盒子”（它**永远是 R15 寄存器**），但盒子里装的“FLASH 地址（数字）”每时每刻都在变。
 
@@ -2028,7 +2771,7 @@ int main(void) {
 }
 ```
 
-### 1.4.4 常见寄存器命名
+### 1.4.5 常见寄存器命名
 
 |    简称    |         全称         |  中文名称  |
 | :------: | :----------------: | :----: |
@@ -3840,7 +4583,7 @@ int main(void)
 
 编译 `main.c` 的时候，编译器知道有一个函数叫 `uart_init` 但是它可能还不知道 `uart_init`最终地址是多少。因为它在 `uart.c` 里面。所以 `main.o` 里可能先留下这里要调用 `uart_init`，但地址以后再补这就是为什么需要 Linker。
 
-#### 机器指令
+#### 1.9.4.1 机器指令
 
 **机器指令（Machine Instruction）**，简单来说，就是**计算机芯片（CPU/MCU）唯一能直接听懂并执行的“底层黑话”**。在计算机底层，没有任何文本和字母。机器指令在存储器中完全表现为由 **`0` 和 `1` 组成的二进制数字串**（在开发调试时通常用十六进制表示）。
 
