@@ -2234,17 +2234,14 @@ int main(void) {
 
 ### 1.5.1 NVIC
 
-NVIC 全称是 Nested Vectored Interrupt Controller，即嵌套向量中断控制器。
+NVIC 全称是 Nested Vectored Interrupt Controller，即**嵌套向量中断控制器**。它是 ARM Cortex-M 内核中的中断管理模块，负责：
 
-它是 ARM Cortex-M 内核中的中断管理模块，负责：
+- 管理中断使能/关闭
+- 管理中断优先级
+- 支持中断嵌套
+- 根据中断向量表跳转到对应 ISR
+- 管理 pending 状态
 
-1. 管理中断使能/关闭
-2. 管理中断优先级
-3. 支持中断嵌套
-4. 根据中断向量表跳转到对应 ISR
-5. 管理 pending 状态
-
----
 
 1. NVIC 常用操作
 
@@ -2271,6 +2268,7 @@ NVIC_SetPriority(USART1_IRQn, 2);
 ```c
 NVIC_ClearPendingIRQ(USART1_IRQn);
 ```
+
 ---
 
 2. 中断优先级
@@ -2442,7 +2440,6 @@ SCB里面的一个寄存器
 所以不要把：SCB 和：VTOR当成同一级别。
 ```
 
-
 SCB的整体框架为
 
 ```text
@@ -2473,8 +2470,6 @@ SCB
     └── Cortex-M运行控制
 ```
 
----
-
 #### 1.5.3.1 SCB 和 USART/DMA 区别
 
 平时看到：
@@ -2503,14 +2498,12 @@ VTOR： `Vector Table Offset Register`。作用是**告诉 Cortex-M当前中断�
 比如 MCU 正常从 Bootloader 启动`VTOR = 0x08000000`那么发生 USART 中断时，CPU 去`0x08000000 + USART对应Vector偏移找 Handler 地址`。当准备跳 `APP SCB->VTOR = 0x08010000;`意思就是**从现在开始，异常和中断都使用 APP 的 Vector Table**。所以：
 
 ```text
-Bootloader：
-VTOR = 0x08000000
+Bootloader：VTOR = 0x08000000
 
-跳APP后：
-VTOR = 0x08010000
+跳APP后：VTOR = 0x08010000
 ```
 
-这也是为什么 Bootloader 跳转时必须处理 VTOR。如果只 `app_entry();`但没改 VTOR，那么 APP 运行以后发生中断，CPU 可能还是去 Bootloader 的 Vector Table 查 Handler。这就可能出问题。
+这也是为什么 Bootloader 跳转时必须处理 VTOR。如果只 `app_entry();`，但没改 VTOR，那么 APP 运行以后发生中断，CPU 可能还是去 Bootloader 的 Vector Table 查 Handler。这就可能出问题。
 
 **VTOR** 的全称是 **Vector Table Offset Register（向量表偏移寄存器）**。如果把**中断向量表**比作 CPU 桌上的《紧急突发事件客服通讯录》，那么 **VTOR 寄存器就是控制这本通讯录摆放位置的“物理底座”** 在普通的单片机程序中，芯片内部只有一套代码，中断向量表默认死死固化在物理 FLASH 的大门口（`0x08000000`）。CPU 只要发生任何中断，都会雷打不动地去这里查表。
 
@@ -2636,7 +2629,7 @@ Cortex-M 必须运行 Thumb 指令。
 
 #### 1.5.3.5 SCB->HFSR
 
-SCB->HFSR，全称`HardFault Status Register`其中一个特别重要FORCED如果`HFSR.FORCED = 1`通常表示原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。所以：
+SCB->HFSR，全称 `HardFault Status Register` 其中一个特别重要 FORCED，如果 `HFSR.FORCED = 1` 通常表示原本发生的是 BusFault / UsageFault / MemManageFault，但是这个 Fault 没被单独处理，于是升级成了 HardFault。所以：
 
 ```text
 HardFault
@@ -2685,23 +2678,21 @@ BFARVALID = 1
 
 #### 1.5.3.7 SCB->MMFAR
 
-```
+```c
 SCB->MMFAR
 ```
 
-全称`MemManage Fault Address Register`作用和 BFAR 类似。区别：
+全称 `MemManage Fault Address Register` 作用和 BFAR 类似。区别：
 
-```
-BFAR
-→ BusFault导致的非法地址
+```text
+BFAR → BusFault导致的非法地址
 
-MMFAR
-→ MemManage Fault导致的非法地址
+MMFAR → MemManage Fault导致的非法地址
 ```
 
 如果以后用了 MPU：
 
-```
+```c
 Memory Protection Unit
 ```
 
@@ -2711,42 +2702,35 @@ Memory Protection Unit
 
 这个也是经常见到的：
 
-```
+```c
 SCB->AIRCR
 ```
 
-全称`Application Interrupt and Reset Control Register`可以控制一些：
-
-```
-系统复位
-中断优先级分组
-```
+全称 `Application Interrupt and Reset Control Register`，可以控制一些**系统复位、中断优先级分组**
 
 比如软件复位常见 CMSIS 写法：
 
-```
+```c
 NVIC_SystemReset();
 ```
 
 底层最终就和：
 
-```
+```c
 SCB->AIRCR
 ```
 
 有关。
 
----
-
 #### 1.5.3.9 SCB->SHCSR
 
-```
+```c
 SCB->SHCSR
 ```
 
-全称`System Handler Control and State Register`它主要用于控制：
+全称 `System Handler Control and State Register` 它主要用于控制：
 
-```
+```text
 MemManage Fault
 BusFault
 UsageFault
@@ -2754,7 +2738,7 @@ UsageFault
 
 这些系统异常是否使能，以及状态。很多项目默认没有单独处理这些 Fault。于是：
 
-```
+```text
 BusFault
 ↓
 没有单独Handler
@@ -2766,30 +2750,18 @@ HardFault
 
 #### 1.5.3.10 SCB->CCR
 
-```
+```c
 SCB->CCR
 ```
 
-全称`Configuration and Control Register` 可以控制 Cortex-M 的一些运行行为。比如常见：
+全称 `Configuration and Control Register` 可以控制 Cortex-M 的一些运行行为。比如常见：
 
-```
+```text
 UNALIGN_TRP
 DIV_0_TRP
 ```
 
-例如打开：
-
-```
-DIV_0_TRP
-```
-
-以后执行整数除 0：
-
-```
-a = b / 0;
-```
-
-就可以主动触发 UsageFault。
+例如打开 `DIV_0_TRP`，以后执行整数除 0 `a = b / 0;`，就可以主动触发 UsageFault。
 
 这个非常适合 Debug，因为否则某些错误行为可能不容易直接暴露。
 
@@ -2797,7 +2769,7 @@ a = b / 0;
 
 假设`app_entry();` 之后马上HardFault_Handler。可以 Watch：
 
-```
+```c
 SCB->VTOR
 SCB->CFSR
 SCB->HFSR
@@ -2807,7 +2779,7 @@ SCB->MMFAR
 
 比如看到：
 
-```
+```c
 VTOR = 0x08010000
 ```
 
@@ -2815,7 +2787,7 @@ VTOR = 0x08010000
 
 然后：
 
-```
+```c
 HFSR
 FORCED = 1
 ```
@@ -2824,13 +2796,13 @@ FORCED = 1
 
 再看：
 
-```
+```c
 CFSR
 PRECISERR = 1
 BFARVALID = 1
 ```
 
-然后`BFAR = 0x12345678` 这时候的分析就可以是：
+然后 `BFAR = 0x12345678` 这时候的分析就可以是：
 
 ```text
 HardFault
