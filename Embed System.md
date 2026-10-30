@@ -824,7 +824,7 @@ ZI-data
 | RW-data | 有初值可读写变量 | ✅ 初始镜像  | ✅ 运行对象 |  `.data`   |
 | ZI-data |  零初始化变量  | ❌ 不存实际0 |   ✅    |   `.bss`   |
 
-#### 1. `Code`
+#### 1.1.7.1 `Code`
 
 `Code` 就是**程序机器指令本身**。例如：
 
@@ -839,7 +839,7 @@ int add(int a, int b)
 
 所以可以近似理解 `Code ≈ .text`
 
-#### 2. `RO-data`
+#### 1.1.7.2 `RO-data`
 
 `RO` Read Only 也就是**只读数据**。例如：
 
@@ -857,7 +857,7 @@ printf("hello");
 
 可以理解为 `Code + RO-data` 主要就是真正长期待在 Flash 里的只读内容。
 
-#### 3. `RW-data`
+#### 1.1.7.3 `RW-data`
 
 `RW` （Read Write）表示**可读可写，并且有非零初始值的数据**。例如：
 
@@ -918,7 +918,7 @@ ZI区域
 
 所以 **RW-data ≈ .data**
 
-#### 4. `ZI-data`
+#### 1.1.7.4 `ZI-data`
 
 `ZI` Zero Initialized，意思**零初始化数据**。例如：
 
@@ -964,7 +964,7 @@ RAM这10000 Byte
 
 ---
 
-#### 6.  ROM 和 RAM 使用量
+#### 1.1.7.5 ROM 和 RAM 使用量
 
 Keil 编译完经常会看到类似：
 
@@ -1009,7 +1009,7 @@ ZI-data
 
 所以 **RAM ≈ RW + ZI**
 
-####  具体例子
+#### 1.1.7.6 具体例子
 
 假设：
 
@@ -1060,27 +1060,18 @@ RW-data运行变量
 ZI-data
 ```
 
-# 13. Heap 和 Stack 为什么没直接显示成 RW/ZI
+#### 1.1.7.7 Heap 与 Stack 
 
-Keil 的 RAM 使用还要稍微注意一点。
+Keil 的 RAM 使用还要稍微注意一点。除了 `RW-data、ZI-data`，程序运行时还可能需要：
 
-除了：
-
-```
-RW-data
-ZI-data
-```
-
-程序运行时还可能需要：
-
-```
+```text
 Stack
 Heap
 ```
 
 例如：
 
-```
+```text
 RAM
 ┌─────────────────┐
 │ RW-data         │
@@ -1093,41 +1084,19 @@ RAM
 └─────────────────┘
 ```
 
-不同工具链/启动文件如何统计 Stack 和 Heap 到最终 RAM 数字里，显示方式可能不同。
+不同工具链/启动文件如何统计 Stack 和 Heap 到最终 RAM 数字里，显示方式可能不同。所以工程上不要只看 `RW + ZI` 然后就认为剩下 RAM 全都安全。
 
-所以工程上不要只看：
+还要给：
 
-```
-RW + ZI
-```
-
-然后就认为：
-
-> 剩下 RAM 全都安全。
-
-你还要给：
-
-```
+```text
 Stack
 Heap
 RTOS Task Stack
 ```
 
-留下空间。
+留下空间。在 FreeRTOS 中更加重要，FreeRTOS 里面 `xTaskCreate(...)` 会从 FreeRTOS Heap 创建：
 
----
-
-# 14. 到 FreeRTOS 后更加重要
-
-FreeRTOS 里面：
-
-```
-xTaskCreate(...)
-```
-
-会从 FreeRTOS Heap 创建：
-
-```
+```text
 TCB
 +
 Task Stack
@@ -1135,7 +1104,7 @@ Task Stack
 
 例如 5 个 Task：
 
-```
+```text
 Task1 Stack
 Task2 Stack
 Task3 Stack
@@ -1143,17 +1112,9 @@ Task4 Stack
 Task5 Stack
 ```
 
-都会占 RAM。
+都会占 RAM。所以最终 RAM 不是只有 `Global variables`，还有：
 
-所以你最终 RAM 不是只有：
-
-```
-Global variables
-```
-
-还有：
-
-```
+```text
 .data
 .bss
 FreeRTOS Heap
@@ -1167,119 +1128,16 @@ DMA Buffer
 
 这也是为什么 RTOS 项目特别容易出现：
 
-```
+```text
 Flash还有很多
 但RAM不够
 ```
 
----
+#### 1.1.7.8 总结
 
-# 15. 为什么一个大 buffer 会让 ZI 暴涨
+Map 里面可能看到：
 
-比如：
-
-```
-uint8_t rx_buffer[1024];
-```
-
-全局：
-
-```
-ZI +1024
-```
-
-再来：
-
-```
-uint8_t dma_buffer[2048];
-```
-
-又：
-
-```
-ZI +2048
-```
-
-再来：
-
-```
-uint8_t image_buffer[8192];
-```
-
-直接：
-
-```
-ZI +8192
-```
-
-所以你看到 Keil：
-
-```
-ZI-data突然变大
-```
-
-首先应该查：
-
-```
-有没有大的全局/static数组
-```
-
----
-
-# 16. 为什么 const 能省 RAM
-
-比如：
-
-```
-uint8_t table[1000] =
-{
-    ...
-};
-```
-
-这是可写变量：
-
-```
-RW-data
-```
-
-运行时需要：
-
-```
-1000 Byte RAM
-```
-
-而：
-
-```
-const uint8_t table[1000] =
-{
-    ...
-};
-```
-
-如果工具链正常把它放只读区：
-
-```
-RO-data
-```
-
-主要留在 Flash。
-
-所以：
-
-```
-RAM少用约1000 Byte
-```
-
-这在嵌入式特别有价值。
-
--
-# 18. 你看到 Map 文件时怎么对应
-
-Map 里面你可能看到：
-
-```
+```text
 .text
 .rodata
 .data
@@ -1288,7 +1146,7 @@ Map 里面你可能看到：
 
 Keil Build Summary 看到：
 
-```
+```text
 Code
 RO-data
 RW-data
@@ -1297,48 +1155,33 @@ ZI-data
 
 基本对应：
 
-```
-Code
-↔ .text
+```text
+Code ↔ .text
 
-RO-data
-↔ .rodata
+RO-data ↔ .rodata
 
-RW-data
-↔ .data
+RW-data ↔ .data
 
-ZI-data
-↔ .bss
+ZI-data ↔ .bss
 ```
 
 虽然实际 linker section 可能比这复杂很多，但第一遍这么对应完全正确。
 
-
 这个面试特别好用：
 
-```
-Flash / ROM usage
-≈
-Code + RO-data + RW-data
+```text
+Flash / ROM usage ≈ Code + RO-data + RW-data
 ```
 
-因为：
+因为 RW-data 的初始化值也必须保存在Flash，而：
 
-```
-RW-data的初始化值也必须保存在Flash
-```
-
-而：
-
-```
-RAM usage
-≈
-RW-data + ZI-data
+```text
+RAM usage ≈ RW-data + ZI-data
 ```
 
 再加实际工程运行需要考虑：
 
-```
+```text
 Stack
 Heap
 RTOS动态对象
@@ -1347,20 +1190,15 @@ RTOS动态对象
 然后把它和变量联系起来：
 
 ```
-普通函数代码
-→ Code
+普通函数代码 → Code
 
-const全局数据
-→ RO
+const全局数据 → RO
 
-非零初始化 global/static
-→ RW
+非零初始化 global/static → RW
 
-零/未初始化 global/static
-→ ZI
+零/未初始化 global/static → ZI
 
-普通局部变量
-→ Stack / Register
+普通局部变量 → Stack / Register
 ```
 
 ### 1.1.8 Endianness（大小端）
