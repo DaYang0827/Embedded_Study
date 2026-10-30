@@ -759,7 +759,7 @@ struct A {
 };
 ```
 
-这样可以减少 padding。可以使用`#define MY_OFFSETOF(type, member) ((size_t)&(((type *)0)->member))` 在不创建任何结构体变量（不占内存）的情况下，**直接计算出结构体中某个成员距离结构体开头的“内存偏移量”（Offset）是多少字节**。
+这样可以减少 padding。可以使用 `#define MY_OFFSETOF(type, member) ((size_t)&(((type *)0)->member))` 在不创建任何结构体变量（不占内存）的情况下，**直接计算出结构体中某个成员距离结构体开头的“内存偏移量”（Offset）是多少字节**。
 
 ```c
 #include <stdio.h>
@@ -815,7 +815,14 @@ RW-data
 ZI-data
 ```
 
-它们分别对应 `.text / .rodata / .data / .bss` 这一套。
+它们分别对应 `.text / .rodata / .data / .bss` 这一套。可以直接记这张表：
+
+|  Keil   |    含义    |  Flash  |  RAM   | 对应 Section |
+| :-----: | :------: | :-----: | :----: | :--------: |
+|  Code   |   机器代码   |    ✅    |  通常❌   |  `.text`   |
+| RO-data |   只读数据   |    ✅    |  通常❌   | `.rodata`  |
+| RW-data | 有初值可读写变量 | ✅ 初始镜像  | ✅ 运行对象 |  `.data`   |
+| ZI-data |  零初始化变量  | ❌ 不存实际0 |   ✅    |   `.bss`   |
 
 #### 1. `Code`
 
@@ -932,26 +939,13 @@ RAM这10000 Byte
 
 所以 **ZI-data ≈ .bss**
 
-# 5. 四个东西放在哪里
-
-你可以直接记这张表：
-
-|Keil|含义|Flash|RAM|对应 Section|
-|---|---|---|---|---|
-|Code|机器代码|✅|通常❌|`.text`|
-|RO-data|只读数据|✅|通常❌|`.rodata`|
-|RW-data|有初值可读写变量|✅ 初始镜像|✅ 运行对象|`.data`|
-|ZI-data|零初始化变量|❌ 不存实际0|✅|`.bss`|
-
-这个表非常重要。
-
 ---
 
-# 6. Keil 为什么会显示 ROM 和 RAM 使用量
+#### 6.  ROM 和 RAM 使用量
 
 Keil 编译完经常会看到类似：
 
-```
+```text
 Program Size:
 Code=20000
 RO-data=1000
@@ -961,36 +955,28 @@ ZI-data=3000
 
 那 ROM 大概怎么算？
 
-```
+```text
 ROM Size
 ≈ Code
 + RO-data
 + RW-data
 ```
 
-为什么 RW-data 也算 ROM？
+为什么 RW-data 也算 ROM？因为 RW-data 的初始值要存 Flash。所以：
 
-因为：
-
-> RW-data 的初始值要存 Flash。
-
-所以：
-
-```
-ROM
-≈ Code + RO + RW
+```text
+ROM ≈ Code + RO + RW
 ```
 
 而 RAM：
 
-```
-RAM
-≈ RW-data + ZI-data
+```text
+RAM ≈ RW-data + ZI-data
 ```
 
 因为运行时：
 
-```
+```text
 RW-data
 → RAM
 
@@ -998,14 +984,7 @@ ZI-data
 → RAM
 ```
 
-所以：
-
-```
-RAM
-≈ RW + ZI
-```
-
----
+所以 **RAM ≈ RW + ZI**
 
 # 7. 举一个具体例子
 
