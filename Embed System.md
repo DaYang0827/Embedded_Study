@@ -553,7 +553,6 @@ a = 10
 所以 `.data` 有两个概念：
 
 > **运行时变量本体在 RAM。**
-
 > **它的初始化数据在 Flash 里有一份副本。**
 
 这就是为什么 `.data` 会同时消耗Flash空间 + RAM空间
@@ -659,8 +658,6 @@ MCU 上电后：
 6. SystemInit()
 7. main()
 ```
-
----
 
 |            变量            |          典型位置           |
 | :----------------------: | :---------------------: |
@@ -815,7 +812,7 @@ RW-data
 ZI-data
 ```
 
-它们分别对应 `.text / .rodata / .data / .bss` 这一套。可以直接记这张表：
+它们分别对应 `.text / .rodata / .data / .bss` ，可以直接记这张表：
 
 |  Keil   |    含义    |  Flash  |  RAM   | 对应 Section |
 | :-----: | :------: | :-----: | :----: | :--------: |
@@ -962,8 +959,6 @@ RAM这10000 Byte
 
 所以 **ZI-data ≈ .bss**
 
----
-
 #### 1.1.7.5 ROM 和 RAM 使用量
 
 Keil 编译完经常会看到类似：
@@ -1030,26 +1025,21 @@ int main(void)
 
 大致分类：
 
-```
-main()机器指令
-→ Code
+```text
+main()机器指令 → Code
 
-version
-→ RO-data
+version → RO-data
 
-count = 10
-→ RW-data
+count = 10 → RW-data
 
-error_count
-→ ZI-data
+error_count → ZI-data
 
-buffer[1000]
-→ ZI-data
+buffer[1000] → ZI-data
 ```
 
 所以：
 
-```
+```text
 Flash:
 Code
 RO-data
@@ -1189,7 +1179,7 @@ RTOS动态对象
 
 然后把它和变量联系起来：
 
-```
+```text
 普通函数代码 → Code
 
 const全局数据 → RO
@@ -3510,7 +3500,7 @@ Disassembly
 ---
 
 2. **看 LR，判断从哪里来的。**  
-    `LR` 是 Link Register，通常保存返回地址或异常返回信息。
+   `LR` 是 Link Register，通常保存返回地址或异常返回信息。
 
 普通函数调用里：
 
@@ -3537,7 +3527,7 @@ LR
 ---
 
 3. **看 CFSR。**  
-    这是最关键的 Fault 状态寄存器之一：
+   这是最关键的 Fault 状态寄存器之一：
 
 ```
 SCB->CFSR
@@ -4184,14 +4174,11 @@ extern uint32_t count;
 流程：
 
 ```text
-a.c
-→ 提供 count 符号
+a.c → 提供 count 符号
 
-b.c
-→ 引用 count 符号
+b.c → 引用 count 符号
 
-Linker
-→ 把两者连起来
+Linker → 把两者连起来
 ```
 
 ---
@@ -4378,8 +4365,6 @@ Reset_Handler
 
 就是在分析 Linker 最终布局。所以 Map = Linker的体检报告这个理解很好用。
 
----
-
 ### 1.9.6 ELF / AXF 转成 HEX / BIN
 
 烧录时经常使用：
@@ -4404,8 +4389,6 @@ BIN
 1. BIN
 
 基本就是**纯机器数据**，不知道自己应该烧到哪个地址。所以烧 `.bin` 通常需要告诉工具起始地址 = `0x08010000`
-
----
 
 2. HEX
 
@@ -4444,52 +4427,7 @@ undefined symbol
 
 这就是 Link Error。
 
----
-
-## 1.10 与 Bootloader 项目关系
-
-Bootloader 下载 APP 时 `APP.bin`，实际上就是编译流程：
-
-```text
-APP源代码
-↓
-compile
-↓
-各个.o
-↓
-link
-↓
-APP.axf / APP.elf
-↓
-转换
-↓
-APP.bin
-```
-
-然后上位机：
-
-```text
-读取 APP.bin
-↓
-串口分包
-↓
-Bootloader接收
-↓
-写Flash 0x08010000
-```
-
-所以 Bootloader 根本不关心：
-
-```c
-main.c
-uart.c
-```
-
-它只关心最终生成的机器码固件。
-
----
-
-## 1.11 全流程
+### 1.9.8 全流程
 
 一个 `parser.c`文件的全流程为：
 
