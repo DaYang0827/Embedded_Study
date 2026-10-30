@@ -518,79 +518,11 @@ OTA 里这很重要。
 还是断点续传
 ```
 
----
+# MTU 
 
-# 二十三、MTU 是 OTA 重点
+MTU （Maximum Transmission Unit）**ATT 默认 MTU 常见 23 Byte** 但不是说能传 23 Byte payload。
 
-MTU：
-
-```
-Maximum Transmission Unit
-```
-
-ATT 默认 MTU 常见：
-
-```
-23 Byte
-```
-
-但不是说你能传 23 Byte payload。
-
-因为 ATT 自己需要 header。
-
-典型 ATT Write：
-
-```
-ATT_MTU = 23
-```
-
-真正 Value 最大大约：
-
-```
-23 - 3 = 20 Byte
-```
-
-所以老 BLE 经常看到：
-
-```
-20 Byte一包
-```
-
----
-
-# 二十五、MTU 和你的 Chunk Size
-
-你以后 OTA 不能随便：
-
-```
-一帧固定32 Byte
-```
-
-而应该：
-
-```
-根据Negotiated MTU
-↓
-计算最大Chunk
-```
-
-例如：
-
-```
-chunk_size <= ATT_MTU - overhead
-```
-
-然后你的 OTA 协议可能：
-
-```
-offset
-length
-payload
-```
-
-实际 payload 长度动态变化。
-
----
+因为 ATT 自己需要 header。典型 ATT Write `ATT_MTU = 23`，真正 Value 最大大约 `23 - 3 = 20 Byte`所以老 BLE 经常看到 20 Byte一包
 
 # 二十六、Data Length Extension
 
@@ -614,72 +546,6 @@ DLE
 ```
 
 OTA吞吐和两者都有关。
-
----
-
-# 二十七、PHY
-
-BLE 常见：
-
-```
-1M PHY
-2M PHY
-Coded PHY
-```
-
-OTA：
-
-```
-2M PHY
-```
-
-可能提高速度。
-
-Coded PHY：
-
-```
-更远距离
-更强抗干扰
-但速度慢
-```
-
-第一遍你先知道即可。
-
----
-
-# 二十八、L2CAP
-
-L2CAP：
-
-```
-Logical Link Control and Adaptation Protocol
-```
-
-作用可以先理解为：
-
-```
-上层数据
-↓
-L2CAP
-↓
-Link Layer
-```
-
-负责：
-
-```
-复用
-分片/重组
-逻辑通道
-```
-
-你暂时不用深挖 L2CAP CoC。
-
-但要知道：
-
-> GATT/ATT 数据最终也是通过 L2CAP 承载。
-
----
 
 # 二十九、BLE 自己已经可靠，为什么 OTA 还要 CRC
 
