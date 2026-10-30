@@ -1771,7 +1771,7 @@ xTaskCreate()
 
 3. `128`
 
-这个非常重要。它表示任务栈深度128 个 StackType_t不是一定代表 128 bytes。 STM32F4 是 32 位 Cortex-M4，通常`sizeof(StackType_t) = 4 bytes` 所以`128 × 4 = 512 bytes`。也就是说128大约给这个 Task 分了512 bytes stack这个栈是任务私有的。所以：
+这个非常重要。它表示任务栈深度 128 个 StackType_t不是一定代表 128 bytes。 STM32F4 是 32 位 Cortex-M4，通常`sizeof(StackType_t) = 4 bytes` 所以`128 × 4 = 512 bytes`。也就是说128大约给这个 Task 分了512 bytes stack这个栈是任务私有的。所以：
 
 ```
 Task1 有自己的栈
