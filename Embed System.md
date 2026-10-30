@@ -2862,9 +2862,7 @@ Disassembly
 
 ### 1.5.5 Vector Table 和 Vtor 的区别
 
-它们都带有 `vector table` 这几个字，但它们一个是**硬件寄存器（指针）**，另一个是**内存里的一大片死数据（表格原文）**。
-
-通过三个维度，把它们俩彻底区分开：
+它们都带有 `vector table` 这几个字，但它们一个是**硬件寄存器（指针）**，另一个是**内存里的一大片死数据（表格原文）**。通过三个维度，把它们俩彻底区分开：
 
 1. 概念与物理本质的区别
 
@@ -2899,7 +2897,7 @@ Disassembly
 
 ### 1.5.6 ISR
 
-ISR 全称Interrupt Service Routine。中文一般叫**中断服务程序 / 中断服务例程**
+ISR （Interrupt Service Routine）。中文一般叫**中断服务程序 / 中断服务例程**
 
 ```c
 void USART1_IRQHandler(void)
@@ -2918,7 +2916,7 @@ void USART1_IRQHandler(void)
 
 ---
 
-ISR 需要注意。
+ISR 需要注意：
 
 1. **ISR 是被硬件事件触发的，不是主程序正常顺序调用的**。
 2. ISR要**快进快出**。因此一般不要在里面
@@ -3001,7 +2999,6 @@ void USART1_IRQHandler(void)
 - **Bootloader / 烧录器：** 把这本印刷好的通讯录和房子，一起原封不动地刻在了芯片的 Flash 里。
 - **CPU（运行时）：** 当串口中断爆发时，CPU 就像一个**完全不认路、只按指令办事的机器人快递员**。它不去满大街找房子，它只低头看通讯录的串口1格子（`VTOR + 0xD4`），看到上面写着 `0x08012560`，它就**瞬间瞬移**到了这个坐标。
 - **结果：** 既然坐标是房子的门口，机器人快递员一睁眼，看到的自然就是写在房子里的那些 C 语言代码了。
-
 
 CPU 之所以知道那个地址对应的是中断函数，是因为 **CPU 绝对信任编译器**。 编译器既负责**安置中断函数的机器码位置**，又负责**把这个位置数字写进 `0xD4` 的抽屉里**。它们俩是由同一个编译器在同一套编译规则下一起生成的，属于“同根同源”。所以，CPU 只要顺着抽屉里的数字跳过去，**迎面撞上的必然、且百分之百就是你写的那个中断函数的机器码入口**。
 
@@ -3138,8 +3135,6 @@ MOV R0, #1   ;  正确写法！
 - **加上立即数**：硬件加法器收到 `#4` 这个常数命令，直接让地址做加法：`0x20000000 + 4 = 0x20000004`。
 - **寻找新房间**：因为数字从 `0x20000000` 变大到了 `0x20000004`，在宏观地图上，指针的轨迹自然是**直直地“向上拔高”了 4 个字节的距离**！
 
----
-
 ### 1.6.4 汇编指令速查
 
 核心语法公式
@@ -3254,6 +3249,7 @@ MOV R0, #1   ;  正确写法！
    在 C 语言里调用普通的函数（比如 `lv_obj_create()`），CPU 在底层需要大费周章地执行 `BL` 指令去买回程车票（压栈、跳转）。  但在嵌入式里，有些动作必须**一纳秒都不能耽误，甚至需要直接调用一条特殊的 ARM 汇编指令**。这时候，双下划线函数就上场了，它们在技术上叫做 **“编译器内建函数 (Built-in / Intrinsic Functions)”**：
 
 - 之前在 Bootloader 跳转里见过的：
+
  ```c
 __set_MSP(sp); 
  ```
@@ -3438,17 +3434,14 @@ UartHandle uart1;
 
 更灵活，但外部代码可能错误修改内部状态。
 
-
----
 ### 1.7.2 数字后缀
 
 `#define FW_MAGIC 0x5AA55AA5U`
 
-这个：U  代表： **Unsigned，无符号。** 也就是说：100U,告诉编译器：这个整数常量按照 unsigned 类型处理。
+这个 U  代表 **Unsigned，无符号。** 也就是说 100U ，告诉编译器这个整数常量按照 unsigned 类型处理。
 
-例如：10   默认通常首先按照：int理解。而：10U,明确表示：`unsigned int`
+例如：10 默认通常首先按照 int 理解。而 10U,明确表示：`unsigned int`，嵌入式里大量涉及：
 
-嵌入式里大量涉及：
 ```text
 寄存器
 地址
@@ -3458,44 +3451,34 @@ Mask
 Magic Number
 ```
 
-这些东西通常：**没有负数意义。** 例如：`#define BUFFER_SIZE 4096U` 缓冲区不可能：-4096 Byte所以用 `unsigned` 很合理。再比如：`#define USART_TIMEOUT 1000000U`Timeout 不应该是负数。
+这些东西通常**没有负数意义。** 例如`#define BUFFER_SIZE 4096U` ，缓冲区不可能 -4096 Byte所以用 `unsigned` 很合理。再比如 `#define USART_TIMEOUT 1000000U`Timeout 不应该是负数。
 
 ---
 
 与位运算相关
 
-例如：`1 << 31`,在一些类型规则下可能引入有符号整数相关的问题。因此工程里经常写：`1U << 31`
+例如：`1 << 31`,在一些类型规则下可能引入有符号整数相关的问题。因此工程里经常写 `1U << 31` ，意思是先把 1 明确当成 `unsigned` -- 再左移 31 位。这对于寄存器位 Mask 特别常见。
 
-意思：先把1明确当成`unsigned`-- 再左移31位。这对于寄存器位 Mask 特别常见。
-
-例如：
-`#define BIT31 (1U << 31)`
+例如：`#define BIT31 (1U << 31)`
 
 
 ## 1.8 HardFault
 
- **HardFault = CPU 执行到了一个严重异常状态。** 真正原因通常藏在：**错误地址、错误指令、非法内存访问、栈问题、BusFault/UsageFault/MemManageFault 被升级**。
+ **HardFault = CPU 执行到了一个严重异常状态。** 真正原因通常藏在**错误地址、错误指令、非法内存访问、栈问题、BusFault/UsageFault/MemManageFault 被升级**。
 
 可以按顺序排查。
 
 1. **先看 PC 在哪。**  
    PC 是 CPU 当前执行位置。HardFault 发生时，最先看：
 
-```
+```text
 PC
 LR
 MSP
 PSP
 ```
 
-如果`PC = 0x080105A4`，就去：
-
-```
-MAP
-Disassembly
-```
-
-找 `0x080105A4` 落在哪个函数、哪条指令。这是第一步，因为它告诉你“CPU 在哪炸了。”
+如果`PC = 0x080105A4`，就去 MAP Disassembly 找 `0x080105A4` 落在哪个函数、哪条指令。这是第一步，因为它告诉你“CPU 在哪炸了。”
 
 ---
 
@@ -3567,13 +3550,9 @@ INVPC
 
 4. **看 HFSR。**
 
-```
-SCB->HFSR
-```
+`SCB->HFSR` 很常见的是 `FORCED = 1` 这通常表示原本是 BusFault / MemManageFault / UsageFault，但没有被单独处理，于是升级成 HardFault。也就是说：
 
-很常见的是`FORCED = 1`这通常表示原本是 BusFault / MemManageFault / UsageFault，但没有被单独处理，于是升级成 HardFault。也就是说：
-
-```
+```text
 HFSR告诉你：
 “是不是别的fault升级上来的”
 ```
@@ -3584,14 +3563,14 @@ HFSR告诉你：
 
 5. **如果是非法内存访问，看 BFAR / MMFAR。**
 
-```
+```text
 SCB->BFAR
 SCB->MMFAR
 ```
 
 分别用于：
 
-```
+```text
 BFAR
 → BusFault Address Register
 
@@ -3603,13 +3582,13 @@ MMFAR
 
 比如：
 
-```
+```c
 BFAR = 0xFFFFFFFF
 ```
 
-那你就应该立刻怀疑：
+那就应该立刻怀疑：
 
-```
+```text
 野指针
 非法函数指针
 未初始化地址
@@ -3620,22 +3599,17 @@ BFAR = 0xFFFFFFFF
 
 6. **看 MSP / PSP，检查栈。**
 
-尤其你现在做 Bootloader，非常重要。如果跳 APP 之后 HardFault先看 MSP。正常应该已经变成 APP Vector Table 第0项里的值，例如：
+在做 Bootloader，非常重要。如果跳 APP 之后 HardFault先看 MSP。正常应该已经变成 APP Vector Table 第0项里的值，例如：
 
-```
+```c
 MSP = 0x200006A8
 ```
 
-如果还是 Bootloader 的栈：
-
-```
-说明 __set_MSP() 没生效
-或者跳转顺序有问题
-```
+如果还是 Bootloader 的栈说明 __set_MSP() 没生效或者跳转顺序有问题
 
 如果 MSP 是：
 
-```
+```c
 0xFFFFFFFF
 0x080xxxxx
 0x00000000
