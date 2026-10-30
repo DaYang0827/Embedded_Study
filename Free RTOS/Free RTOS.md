@@ -13,6 +13,8 @@
 
 其中 **Zephyr复盘和Linux基础可以穿插进行**
 
+![[4f338139763ba12be68c51b9bbc810e0.jpg]]
+
 # 1 概念
 
 `RTOS` （Real Time Operating System，中文就是实时操作系统）
