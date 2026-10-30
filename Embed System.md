@@ -986,11 +986,11 @@ ZI-data
 
 所以 **RAM ≈ RW + ZI**
 
-# 7. 举一个具体例子
+####  具体例子
 
 假设：
 
-```
+```c
 const uint32_t version = 0x01020304;
 
 uint32_t count = 10;
@@ -1036,59 +1036,6 @@ RAM:
 RW-data运行变量
 ZI-data
 ```
-
----
-
-# 8. 为什么 RW-data 同时占两边
-
-这是最容易混的。
-
-你可以画成：
-
-```
-编译完成：
-
-FLASH
-┌─────────────────┐
-│ Code            │
-├─────────────────┤
-│ RO-data         │
-├─────────────────┤
-│ RW init image   │ ← count = 10
-└─────────────────┘
-
-RAM
-┌─────────────────┐
-│ RW-data         │
-├─────────────────┤
-│ ZI-data         │
-└─────────────────┘
-```
-
-刚上电：
-
-```
-Flash RW init image
-↓ copy
-RAM RW-data
-```
-
-然后：
-
-```
-ZI区域
-↓ memset(0)
-```
-
-最后：
-
-```
-main()
-```
-
-开始。
-
----
 
 # 9. 这和启动流程直接相关
 
@@ -1180,48 +1127,6 @@ Stack
 ```
 
 而不是 `ZI-data`。
-
----
-
-# 11. `static local` 就不一样
-
-例如：
-
-```
-void func(void)
-{
-    static uint32_t count = 10;
-}
-```
-
-它不是 Stack 变量。
-
-因为：
-
-```
-生命周期 = 整个程序
-```
-
-所以：
-
-```
-count = 10
-→ RW-data
-```
-
-如果：
-
-```
-static uint32_t count;
-```
-
-通常：
-
-```
-ZI-data
-```
-
-这和你之前学 static 的内容正好连起来。
 
 ---
 
@@ -1480,68 +1385,7 @@ RAM少用约1000 Byte
 
 这在嵌入式特别有价值。
 
----
-
-# 17. 和你的 Bootloader 也直接相关
-
-比如：
-
-```
-uint8_t dma_rx_buf[1024];
-```
-
-如果全局：
-
-```
-ZI-data +1024
-```
-
-RingBuffer：
-
-```
-uint8_t ring_buffer[1024];
-```
-
-又：
-
-```
-ZI-data +1024
-```
-
-Parser：
-
-```
-uint8_t data[32];
-```
-
-如果在全局结构体里：
-
-```
-也进入RAM常驻区域
-```
-
-再加 FreeRTOS：
-
-```
-Task Stack
-Queue
-TCB
-```
-
-所以你以后分析 Bootloader RAM 时就可以问：
-
-```
-DMA Buffer占多少
-RingBuffer占多少
-Queue占多少
-Task Stack占多少
-Metadata runtime object占多少
-```
-
-而不是只看代码行数。
-
----
-
+-
 # 18. 你看到 Map 文件时怎么对应
 
 Map 里面你可能看到：
@@ -1580,9 +1424,6 @@ ZI-data
 
 虽然实际 linker section 可能比这复杂很多，但第一遍这么对应完全正确。
 
----
-
-# 19. 最后压缩成一个公式
 
 这个面试特别好用：
 
@@ -1614,22 +1455,6 @@ Heap
 RTOS动态对象
 ```
 
----
-
-你现在最应该牢牢记住这一张：
-
-```
-                 FLASH                 RAM
-
-Code        ───→   ✅                   ❌
-
-RO-data     ───→   ✅                   ❌
-
-RW-data     ───→   ✅ 初始值   ─copy→   ✅ 运行对象
-
-ZI-data     ───→   不存0      ─zero→   ✅ 运行对象
-```
-
 然后把它和变量联系起来：
 
 ```
@@ -1649,7 +1474,6 @@ const全局数据
 → Stack / Register
 ```
 
-这块你如果弄透了，**Keil Program Size、Map 文件、`.data/.bss`、启动过程、Bootloader RAM 分配和 FreeRTOS 内存**就基本连起来了。
 ### 1.1.8 Endianness（大小端）
 
  **一个内存地址只能存 1 Byte。** 假设现在有一个 32 位整数：
