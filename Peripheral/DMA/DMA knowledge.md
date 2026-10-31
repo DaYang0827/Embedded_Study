@@ -81,7 +81,7 @@ DMA_Config.Direction = DMA_PERIPHERAL_TO_MEMORY;      // 4. 传输方向
 typedef struct
 {
   uint32_t DMA_Channel;               // 1. 硬件通道选择
-  uint32_t DMA_PeripheralBaseAddr;     // 2. 外设基地址
+  uint32_t DMA_PeripheralBaseAddr;    // 2. 外设基地址
   uint32_t DMA_Memory0BaseAddr;       // 3. 内存基地址（大仓库）
   uint32_t DMA_DIR;                   // 4. 数据传输方向
   uint32_t DMA_BufferSize;            // 5. 传输数据大小（计数器）
@@ -134,6 +134,7 @@ DMA 从 DR 搬走
 所以`DMA_PeripheralBaseAddr = &USART1->DR;` 对于 ADC:`DMA_PeripheralBaseAddr = &ADC1->DR;`  对于 SPI：`DMA_PeripheralBaseAddr = &SPI1->DR;`
 
 所以可以直接记`PeripheralBaseAddr` 通常就是某个外设的 **数据寄存器地址**。注意它存的是**地址**，不是数据。比如`USART1->DR`表示寄存器里的值。而`&USART1->DR`表示这个寄存器所在的地址。DMA 需要的是地址。
+
 ## 6.3 `DMA_Memory0BaseAddr`
 
 ```c
@@ -169,7 +170,7 @@ DMA_Memory0BaseAddr
       rx_buffer
 ```
 
-这两个成员基本就是 DMA 最核心的：**源地址 / 目的地址** 不过谁是源、谁是目的，还得结合 `DMA_DIR` 看。
+这两个成员基本就是 DMA 最核心的**源地址 / 目的地址** 不过谁是源、谁是目的，还得结合 `DMA_DIR` 看。
 
 ## 6.4 `DMA_DIR`
 
