@@ -1,6 +1,7 @@
  USART Setting
 
 # 1 USART Establish
+
 1. 开 GPIO 时钟
 2. 开 USART 时钟
 3. 配置 GPIO 为复用模式
@@ -17,11 +18,9 @@ GPIO复用 + USART参数 + NVIC中断 + 回调函数
 
 # 3 在stm32f407中常见的USART搭配
 
-USART1：PA9 / PA10，挂在 APB2
-
-USART2：PA2 / PA3，挂在 APB1
-
-GPIOA：挂在AHB1
+- USART1：PA9 / PA10，挂在 APB2
+- USART2：PA2 / PA3，挂在 APB1
+- GPIOA：挂在AHB1
 
 # 4 状态标志位
 | 中断/标志  |      含义      |     什么时候触发      |     常见用途      |
@@ -38,6 +37,7 @@ GPIOA：挂在AHB1
 | `LBD`  | LIN Break 检测 |  检测到 LIN Break  |   LIN 总线通信    |
 
 **RXNE看接收：有没有数据可以读；TXE 看发送：有没有空位可以写**
+
 ```c
 //接收数据寄存器非空，也就是USART 已经收到了一个字节，这个字节现在放在接收数据寄存器里，还没有被你读走
     if (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) != RESET)
