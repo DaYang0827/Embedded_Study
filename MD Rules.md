@@ -368,7 +368,7 @@ $\lim_{x\to0} f(x)$
 
 ## 10.8 常用数学符号
 
-```
+```text
 $\times$
 $\div$
 $\pm$
@@ -381,6 +381,18 @@ $\rightarrow$
 $\leftarrow$
 $\Rightarrow$
 ```
+
+$\times$
+$\div$
+$\pm$
+$\neq$
+$\approx$
+$\leq$
+$\geq$
+$\infty$
+$\rightarrow$
+$\leftarrow$
+$\Rightarrow$
 
 ## 10.9 多行公式
 
