@@ -380,6 +380,7 @@ $\infty$
 $\rightarrow$
 $\leftarrow$
 $\Rightarrow$
+$\infty$
 ```
 
 $\times$
@@ -393,6 +394,7 @@ $\infty$
 $\rightarrow$
 $\leftarrow$
 $\Rightarrow$
+$\infty$
 
 ## 10.9 多行公式
 
